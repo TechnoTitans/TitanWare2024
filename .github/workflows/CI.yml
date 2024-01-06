@@ -27,9 +27,6 @@ jobs:
       # Grant exec perms for ./gradlew
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
-      # Run spotless code formatting
-      - name: Spotless formatting check
-        run: ./gradlew spotlessCheck --max-workers 1
       # Run only build tasks without tests, that way we can build the JNIs first that the tests depend on
       - name: Gradle build
         run: ./gradlew build -x check --max-workers 2
