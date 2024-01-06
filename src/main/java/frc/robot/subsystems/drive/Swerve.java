@@ -6,6 +6,7 @@ import edu.wpi.first.math.MathUtil;
 import edu.wpi.first.math.estimator.SwerveDrivePoseEstimator;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
+import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.math.geometry.Twist2d;
 import edu.wpi.first.math.kinematics.ChassisSpeeds;
 import edu.wpi.first.math.kinematics.SwerveDriveKinematics;
@@ -19,6 +20,8 @@ import frc.robot.constants.RobotMap;
 import frc.robot.subsystems.gyro.*;
 import frc.robot.utils.gyro.GyroUtils;
 import frc.robot.utils.logging.LogUtils;
+import frc.robot.utils.teleop.ControllerUtils;
+import frc.robot.utils.teleop.Profiler;
 import org.littletonrobotics.junction.Logger;
 
 import java.util.function.DoubleSupplier;
@@ -309,12 +312,37 @@ public class Swerve extends SubsystemBase {
             final DoubleSupplier ySpeedSupplier,
             final DoubleSupplier rotSupplier
     ) {
-        return run(() -> drive(
-                xSpeedSupplier.getAsDouble(),
-                ySpeedSupplier.getAsDouble(),
-                rotSupplier.getAsDouble(),
-                true
-        ));
+        return run(() -> {
+            final Profiler.DriverProfile driverProfile = Profiler.getDriverProfile();
+            final Profiler.SwerveSpeed swerveSpeed = Profiler.getSwerveSpeed();
+
+            final double throttleWeight = swerveSpeed.getThrottleWeight();
+            final double rotWeight = swerveSpeed.getRotateWeight();
+
+            final Translation2d leftStickSpeeds = ControllerUtils.getStickXYSquaredInput(
+                    xSpeedSupplier.getAsDouble(),
+                    ySpeedSupplier.getAsDouble(),
+                    0.01,
+                    Constants.Swerve.TELEOP_MAX_SPEED_MPS,
+                    driverProfile.getThrottleSensitivity(),
+                    throttleWeight
+            );
+
+            final double rot = ControllerUtils.getStickSquaredInput(
+                    rotSupplier.getAsDouble(),
+                    0.01,
+                    Constants.Swerve.TELEOP_MAX_ANGULAR_SPEED_RAD_PER_SEC,
+                    driverProfile.getRotationalSensitivity(),
+                    rotWeight
+            );
+
+            drive(
+                    leftStickSpeeds.getX(),
+                    leftStickSpeeds.getY(),
+                    rot,
+                    true
+            );
+        });
     }
 
     public void stop() {
@@ -367,12 +395,6 @@ public class Swerve extends SubsystemBase {
      */
     public Command wheelXCommand() {
         return runOnce(() -> rawSet(0, 0, 0, 0, 45, -45, -45, 45));
-    }
-
-    public Command autoBalanceCommand() {
-        return run(() -> drive(2, 0, 0, false))
-                .until(() -> getPitch().getDegrees() > 12 && getGyro().getFilteredPitchVelocity() < -5)
-                .andThen(wheelXCommand());
     }
 
     /**

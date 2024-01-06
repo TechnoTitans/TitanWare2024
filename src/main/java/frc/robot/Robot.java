@@ -16,11 +16,13 @@ import org.littletonrobotics.junction.networktables.NT4Publisher;
 import org.littletonrobotics.junction.wpilog.WPILOGReader;
 import org.littletonrobotics.junction.wpilog.WPILOGWriter;
 
-import java.io.File;
+import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 
 public class Robot extends LoggedRobot {
+    private static final String HOOT_LOG_PATH = "/U/hoot";
+
     private RobotContainer robotContainer;
     private Command autonomousCommand;
 
@@ -65,11 +67,26 @@ public class Robot extends LoggedRobot {
             default -> Logger.recordMetadata("GitDirty", "Unknown");
         }
 
+
         switch (Constants.CURRENT_MODE) {
             case REAL -> {
                 // TODO: I don't think SignalLogger.setPath will create the non-existent directories if they don't exist
                 //  verify this, and then it might be worth it to make the directory ourselves
-                SignalLogger.setPath("/U/hoot");
+                try {
+                    Files.createDirectories(Paths.get(HOOT_LOG_PATH));
+                    SignalLogger.setPath(HOOT_LOG_PATH);
+                } catch (final IOException ioException) {
+                    SignalLogger.setPath("/U");
+                    DriverStation.reportError(
+                            String.format(
+                                    "Failed to create CTRE .hoot log path at \"%s\"! Falling back to default.\n%s",
+                                    HOOT_LOG_PATH,
+                                    ioException
+                            ),
+                            false
+                    );
+                }
+
                 Logger.addDataReceiver(new WPILOGWriter("/U/akit"));
                 Logger.addDataReceiver(new NT4Publisher());
             }
@@ -89,6 +106,7 @@ public class Robot extends LoggedRobot {
         }
 
         robotContainer = new RobotContainer();
+        SignalLogger.enableAutoLogging(true);
         SignalLogger.start();
         ToClose.add(SignalLogger::stop);
 
@@ -109,9 +127,6 @@ public class Robot extends LoggedRobot {
     public void disabledPeriodic() {}
 
     @Override
-    public void disabledExit() {}
-
-    @Override
     public void autonomousInit() {
         autonomousCommand = robotContainer.getAutonomousCommand();
 
@@ -126,22 +141,26 @@ public class Robot extends LoggedRobot {
     public void autonomousPeriodic() {}
 
     @Override
-    public void autonomousExit() {}
-
-    @Override
     public void teleopInit() {
         if (autonomousCommand != null) {
             autonomousCommand.cancel();
         }
 
         robotContainer.swerve.setNeutralMode(NeutralModeValue.Coast);
+        // No need to lint this here, X and Y are flipped for robot vs. controller joystick coordinate systems, so we
+        // pass the controller X into the robot Y, and vice versa
+        //noinspection SuspiciousNameCombination
+        robotContainer.swerve.setDefaultCommand(
+                robotContainer.swerve.teleopDriveCommand(
+                        robotContainer.driverController::getLeftY,
+                        robotContainer.driverController::getLeftX,
+                        robotContainer.driverController::getRightX
+                )
+        );
     }
 
     @Override
     public void teleopPeriodic() {}
-
-    @Override
-    public void teleopExit() {}
 
     @Override
     public void testInit() {
@@ -150,7 +169,4 @@ public class Robot extends LoggedRobot {
 
     @Override
     public void testPeriodic() {}
-
-    @Override
-    public void testExit() {}
 }
