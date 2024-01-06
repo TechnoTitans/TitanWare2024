@@ -1,20 +1,33 @@
-// Copyright (c) FIRST and other WPILib contributors.
-// Open Source Software; you can modify and/or share it under the terms of
-// the WPILib BSD license file in the root directory of this project.
-
 package frc.robot;
 
+import edu.wpi.first.wpilibj.PowerDistribution;
+import edu.wpi.first.wpilibj.RobotState;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
+import frc.robot.constants.Constants;
+import frc.robot.constants.HardwareConstants;
+import frc.robot.constants.RobotMap;
+import frc.robot.subsystems.drive.Swerve;
 
 public class RobotContainer {
-  public RobotContainer() {
-    configureBindings();
-  }
+    public final PowerDistribution powerDistribution;
 
-  private void configureBindings() {}
+    public final Swerve swerve;
 
-  public Command getAutonomousCommand() {
-    return Commands.print("No autonomous command configured");
-  }
+    public RobotContainer() {
+        powerDistribution = new PowerDistribution(RobotMap.PowerDistributionHub, PowerDistribution.ModuleType.kRev);
+        powerDistribution.clearStickyFaults();
+
+        swerve = new Swerve(
+                Constants.CURRENT_MODE,
+                HardwareConstants.FRONT_LEFT_MODULE,
+                HardwareConstants.FRONT_RIGHT_MODULE,
+                HardwareConstants.BACK_LEFT_MODULE,
+                HardwareConstants.BACK_RIGHT_MODULE
+        );
+    }
+
+    public Command getAutonomousCommand() {
+        return Commands.waitUntil(() -> !RobotState.isAutonomous());
+    }
 }
