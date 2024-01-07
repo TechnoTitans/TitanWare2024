@@ -188,7 +188,7 @@ public class SwerveModule {
      */
     public static class Builder {
         /**
-         * Make a SDS MK4i {@link SwerveModule} with 2 ({@link TalonFX}s) for the drive and turn motors
+         * Make a SDS MK4i {@link SwerveModule} with 2 {@link TalonFX}s for the drive and turn motors
          * and a {@link CANcoder} as the turn encoder.
          *
          * @param name                    the name of the {@link SwerveModule}

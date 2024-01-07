@@ -6,7 +6,6 @@ import edu.wpi.first.math.MathUtil;
 import edu.wpi.first.math.estimator.SwerveDrivePoseEstimator;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
-import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.math.geometry.Twist2d;
 import edu.wpi.first.math.kinematics.ChassisSpeeds;
 import edu.wpi.first.math.kinematics.SwerveDriveKinematics;
@@ -20,8 +19,6 @@ import frc.robot.constants.RobotMap;
 import frc.robot.subsystems.gyro.*;
 import frc.robot.utils.gyro.GyroUtils;
 import frc.robot.utils.logging.LogUtils;
-import frc.robot.utils.teleop.ControllerUtils;
-import frc.robot.utils.teleop.Profiler;
 import org.littletonrobotics.junction.Logger;
 
 import java.util.function.DoubleSupplier;
@@ -37,6 +34,29 @@ public class Swerve extends SubsystemBase {
 
     private final SwerveModule frontLeft, frontRight, backLeft, backRight;
     private final SwerveModule[] swerveModules;
+
+    Swerve(
+            final Gyro gyro,
+            final SwerveModule frontLeft,
+            final SwerveModule frontRight,
+            final SwerveModule backLeft,
+            final SwerveModule backRight,
+            final SwerveDriveKinematics kinematics,
+            final SwerveDrivePoseEstimator poseEstimator
+    ) {
+        this.frontLeft = frontLeft;
+        this.frontRight = frontRight;
+        this.backLeft = backLeft;
+        this.backRight = backRight;
+
+        this.swerveModules = new SwerveModule[] {frontLeft, frontRight, backLeft, backRight};
+        this.kinematics = kinematics;
+
+        this.gyroInputs = new GyroIOInputsAutoLogged();
+        this.gyro = gyro;
+
+        this.poseEstimator = poseEstimator;
+    }
 
     public Swerve(
             final Constants.RobotMode mode,
@@ -164,9 +184,6 @@ public class Swerve extends SubsystemBase {
                 estimatedPosition,
                 GyroUtils.rpyToRotation3d(getRoll(), getPitch(), getYaw())
         ));
-
-        Logger.recordOutput("PoseX", estimatedPosition.getX());
-        Logger.recordOutput("PoseY", estimatedPosition.getY());
     }
 
     public SwerveDriveKinematics getKinematics() {
@@ -312,37 +329,12 @@ public class Swerve extends SubsystemBase {
             final DoubleSupplier ySpeedSupplier,
             final DoubleSupplier rotSupplier
     ) {
-        return run(() -> {
-            final Profiler.DriverProfile driverProfile = Profiler.getDriverProfile();
-            final Profiler.SwerveSpeed swerveSpeed = Profiler.getSwerveSpeed();
-
-            final double throttleWeight = swerveSpeed.getThrottleWeight();
-            final double rotWeight = swerveSpeed.getRotateWeight();
-
-            final Translation2d leftStickSpeeds = ControllerUtils.getStickXYSquaredInput(
-                    xSpeedSupplier.getAsDouble(),
-                    ySpeedSupplier.getAsDouble(),
-                    0.01,
-                    Constants.Swerve.TELEOP_MAX_SPEED_MPS,
-                    driverProfile.getThrottleSensitivity(),
-                    throttleWeight
-            );
-
-            final double rot = ControllerUtils.getStickSquaredInput(
-                    rotSupplier.getAsDouble(),
-                    0.01,
-                    Constants.Swerve.TELEOP_MAX_ANGULAR_SPEED_RAD_PER_SEC,
-                    driverProfile.getRotationalSensitivity(),
-                    rotWeight
-            );
-
-            drive(
-                    leftStickSpeeds.getX(),
-                    leftStickSpeeds.getY(),
-                    rot,
-                    true
-            );
-        });
+        return run(() -> drive(
+                xSpeedSupplier.getAsDouble(),
+                ySpeedSupplier.getAsDouble(),
+                rotSupplier.getAsDouble(),
+                true
+        ));
     }
 
     public void stop() {
@@ -389,12 +381,18 @@ public class Swerve extends SubsystemBase {
         return runOnce(() -> rawSet(0, 0, 0, 0, 0, 0, 0, 0));
     }
 
+
+
     /**
      * Put modules into an X pattern (significantly reduces the swerve's ability to coast/roll)
      * @see Swerve#rawSet(double, double, double, double, double, double, double, double)
      */
+    public void wheelX() {
+        rawSet(0, 0, 0, 0, 45, -45, -45, 45);
+    }
+
     public Command wheelXCommand() {
-        return runOnce(() -> rawSet(0, 0, 0, 0, 45, -45, -45, 45));
+        return runOnce(this::wheelX);
     }
 
     /**
