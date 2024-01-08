@@ -1,9 +1,13 @@
 package frc.robot.subsystems.drive;
 
+import com.ctre.phoenix6.*;
+import com.ctre.phoenix6.hardware.ParentDevice;
 import com.ctre.phoenix6.hardware.Pigeon2;
 import com.ctre.phoenix6.signals.NeutralModeValue;
 import edu.wpi.first.math.MathUtil;
 import edu.wpi.first.math.estimator.SwerveDrivePoseEstimator;
+import edu.wpi.first.math.filter.LinearFilter;
+import edu.wpi.first.math.filter.MedianFilter;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.geometry.Twist2d;
@@ -11,6 +15,8 @@ import edu.wpi.first.math.kinematics.ChassisSpeeds;
 import edu.wpi.first.math.kinematics.SwerveDriveKinematics;
 import edu.wpi.first.math.kinematics.SwerveModulePosition;
 import edu.wpi.first.math.kinematics.SwerveModuleState;
+import edu.wpi.first.wpilibj.DriverStation;
+import edu.wpi.first.wpilibj.Threads;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import frc.robot.constants.Constants;
@@ -21,6 +27,11 @@ import frc.robot.utils.gyro.GyroUtils;
 import frc.robot.utils.logging.LogUtils;
 import org.littletonrobotics.junction.Logger;
 
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Queue;
+import java.util.concurrent.ArrayBlockingQueue;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.function.DoubleSupplier;
 
 public class Swerve extends SubsystemBase {
@@ -35,6 +46,194 @@ public class Swerve extends SubsystemBase {
     private final SwerveModule frontLeft, frontRight, backLeft, backRight;
     private final SwerveModule[] swerveModules;
 
+    private final OdometryThreadRunner odometryThreadRunner;
+    private final ReentrantReadWriteLock signalQueueReadWriteLock = new ReentrantReadWriteLock();
+
+    public static class OdometryThreadRunner {
+        // Increase the priority to dedicate more resources towards running the thread at the right frequency, 1 is the
+        // minimum realtime priority and should work well enough
+        protected static final int STARTING_THREAD_PRIORITY = 1;
+        // 250Hz should work well when on a CAN-FD network, if only on CAN 2.0 or other, this should probably be
+        // set to <= 100Hz
+        protected static final double UPDATE_FREQUENCY_HZ = 250;
+
+        protected final ReentrantReadWriteLock signalQueueReadWriteLock;
+        protected final ReentrantReadWriteLock signalReadWriteLock = new ReentrantReadWriteLock();
+
+        protected final List<StatusSignal<Double>> allSignals = new ArrayList<>();
+        protected final List<Boolean> isLatencyCompensated = new ArrayList<>();
+        protected final List<Queue<Double>> queues = new ArrayList<>();
+
+        protected final Thread thread;
+        protected volatile boolean running = false;
+
+        protected final MedianFilter peakRemover = new MedianFilter(3);
+        protected final LinearFilter lowPass = LinearFilter.movingAverage(50);
+        protected double lastTimeSeconds = 0;
+        protected double currentTimeSeconds = 0;
+        protected double averageLoopTimeSeconds = 0;
+
+        protected int successfulDAQs = 0;
+        protected int failedDAQs = 0;
+
+        protected int lastThreadPriority = STARTING_THREAD_PRIORITY;
+        protected volatile int threadPriorityToSet = lastThreadPriority;
+
+        public OdometryThreadRunner(final ReentrantReadWriteLock signalQueueReadWriteLock) {
+            this.thread = new Thread(this::run);
+            this.thread.setDaemon(true);
+
+            this.signalQueueReadWriteLock = signalQueueReadWriteLock;
+        }
+
+        /**
+         * Starts the odometry thread.
+         */
+        public void start() {
+            running = true;
+            thread.start();
+        }
+
+        /**
+         * Stops the odometry thread.
+         */
+        public void stop() {
+            stop(0);
+        }
+
+        /**
+         * Stops the odometry thread with a timeout.
+         * @param timeoutMillis The time to wait in milliseconds
+         */
+        public void stop(final long timeoutMillis) {
+            running = false;
+            try {
+                thread.join(timeoutMillis);
+            } catch (final InterruptedException interruptedException) {
+                Thread.currentThread().interrupt();
+            }
+        }
+
+        public record Signal<T>(
+                boolean isLatencyCompensated,
+                StatusSignal<T> baseSignal,
+                StatusSignal<T> latencyCompensatorSignal
+        ) {
+            public static <T> Signal<T> single(final StatusSignal<T> baseSignal) {
+                return new Signal<>(false, baseSignal, null);
+            }
+
+            public static <T> Signal<T> latencyCompensated(
+                    final StatusSignal<T> baseSignal,
+                    final StatusSignal<T> latencyCompensatorSignal
+            ) {
+                return new Signal<>(true, baseSignal, latencyCompensatorSignal);
+            }
+        }
+
+        public Queue<Double> registerSignal(
+                final ParentDevice device,
+                final StatusSignal<Double> baseSignal,
+                final StatusSignal<Double> latencyCompensatorSignal
+        ) {
+            return registerSignal(device, Signal.latencyCompensated(baseSignal, latencyCompensatorSignal));
+        }
+
+        public Queue<Double> registerSignal(
+                final ParentDevice device,
+                final Signal<Double> signal
+        ) {
+            final Queue<Double> queue = new ArrayBlockingQueue<>(100);
+            try {
+                signalReadWriteLock.writeLock().lock();
+                if (!CANBus.isNetworkFD(device.getNetwork())) {
+                    throw new RuntimeException("Attempted to register signal from a non CAN-FD device! This is a bug!");
+                }
+
+                allSignals.add(signal.baseSignal);
+                isLatencyCompensated.add(signal.isLatencyCompensated);
+                if (signal.isLatencyCompensated) {
+                    allSignals.add(signal.latencyCompensatorSignal);
+                    isLatencyCompensated.add(true);
+                }
+
+                queues.add(queue);
+            } finally {
+                signalReadWriteLock.writeLock().unlock();
+            }
+
+            return queue;
+        }
+
+        private void run() {
+            if (allSignals.isEmpty()) {
+                stop();
+                DriverStation.reportError(
+                        "Attempted to start OdometryThread without any registered signals!",
+                        false
+                );
+
+                return;
+            }
+
+            final BaseStatusSignal[] allSignalsArray = allSignals.toArray(BaseStatusSignal[]::new);
+            BaseStatusSignal.setUpdateFrequencyForAll(UPDATE_FREQUENCY_HZ, allSignalsArray);
+            Threads.setCurrentThreadPriority(true, STARTING_THREAD_PRIORITY);
+
+            while (running) {
+                try {
+                    signalReadWriteLock.writeLock().lock();
+                    final StatusCode statusCode = BaseStatusSignal.waitForAll(
+                            2.0 / UPDATE_FREQUENCY_HZ, allSignalsArray
+                    );
+
+                    if (statusCode.isOK()) {
+                        successfulDAQs++;
+                    } else {
+                        failedDAQs++;
+                    }
+                } finally {
+                    signalReadWriteLock.writeLock().unlock();
+                }
+
+                try {
+                    signalQueueReadWriteLock.writeLock().lock();
+                    lastTimeSeconds = currentTimeSeconds;
+                    currentTimeSeconds = Utils.getCurrentTimeSeconds();
+                    // We don't care about the peaks, as they correspond to GC events,
+                    // and we want the period generally low passed
+
+                    averageLoopTimeSeconds = lowPass.calculate(
+                            peakRemover.calculate(currentTimeSeconds - lastTimeSeconds)
+                    );
+
+                    for (int i = 0; i < allSignals.size(); i++) {
+                        final Queue<Double> queue = queues.get(i);
+                        final boolean isLatencyCompensatedSignal = isLatencyCompensated.get(i);
+
+                        if (isLatencyCompensatedSignal) {
+                            queue.offer(BaseStatusSignal.getLatencyCompensatedValue(
+                                    allSignals.get(i),
+                                    allSignals.get(i + 1)
+                            ));
+                            // skip next signal, as the next signal is the latency compensator for the current signal
+                            i++;
+                        } else {
+                            queue.offer(allSignals.get(i).getValue());
+                        }
+                    }
+                } finally {
+                    signalQueueReadWriteLock.writeLock().unlock();
+                }
+
+                if (threadPriorityToSet != lastThreadPriority) {
+                    Threads.setCurrentThreadPriority(true, threadPriorityToSet);
+                    lastThreadPriority = threadPriorityToSet;
+                }
+            }
+        }
+    }
+
     Swerve(
             final Gyro gyro,
             final SwerveModule frontLeft,
@@ -42,7 +241,8 @@ public class Swerve extends SubsystemBase {
             final SwerveModule backLeft,
             final SwerveModule backRight,
             final SwerveDriveKinematics kinematics,
-            final SwerveDrivePoseEstimator poseEstimator
+            final SwerveDrivePoseEstimator poseEstimator,
+            final OdometryThreadRunner odometryThreadRunner
     ) {
         this.frontLeft = frontLeft;
         this.frontRight = frontRight;
@@ -56,6 +256,8 @@ public class Swerve extends SubsystemBase {
         this.gyro = gyro;
 
         this.poseEstimator = poseEstimator;
+        this.odometryThreadRunner = odometryThreadRunner;
+        this.odometryThreadRunner.start();
     }
 
     public Swerve(
@@ -96,6 +298,9 @@ public class Swerve extends SubsystemBase {
 //                Constants.Vision.STATE_STD_DEVS,
 //                Constants.Vision.VISION_MEASUREMENT_STD_DEVS
         );
+
+        this.odometryThreadRunner = new OdometryThreadRunner(signalQueueReadWriteLock);
+        this.odometryThreadRunner.start();
     }
 
     /**
@@ -380,8 +585,6 @@ public class Swerve extends SubsystemBase {
     public Command zeroCommand() {
         return runOnce(() -> rawSet(0, 0, 0, 0, 0, 0, 0, 0));
     }
-
-
 
     /**
      * Put modules into an X pattern (significantly reduces the swerve's ability to coast/roll)

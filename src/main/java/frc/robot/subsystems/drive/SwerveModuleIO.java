@@ -75,6 +75,13 @@ public interface SwerveModuleIO {
     default void setInputs(final double desiredDriverVelocity, final double desiredTurnerRotations) {}
 
     /**
+     * Characterize the driving motor by applying a voltage, while holding/keeping the turning motor at a constant angle
+     * @param driveVolts volts to apply to the drive motor
+     * @param desiredTurnerRotations rotations to hold the turn motor at
+     */
+    default void setDriveCharacterizationVolts(final double driveVolts, final double desiredTurnerRotations) {}
+
+    /**
      * Set the desired {@link NeutralModeValue} of the drive motor on this module
      * @param neutralMode the desired {@link NeutralModeValue}
      * @see NeutralModeValue

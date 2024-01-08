@@ -25,8 +25,11 @@ public interface Constants {
             double WHEEL_MASS_KG = 0.2313321; //0.51 lbs
             double DRIVE_WHEEL_MOMENT_OF_INERTIA_KG_M_SQUARED = WHEEL_MASS_KG * WHEEL_RADIUS_M * WHEEL_RADIUS_M;
             double TURN_WHEEL_MOMENT_OF_INERTIA_KG_M_SQUARED = 0.004;
-            double DRIVER_GEAR_RATIO = 6.12;
+            double DRIVER_GEAR_RATIO = 6.122;
             double TURNER_GEAR_RATIO = 150.0 / 7.0;
+
+            double SLIP_CURRENT_A = 300;
+            double COUPLING_GEAR_RATIO = 50d / 14;
 
             double WHEEL_CIRCUMFERENCE_M = 2 * Math.PI * WHEEL_RADIUS_M;
             // SDS MK4i L3 with Kraken X60 FOC

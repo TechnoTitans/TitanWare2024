@@ -6,8 +6,9 @@ import com.ctre.phoenix6.StatusSignal;
 import com.ctre.phoenix6.configs.CANcoderConfiguration;
 import com.ctre.phoenix6.configs.Slot0Configs;
 import com.ctre.phoenix6.configs.TalonFXConfiguration;
-import com.ctre.phoenix6.controls.PositionVoltage;
+import com.ctre.phoenix6.controls.MotionMagicExpoTorqueCurrentFOC;
 import com.ctre.phoenix6.controls.VelocityTorqueCurrentFOC;
+import com.ctre.phoenix6.controls.VoltageOut;
 import com.ctre.phoenix6.hardware.CANcoder;
 import com.ctre.phoenix6.hardware.TalonFX;
 import com.ctre.phoenix6.signals.AbsoluteSensorRangeValue;
@@ -17,6 +18,9 @@ import com.ctre.phoenix6.signals.NeutralModeValue;
 import edu.wpi.first.wpilibj.DriverStation;
 import frc.robot.constants.Constants;
 import frc.robot.utils.ctre.Phoenix6Utils;
+
+import java.util.List;
+import java.util.Queue;
 
 public class SwerveModuleIOTalonFX implements SwerveModuleIO {
     private final TalonFX driveMotor;
@@ -28,7 +32,9 @@ public class SwerveModuleIOTalonFX implements SwerveModuleIO {
     private final TalonFXConfiguration turnTalonFXConfiguration = new TalonFXConfiguration();
 
     private final VelocityTorqueCurrentFOC velocityTorqueCurrentFOC;
-    private final PositionVoltage positionVoltage;
+    private final MotionMagicExpoTorqueCurrentFOC motionMagicExpoTorqueCurrentFOC;
+    private final VoltageOut voltageOut;
+
 
     // Cached StatusSignals
     private final StatusSignal<Double> _drivePosition;
@@ -42,11 +48,16 @@ public class SwerveModuleIOTalonFX implements SwerveModuleIO {
     private final StatusSignal<Double> _turnStatorCurrent;
     private final StatusSignal<Double> _turnDeviceTemp;
 
+    // Odometry update queues
+    private final Queue<Double> drivePositionQueue;
+    private final Queue<Double> turnPositionQueue;
+
     public SwerveModuleIOTalonFX(
             final TalonFX driveMotor,
             final TalonFX turnMotor,
             final CANcoder turnEncoder,
-            final double magnetOffset
+            final double magnetOffset,
+            final Swerve.OdometryThreadRunner odometryThreadRunner
     ) {
         this.driveMotor = driveMotor;
         this.turnMotor = turnMotor;
@@ -55,7 +66,8 @@ public class SwerveModuleIOTalonFX implements SwerveModuleIO {
         this.magnetOffset = magnetOffset;
 
         this.velocityTorqueCurrentFOC = new VelocityTorqueCurrentFOC(0);
-        this.positionVoltage = new PositionVoltage(0);
+        this.motionMagicExpoTorqueCurrentFOC = new MotionMagicExpoTorqueCurrentFOC(0);
+        this.voltageOut = new VoltageOut(0);
 
         this._drivePosition = driveMotor.getPosition();
         this._driveVelocity = driveMotor.getVelocity();
@@ -67,6 +79,9 @@ public class SwerveModuleIOTalonFX implements SwerveModuleIO {
         this._turnTorqueCurrent = turnMotor.getTorqueCurrent();
         this._turnStatorCurrent = turnMotor.getStatorCurrent();
         this._turnDeviceTemp = turnMotor.getDeviceTemp();
+
+        this.drivePositionQueue = odometryThreadRunner.registerSignal(driveMotor, _drivePosition, _driveVelocity);
+        this.turnPositionQueue = odometryThreadRunner.registerSignal(turnMotor, _turnPosition, _turnVelocity);
     }
 
     @SuppressWarnings("DuplicatedCode")
@@ -80,8 +95,8 @@ public class SwerveModuleIOTalonFX implements SwerveModuleIO {
         driveTalonFXConfiguration.Slot0 = new Slot0Configs()
                 .withKP(50)
                 .withKS(5.875);
-        driveTalonFXConfiguration.TorqueCurrent.PeakForwardTorqueCurrent = 50;
-        driveTalonFXConfiguration.TorqueCurrent.PeakReverseTorqueCurrent = -50;
+        driveTalonFXConfiguration.TorqueCurrent.PeakForwardTorqueCurrent = Constants.Swerve.Modules.SLIP_CURRENT_A;
+        driveTalonFXConfiguration.TorqueCurrent.PeakReverseTorqueCurrent = -Constants.Swerve.Modules.SLIP_CURRENT_A;
         driveTalonFXConfiguration.ClosedLoopRamps.TorqueClosedLoopRampPeriod = 0.15;
         driveTalonFXConfiguration.Feedback.SensorToMechanismRatio = Constants.Swerve.Modules.DRIVER_GEAR_RATIO;
         driveTalonFXConfiguration.MotorOutput.NeutralMode = NeutralModeValue.Coast;
@@ -91,19 +106,29 @@ public class SwerveModuleIOTalonFX implements SwerveModuleIO {
         turnTalonFXConfiguration.Slot0 = new Slot0Configs()
                 .withKP(30)
                 .withKS(0.5);
-        turnTalonFXConfiguration.Voltage.PeakForwardVoltage = 6;
-        turnTalonFXConfiguration.Voltage.PeakReverseVoltage = -6;
+        turnTalonFXConfiguration.TorqueCurrent.PeakForwardTorqueCurrent = 40;
+        turnTalonFXConfiguration.TorqueCurrent.PeakReverseTorqueCurrent = -40;
         turnTalonFXConfiguration.Feedback.FeedbackRemoteSensorID = turnEncoder.getDeviceID();
         turnTalonFXConfiguration.Feedback.FeedbackSensorSource = FeedbackSensorSourceValue.FusedCANcoder;
         turnTalonFXConfiguration.Feedback.RotorToSensorRatio = Constants.Swerve.Modules.TURNER_GEAR_RATIO;
-        turnTalonFXConfiguration.ClosedLoopGeneral.ContinuousWrap = true;
         turnTalonFXConfiguration.MotorOutput.NeutralMode = NeutralModeValue.Coast;
         turnTalonFXConfiguration.MotorOutput.Inverted = InvertedValue.Clockwise_Positive;
+
+        turnTalonFXConfiguration.MotionMagic.MotionMagicCruiseVelocity =
+                100.0 / Constants.Swerve.Modules.TURNER_GEAR_RATIO;
+        turnTalonFXConfiguration.MotionMagic.MotionMagicExpo_kV = 0.12 * Constants.Swerve.Modules.TURNER_GEAR_RATIO;
+        turnTalonFXConfiguration.MotionMagic.MotionMagicExpo_kA = 0.1;
+        turnTalonFXConfiguration.ClosedLoopGeneral.ContinuousWrap = true;
+
         turnMotor.getConfigurator().apply(turnTalonFXConfiguration);
+
+        velocityTorqueCurrentFOC.UpdateFreqHz = 0;
+        motionMagicExpoTorqueCurrentFOC.UpdateFreqHz = 0;
     }
 
+    @SuppressWarnings("DuplicatedCode")
     @Override
-    public void periodic() {
+    public void updateInputs(final SwerveModuleIOInputs inputs) {
         BaseStatusSignal.refreshAll(
                 _drivePosition,
                 _driveVelocity,
@@ -116,11 +141,7 @@ public class SwerveModuleIOTalonFX implements SwerveModuleIO {
                 _turnStatorCurrent,
                 _turnDeviceTemp
         );
-    }
 
-    @SuppressWarnings("DuplicatedCode")
-    @Override
-    public void updateInputs(final SwerveModuleIOInputs inputs) {
         inputs.drivePositionRots = getDrivePosition();
         inputs.driveVelocityRotsPerSec = _driveVelocity.getValue();
         inputs.driveTorqueCurrentAmps = _driveTorqueCurrent.getValue();
@@ -135,21 +156,44 @@ public class SwerveModuleIOTalonFX implements SwerveModuleIO {
     }
 
     /**
-     * Get the measured mechanism (wheel) angle of the {@link SwerveModuleIOTalonFXSim}, in raw units (rotations)
+     * Get the measured wheel angle (mechanism) angle of the {@link SwerveModuleIO}, in raw units (rotations)
      * @return the measured wheel (turner) angle, in rotations
      */
     private double getRawAngle() {
         return Phoenix6Utils.latencyCompensateIfSignalIsGood(_turnPosition, _turnVelocity);
     }
 
+    /**
+     * Get the measured drive wheel (mechanism) position of the {@link SwerveModuleIO}, in raw units (rotations)
+     * @return the measured drive wheel position, in rotations
+     */
     public double getDrivePosition() {
-        return Phoenix6Utils.latencyCompensateIfSignalIsGood(_drivePosition, _driveVelocity);
+        final double driveWheelPosition = Phoenix6Utils.latencyCompensateIfSignalIsGood(_drivePosition, _driveVelocity);
+        final double turnPosition = Phoenix6Utils.latencyCompensateIfSignalIsGood(_turnPosition, _turnVelocity);
+        final double driveBackOutWheelRotations = (
+                (turnPosition * Constants.Swerve.Modules.COUPLING_GEAR_RATIO)
+                        / Constants.Swerve.Modules.DRIVER_GEAR_RATIO
+        );
+
+        return driveWheelPosition - driveBackOutWheelRotations;
     }
 
     @Override
     public void setInputs(final double desiredDriverVelocity, final double desiredTurnerRotations) {
-        driveMotor.setControl(velocityTorqueCurrentFOC.withVelocity(desiredDriverVelocity));
-        turnMotor.setControl(positionVoltage.withPosition(desiredTurnerRotations));
+        final double driveVelocityBackOut = (
+                (_turnVelocity.getValue() * Constants.Swerve.Modules.COUPLING_GEAR_RATIO)
+                        / Constants.Swerve.Modules.DRIVER_GEAR_RATIO
+        );
+        final double backedOutDriveVelocity = desiredDriverVelocity - driveVelocityBackOut;
+
+        driveMotor.setControl(velocityTorqueCurrentFOC.withVelocity(backedOutDriveVelocity));
+        turnMotor.setControl(motionMagicExpoTorqueCurrentFOC.withPosition(desiredTurnerRotations));
+    }
+
+    @Override
+    public void setDriveCharacterizationVolts(double driveVolts, double desiredTurnerRotations) {
+        driveMotor.setControl(voltageOut.withOutput(driveVolts));
+        turnMotor.setControl(motionMagicExpoTorqueCurrentFOC.withPosition(desiredTurnerRotations));
     }
 
     @Override
