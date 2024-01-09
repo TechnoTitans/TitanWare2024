@@ -15,6 +15,7 @@ import edu.wpi.first.math.kinematics.ChassisSpeeds;
 import edu.wpi.first.math.kinematics.SwerveDriveKinematics;
 import edu.wpi.first.math.kinematics.SwerveModulePosition;
 import edu.wpi.first.math.kinematics.SwerveModuleState;
+import edu.wpi.first.util.struct.Struct;
 import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.Threads;
 import edu.wpi.first.wpilibj2.command.Command;
@@ -27,6 +28,7 @@ import frc.robot.utils.gyro.GyroUtils;
 import frc.robot.utils.logging.LogUtils;
 import org.littletonrobotics.junction.Logger;
 
+import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Queue;
@@ -66,6 +68,7 @@ public class Swerve extends SubsystemBase {
         protected final List<Queue<Double>> queues = new ArrayList<>();
 
         protected final Thread thread;
+        protected final State state = new State();
         protected volatile boolean running = false;
 
         protected final MedianFilter peakRemover = new MedianFilter(3);
@@ -131,6 +134,78 @@ public class Swerve extends SubsystemBase {
          */
         public void setThreadPriority(int priority) {
             threadPriorityToSet = priority;
+        }
+
+        public static class State {
+            @SuppressWarnings("unused") // this is found through reflection and used when logging
+            public static final StateStruct struct = new StateStruct();
+            public int successfulDAQs;
+            public int failedDAQs;
+            public int statusCode;
+            public double odometryPeriodSeconds;
+
+            public static class StateStruct implements Struct<State> {
+                @Override
+                public Class<State> getTypeClass() {
+                    return State.class;
+                }
+
+                @Override
+                public String getTypeString() {
+                    return "struct:SwerveOdometryThreadRunnerState";
+                }
+
+                @Override
+                public int getSize() {
+                    return (kSizeInt32 * 3) + kSizeDouble;
+                }
+
+                @Override
+                public String getSchema() {
+                    return "int32 successfulDAQs;int32 failedDAQs;int32 lastFailedStatusCode;double odometryPeriodSeconds";
+                }
+
+                @Override
+                public State unpack(final ByteBuffer bb) {
+                    final int successfulDAQs = bb.getInt();
+                    final int failedDAQs = bb.getInt();
+                    final double odometryPeriod = bb.getDouble();
+
+                    final State state = new State();
+                    state.successfulDAQs = successfulDAQs;
+                    state.failedDAQs = failedDAQs;
+                    state.odometryPeriodSeconds = odometryPeriod;
+                    return state;
+                }
+
+                @Override
+                public void pack(final ByteBuffer bb, final State value) {
+                    bb.putInt(value.successfulDAQs);
+                    bb.putInt(value.failedDAQs);
+                    bb.putDouble(value.odometryPeriodSeconds);
+                }
+
+                @Override
+                public void unpackInto(final State out, final ByteBuffer bb) {
+                    out.successfulDAQs = bb.getInt();
+                    out.failedDAQs = bb.getInt();
+                    out.odometryPeriodSeconds = bb.getDouble();
+                }
+            }
+        }
+
+        /**
+         * Gets the current state of the {@link OdometryThreadRunner}, describing successful & failed DAQs,
+         * actual (measured) odometry period, etc...
+         * @return the internal {@link State}
+         */
+        public State getState() {
+            try {
+                signalQueueReadWriteLock.readLock().lock();
+                return state;
+            } finally {
+                signalQueueReadWriteLock.readLock().unlock();
+            }
         }
 
         public record Signal<T>(
@@ -200,6 +275,7 @@ public class Swerve extends SubsystemBase {
             Threads.setCurrentThreadPriority(true, STARTING_THREAD_PRIORITY);
 
             while (running) {
+                int statusCodeValue = StatusCode.OK.value;
                 try {
                     signalReadWriteLock.writeLock().lock();
                     final StatusCode statusCode = BaseStatusSignal.waitForAll(
@@ -209,6 +285,7 @@ public class Swerve extends SubsystemBase {
                     if (statusCode.isOK()) {
                         successfulDAQs++;
                     } else {
+                        statusCodeValue = statusCode.value;
                         failedDAQs++;
                     }
                 } finally {
@@ -225,6 +302,11 @@ public class Swerve extends SubsystemBase {
                     averageLoopTimeSeconds = lowPass.calculate(
                             peakRemover.calculate(currentTimeSeconds - lastTimeSeconds)
                     );
+
+                    state.successfulDAQs = successfulDAQs;
+                    state.failedDAQs = failedDAQs;
+                    state.statusCode = statusCodeValue;
+                    state.odometryPeriodSeconds = averageLoopTimeSeconds;
 
                     for (int i = 0; i < allSignals.size(); i++) {
                         final Queue<Double> queue = queues.get(i);
@@ -245,6 +327,8 @@ public class Swerve extends SubsystemBase {
                     signalQueueReadWriteLock.writeLock().unlock();
                 }
 
+                // This is inherently synchronous, since lastThreadPriority is only written
+                // here and threadPriorityToSet is only read here
                 if (threadPriorityToSet != lastThreadPriority) {
                     Threads.setCurrentThreadPriority(true, threadPriorityToSet);
                     lastThreadPriority = threadPriorityToSet;
@@ -270,7 +354,7 @@ public class Swerve extends SubsystemBase {
         this.backLeft = backLeft;
         this.backRight = backRight;
 
-        this.swerveModules = new SwerveModule[] {frontLeft, frontRight, backLeft, backRight};
+        this.swerveModules = new SwerveModule[]{frontLeft, frontRight, backLeft, backRight};
         this.kinematics = kinematics;
 
         this.gyroInputs = new GyroIOInputsAutoLogged();
@@ -294,7 +378,7 @@ public class Swerve extends SubsystemBase {
         this.backLeft = backLeftConstants.create(mode, odometryThreadRunner);
         this.backRight = backRightConstants.create(mode, odometryThreadRunner);
 
-        this.swerveModules = new SwerveModule[] {frontLeft, frontRight, backLeft, backRight};
+        this.swerveModules = new SwerveModule[]{frontLeft, frontRight, backLeft, backRight};
         this.kinematics = new SwerveDriveKinematics(
                 frontLeftConstants.translationOffset(),
                 frontRightConstants.translationOffset(),
@@ -307,7 +391,8 @@ public class Swerve extends SubsystemBase {
         this.gyro = switch (mode) {
             case REAL -> new Gyro(new GyroIOPigeon2(pigeon2, odometryThreadRunner), pigeon2);
             case SIM -> new Gyro(new GyroIOSim(pigeon2, kinematics, swerveModules), pigeon2);
-            case REPLAY -> new Gyro(new GyroIO() {}, pigeon2);
+            case REPLAY -> new Gyro(new GyroIO() {
+            }, pigeon2);
         };
 
         //TODO add vision
@@ -335,6 +420,7 @@ public class Swerve extends SubsystemBase {
      * <p>
      * Note: Do <b>NOT</b> use this for anything other than displaying SwerveModuleStates
      * </p>
+     *
      * @param swerveModuleStates raw SwerveModuleStates retrieved directly from the modules
      * @return modified SwerveModuleStates
      */
@@ -366,6 +452,13 @@ public class Swerve extends SubsystemBase {
                 logKey + "/PeriodicIOPeriodMs",
                 LogUtils.microsecondsToMilliseconds(Logger.getRealTimestamp() - swervePeriodicUpdateStart)
         );
+
+        final OdometryThreadRunner.State fakeState = new OdometryThreadRunner.State();
+        fakeState.successfulDAQs = 78;
+        fakeState.failedDAQs = 22;
+        fakeState.statusCode = -13001;
+        fakeState.odometryPeriodSeconds = 0.254;
+        Logger.recordOutput(logKey + "/OdometryThreadState", fakeState);
 
         //log current swerve chassis speeds
         final ChassisSpeeds robotRelativeSpeeds = getRobotRelativeSpeeds();
