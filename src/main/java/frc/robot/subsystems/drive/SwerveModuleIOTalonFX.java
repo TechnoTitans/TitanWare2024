@@ -175,11 +175,15 @@ public class SwerveModuleIOTalonFX implements SwerveModuleIO {
         inputs.turnTempCelsius = _turnDeviceTemp.getValue();
 
         try {
-            signalQueueReadWriteLock.readLock().lock();
+            signalQueueReadWriteLock.writeLock().lock();
+
             inputs.odometryDrivePositionsRots = drivePositionSignalQueue.stream().mapToDouble(pos -> pos).toArray();
+            drivePositionSignalQueue.clear();
+
             inputs.odometryTurnPositionRots = turnPositionSignalQueue.stream().mapToDouble(pos -> pos).toArray();
+            turnPositionSignalQueue.clear();
         } finally {
-            signalQueueReadWriteLock.readLock().unlock();
+            signalQueueReadWriteLock.writeLock().unlock();
         }
     }
 

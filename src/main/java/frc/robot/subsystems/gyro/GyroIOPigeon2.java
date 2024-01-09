@@ -43,8 +43,9 @@ public class GyroIOPigeon2 implements GyroIO {
         this.yawSignalQueue = odometryThreadRunner.registerSignal(pigeon, _yaw, _yawVelocity);
     }
 
+    @SuppressWarnings("DuplicatedCode")
     @Override
-    public void periodic() {
+    public void updateInputs(final GyroIOInputs inputs) {
         BaseStatusSignal.refreshAll(
                 _yaw,
                 _pitch,
@@ -54,10 +55,7 @@ public class GyroIOPigeon2 implements GyroIO {
                 _rollVelocity,
                 _faultHardware
         );
-    }
 
-    @Override
-    public void updateInputs(final GyroIOInputs inputs) {
         inputs.yawPositionDeg = getYaw();
         inputs.pitchPositionDeg = getPitch();
         inputs.rollPositionDeg = getRoll();
@@ -67,13 +65,18 @@ public class GyroIOPigeon2 implements GyroIO {
         inputs.hasHardwareFault = _faultHardware.getValue();
 
         try {
-            signalQueueReadWriteLock.readLock().lock();
+            signalQueueReadWriteLock.writeLock().lock();
+
             inputs.odometryYawPositionsDeg = yawSignalQueue.stream().mapToDouble(yaw -> yaw).toArray();
+            yawSignalQueue.clear();
         } finally {
-            signalQueueReadWriteLock.readLock().unlock();
+            signalQueueReadWriteLock.writeLock().unlock();
         }
     }
 
+    // TODO: duplicated code warnings here aren't exactly amazing, but I can't really think of a way to extract
+    //  them correctly while still keeping with how AdvKit works
+    @SuppressWarnings("DuplicatedCode")
     @Override
     public void config() {
         //TODO fill in correct mount pose
