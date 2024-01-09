@@ -6,7 +6,8 @@ import edu.wpi.first.math.geometry.Translation2d;
 import frc.robot.subsystems.drive.Swerve;
 import frc.robot.subsystems.drive.SwerveModule;
 
-import static frc.robot.constants.Constants.Swerve.*;
+import static frc.robot.constants.Constants.Swerve.TRACK_WIDTH_M;
+import static frc.robot.constants.Constants.Swerve.WHEEL_BASE_M;
 
 public class HardwareConstants {
     public record SwerveModuleConstants(
@@ -91,49 +92,5 @@ public class HardwareConstants {
             11,
             12,
             0.283203125
-    );
-
-    public record ElevatorConstants(
-            String verticalElevatorCANBus,
-            int verticalMainMotorId,
-            int verticalFollowerMotorId,
-            int verticalEncoderId,
-            int verticalLimitSwitchDIOChannel,
-            String horizontalElevatorCANBus,
-            int horizontalMotorId,
-            int horizontalEncoderId,
-            int horizontalLimitSwitchDIOChannel
-    ) {}
-
-    public static final ElevatorConstants ELEVATOR = new ElevatorConstants(
-            RobotMap.CanivoreCANBus,
-            14,
-            15,
-            16,
-            6,
-            RobotMap.RioCANBus,
-            17,
-            18,
-            8
-    );
-
-    public record ClawConstants(
-            String clawCANBus,
-            int clawMainWheelMotorId,
-            int clawFollowerWheelMotorId,
-            int clawOpenCloseMotorId,
-            int clawOpenCloseEncoderId,
-            int clawTiltMotorId,
-            int clawTiltEncoderId
-    ) {}
-
-    public static final ClawConstants CLAW = new ClawConstants(
-            RobotMap.RioCANBus,
-            19,
-            20,
-            21,
-            22,
-            23,
-            24
     );
 }
