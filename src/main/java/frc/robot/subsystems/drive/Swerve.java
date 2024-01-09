@@ -47,6 +47,7 @@ public class Swerve extends SubsystemBase {
     private final SwerveModule[] swerveModules;
 
     private final OdometryThreadRunner odometryThreadRunner;
+
     private final ReentrantReadWriteLock signalQueueReadWriteLock = new ReentrantReadWriteLock();
 
     public static class OdometryThreadRunner {
@@ -112,6 +113,24 @@ public class Swerve extends SubsystemBase {
             } catch (final InterruptedException interruptedException) {
                 Thread.currentThread().interrupt();
             }
+        }
+
+        /**
+         * Gets a reference to the signal queue {@link ReentrantReadWriteLock} used to lock
+         * read/write operations on any signal queue
+         * @return the {@link ReentrantReadWriteLock}
+         */
+        public ReentrantReadWriteLock getSignalQueueReadWriteLock() {
+            return signalQueueReadWriteLock;
+        }
+
+        /**
+         * Sets the DAQ thread priority to a real time priority under the specified priority level
+         * @param priority Priority level to set the DAQ thread to. This is a value between 0 and 99,
+         *                 with 99 indicating higher priority and 0 indicating lower priority.
+         */
+        public void setThreadPriority(int priority) {
+            threadPriorityToSet = priority;
         }
 
         public record Signal<T>(
@@ -200,9 +219,9 @@ public class Swerve extends SubsystemBase {
                     signalQueueReadWriteLock.writeLock().lock();
                     lastTimeSeconds = currentTimeSeconds;
                     currentTimeSeconds = Utils.getCurrentTimeSeconds();
+
                     // We don't care about the peaks, as they correspond to GC events,
                     // and we want the period generally low passed
-
                     averageLoopTimeSeconds = lowPass.calculate(
                             peakRemover.calculate(currentTimeSeconds - lastTimeSeconds)
                     );
@@ -244,6 +263,8 @@ public class Swerve extends SubsystemBase {
             final SwerveDrivePoseEstimator poseEstimator,
             final OdometryThreadRunner odometryThreadRunner
     ) {
+        this.odometryThreadRunner = odometryThreadRunner;
+
         this.frontLeft = frontLeft;
         this.frontRight = frontRight;
         this.backLeft = backLeft;
@@ -256,7 +277,6 @@ public class Swerve extends SubsystemBase {
         this.gyro = gyro;
 
         this.poseEstimator = poseEstimator;
-        this.odometryThreadRunner = odometryThreadRunner;
         this.odometryThreadRunner.start();
     }
 
@@ -267,12 +287,12 @@ public class Swerve extends SubsystemBase {
             final HardwareConstants.SwerveModuleConstants backLeftConstants,
             final HardwareConstants.SwerveModuleConstants backRightConstants
     ) {
-        final Pigeon2 pigeon2 = new Pigeon2(RobotMap.Pigeon, RobotMap.CanivoreCANBus);
+        this.odometryThreadRunner = new OdometryThreadRunner(signalQueueReadWriteLock);
 
-        this.frontLeft = frontLeftConstants.create(mode);
-        this.frontRight = frontRightConstants.create(mode);
-        this.backLeft = backLeftConstants.create(mode);
-        this.backRight = backRightConstants.create(mode);
+        this.frontLeft = frontLeftConstants.create(mode, odometryThreadRunner);
+        this.frontRight = frontRightConstants.create(mode, odometryThreadRunner);
+        this.backLeft = backLeftConstants.create(mode, odometryThreadRunner);
+        this.backRight = backRightConstants.create(mode, odometryThreadRunner);
 
         this.swerveModules = new SwerveModule[] {frontLeft, frontRight, backLeft, backRight};
         this.kinematics = new SwerveDriveKinematics(
@@ -282,9 +302,10 @@ public class Swerve extends SubsystemBase {
                 backRightConstants.translationOffset()
         );
 
+        final Pigeon2 pigeon2 = new Pigeon2(RobotMap.Pigeon, RobotMap.CanivoreCANBus);
         this.gyroInputs = new GyroIOInputsAutoLogged();
         this.gyro = switch (mode) {
-            case REAL -> new Gyro(new GyroIOPigeon2(pigeon2), pigeon2);
+            case REAL -> new Gyro(new GyroIOPigeon2(pigeon2, odometryThreadRunner), pigeon2);
             case SIM -> new Gyro(new GyroIOSim(pigeon2, kinematics, swerveModules), pigeon2);
             case REPLAY -> new Gyro(new GyroIO() {}, pigeon2);
         };
@@ -299,7 +320,6 @@ public class Swerve extends SubsystemBase {
 //                Constants.Vision.VISION_MEASUREMENT_STD_DEVS
         );
 
-        this.odometryThreadRunner = new OdometryThreadRunner(signalQueueReadWriteLock);
         this.odometryThreadRunner.start();
     }
 

@@ -47,6 +47,9 @@ public interface SwerveModuleIO {
          * Temperature of the turn motor, in Celsius
          */
         public double turnTempCelsius = 0.0;
+
+        public double[] odometryDrivePositionsRots = new double[0];
+        public double[] odometryTurnPositionRots = new double[0];
     }
 
     /**

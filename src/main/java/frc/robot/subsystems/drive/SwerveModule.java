@@ -6,7 +6,6 @@ import com.ctre.phoenix6.signals.NeutralModeValue;
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.kinematics.SwerveModulePosition;
 import edu.wpi.first.math.kinematics.SwerveModuleState;
-import edu.wpi.first.math.system.plant.DCMotor;
 import frc.robot.constants.Constants;
 import frc.robot.utils.logging.LogUtils;
 import org.littletonrobotics.junction.Logger;
@@ -164,8 +163,6 @@ public class SwerveModule {
         final Rotation2d currentWheelRotation = getAngle();
 
         final SwerveModuleState wantedState = SwerveModuleState.optimize(state, currentWheelRotation);
-        SwerveModule.scaleWithErrorCosine(wantedState, currentWheelRotation);
-
         final double desiredDriverVelocity = computeDesiredDriverVelocity(wantedState, currentWheelRotation);
         final double desiredTurnerRotations = computeDesiredTurnerRotations(wantedState);
 

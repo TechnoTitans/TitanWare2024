@@ -10,17 +10,18 @@ import com.ctre.phoenix6.controls.MotionMagicExpoTorqueCurrentFOC;
 import com.ctre.phoenix6.controls.VelocityTorqueCurrentFOC;
 import com.ctre.phoenix6.controls.VoltageOut;
 import com.ctre.phoenix6.hardware.CANcoder;
+import com.ctre.phoenix6.hardware.ParentDevice;
 import com.ctre.phoenix6.hardware.TalonFX;
 import com.ctre.phoenix6.signals.AbsoluteSensorRangeValue;
 import com.ctre.phoenix6.signals.FeedbackSensorSourceValue;
 import com.ctre.phoenix6.signals.InvertedValue;
 import com.ctre.phoenix6.signals.NeutralModeValue;
 import edu.wpi.first.wpilibj.DriverStation;
-import frc.robot.constants.Constants;
+import frc.robot.constants.Constants.Swerve.Modules;
 import frc.robot.utils.ctre.Phoenix6Utils;
 
-import java.util.List;
 import java.util.Queue;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 public class SwerveModuleIOTalonFX implements SwerveModuleIO {
     private final TalonFX driveMotor;
@@ -48,9 +49,10 @@ public class SwerveModuleIOTalonFX implements SwerveModuleIO {
     private final StatusSignal<Double> _turnStatorCurrent;
     private final StatusSignal<Double> _turnDeviceTemp;
 
-    // Odometry update queues
-    private final Queue<Double> drivePositionQueue;
-    private final Queue<Double> turnPositionQueue;
+    // Odometry StatusSignal update queues and queue read/write lock
+    private final ReentrantReadWriteLock signalQueueReadWriteLock;
+    private final Queue<Double> drivePositionSignalQueue;
+    private final Queue<Double> turnPositionSignalQueue;
 
     public SwerveModuleIOTalonFX(
             final TalonFX driveMotor,
@@ -80,13 +82,15 @@ public class SwerveModuleIOTalonFX implements SwerveModuleIO {
         this._turnStatorCurrent = turnMotor.getStatorCurrent();
         this._turnDeviceTemp = turnMotor.getDeviceTemp();
 
-        this.drivePositionQueue = odometryThreadRunner.registerSignal(driveMotor, _drivePosition, _driveVelocity);
-        this.turnPositionQueue = odometryThreadRunner.registerSignal(turnMotor, _turnPosition, _turnVelocity);
+        this.signalQueueReadWriteLock = odometryThreadRunner.signalQueueReadWriteLock;
+        this.drivePositionSignalQueue = odometryThreadRunner.registerSignal(driveMotor, _drivePosition, _driveVelocity);
+        this.turnPositionSignalQueue = odometryThreadRunner.registerSignal(turnMotor, _turnPosition, _turnVelocity);
     }
 
     @SuppressWarnings("DuplicatedCode")
     @Override
     public void config() {
+        // TODO: check StatusCode of some/most of these blocking config calls... maybe retry if failed?
         final CANcoderConfiguration canCoderConfiguration = new CANcoderConfiguration();
         canCoderConfiguration.MagnetSensor.MagnetOffset = -magnetOffset;
         canCoderConfiguration.MagnetSensor.AbsoluteSensorRange = AbsoluteSensorRangeValue.Signed_PlusMinusHalf;
@@ -95,10 +99,10 @@ public class SwerveModuleIOTalonFX implements SwerveModuleIO {
         driveTalonFXConfiguration.Slot0 = new Slot0Configs()
                 .withKP(50)
                 .withKS(5.875);
-        driveTalonFXConfiguration.TorqueCurrent.PeakForwardTorqueCurrent = Constants.Swerve.Modules.SLIP_CURRENT_A;
-        driveTalonFXConfiguration.TorqueCurrent.PeakReverseTorqueCurrent = -Constants.Swerve.Modules.SLIP_CURRENT_A;
+        driveTalonFXConfiguration.TorqueCurrent.PeakForwardTorqueCurrent = Modules.SLIP_CURRENT_A;
+        driveTalonFXConfiguration.TorqueCurrent.PeakReverseTorqueCurrent = -Modules.SLIP_CURRENT_A;
         driveTalonFXConfiguration.ClosedLoopRamps.TorqueClosedLoopRampPeriod = 0.15;
-        driveTalonFXConfiguration.Feedback.SensorToMechanismRatio = Constants.Swerve.Modules.DRIVER_GEAR_RATIO;
+        driveTalonFXConfiguration.Feedback.SensorToMechanismRatio = Modules.DRIVER_GEAR_RATIO;
         driveTalonFXConfiguration.MotorOutput.NeutralMode = NeutralModeValue.Coast;
         driveTalonFXConfiguration.MotorOutput.Inverted = InvertedValue.CounterClockwise_Positive;
         driveMotor.getConfigurator().apply(driveTalonFXConfiguration);
@@ -110,20 +114,36 @@ public class SwerveModuleIOTalonFX implements SwerveModuleIO {
         turnTalonFXConfiguration.TorqueCurrent.PeakReverseTorqueCurrent = -40;
         turnTalonFXConfiguration.Feedback.FeedbackRemoteSensorID = turnEncoder.getDeviceID();
         turnTalonFXConfiguration.Feedback.FeedbackSensorSource = FeedbackSensorSourceValue.FusedCANcoder;
-        turnTalonFXConfiguration.Feedback.RotorToSensorRatio = Constants.Swerve.Modules.TURNER_GEAR_RATIO;
+        turnTalonFXConfiguration.Feedback.RotorToSensorRatio = Modules.TURNER_GEAR_RATIO;
         turnTalonFXConfiguration.MotorOutput.NeutralMode = NeutralModeValue.Coast;
         turnTalonFXConfiguration.MotorOutput.Inverted = InvertedValue.Clockwise_Positive;
 
         turnTalonFXConfiguration.MotionMagic.MotionMagicCruiseVelocity =
-                100.0 / Constants.Swerve.Modules.TURNER_GEAR_RATIO;
-        turnTalonFXConfiguration.MotionMagic.MotionMagicExpo_kV = 0.12 * Constants.Swerve.Modules.TURNER_GEAR_RATIO;
+                100.0 / Modules.TURNER_GEAR_RATIO;
+        turnTalonFXConfiguration.MotionMagic.MotionMagicExpo_kV = 0.12 * Modules.TURNER_GEAR_RATIO;
         turnTalonFXConfiguration.MotionMagic.MotionMagicExpo_kA = 0.1;
         turnTalonFXConfiguration.ClosedLoopGeneral.ContinuousWrap = true;
 
         turnMotor.getConfigurator().apply(turnTalonFXConfiguration);
 
+        // TODO: does setting these control requests to be one-shot actually work?
         velocityTorqueCurrentFOC.UpdateFreqHz = 0;
         motionMagicExpoTorqueCurrentFOC.UpdateFreqHz = 0;
+
+        // TODO: check bus utilization on the canivore with these signals set to 100Hz
+        //  and the odometry signals at 250Hz, if too high, maybe some of these signals do not need to be 100Hz
+        BaseStatusSignal.setUpdateFrequencyForAll(
+                100,
+                _driveTorqueCurrent,
+                _driveStatorCurrent,
+                _driveDeviceTemp,
+                _turnTorqueCurrent,
+                _turnStatorCurrent,
+                _turnDeviceTemp
+        );
+        // TODO: make sure we didn't lose any signals by doing this,
+        //  maybe compare bus utilization before vs. after this?
+        ParentDevice.optimizeBusUtilizationForAll(driveMotor, turnMotor);
     }
 
     @SuppressWarnings("DuplicatedCode")
@@ -153,6 +173,14 @@ public class SwerveModuleIOTalonFX implements SwerveModuleIO {
         inputs.turnTorqueCurrentAmps = _turnTorqueCurrent.getValue();
         inputs.turnStatorCurrentAmps = _turnStatorCurrent.getValue();
         inputs.turnTempCelsius = _turnDeviceTemp.getValue();
+
+        try {
+            signalQueueReadWriteLock.readLock().lock();
+            inputs.odometryDrivePositionsRots = drivePositionSignalQueue.stream().mapToDouble(pos -> pos).toArray();
+            inputs.odometryTurnPositionRots = turnPositionSignalQueue.stream().mapToDouble(pos -> pos).toArray();
+        } finally {
+            signalQueueReadWriteLock.readLock().unlock();
+        }
     }
 
     /**
@@ -171,8 +199,8 @@ public class SwerveModuleIOTalonFX implements SwerveModuleIO {
         final double driveWheelPosition = Phoenix6Utils.latencyCompensateIfSignalIsGood(_drivePosition, _driveVelocity);
         final double turnPosition = Phoenix6Utils.latencyCompensateIfSignalIsGood(_turnPosition, _turnVelocity);
         final double driveBackOutWheelRotations = (
-                (turnPosition * Constants.Swerve.Modules.COUPLING_GEAR_RATIO)
-                        / Constants.Swerve.Modules.DRIVER_GEAR_RATIO
+                (turnPosition * Modules.COUPLING_GEAR_RATIO)
+                        / Modules.DRIVER_GEAR_RATIO
         );
 
         return driveWheelPosition - driveBackOutWheelRotations;
@@ -181,8 +209,8 @@ public class SwerveModuleIOTalonFX implements SwerveModuleIO {
     @Override
     public void setInputs(final double desiredDriverVelocity, final double desiredTurnerRotations) {
         final double driveVelocityBackOut = (
-                (_turnVelocity.getValue() * Constants.Swerve.Modules.COUPLING_GEAR_RATIO)
-                        / Constants.Swerve.Modules.DRIVER_GEAR_RATIO
+                (_turnVelocity.getValue() * Modules.COUPLING_GEAR_RATIO)
+                        / Modules.DRIVER_GEAR_RATIO
         );
         final double backedOutDriveVelocity = desiredDriverVelocity - driveVelocityBackOut;
 
