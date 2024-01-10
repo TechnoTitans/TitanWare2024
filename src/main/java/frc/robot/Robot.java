@@ -70,8 +70,6 @@ public class Robot extends LoggedRobot {
 
         switch (Constants.CURRENT_MODE) {
             case REAL -> {
-                // TODO: I don't think SignalLogger.setPath will create the non-existent directories if they don't exist
-                //  verify this, and then it might be worth it to make the directory ourselves
                 try {
                     Files.createDirectories(Paths.get(HOOT_LOG_PATH));
                     SignalLogger.setPath(HOOT_LOG_PATH);

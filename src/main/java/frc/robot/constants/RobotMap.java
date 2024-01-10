@@ -2,7 +2,7 @@ package frc.robot.constants;
 
 public interface RobotMap {
     int PowerDistributionHub = 1;
-    int Pigeon = 1;
+    int Pigeon = 13;
 
     String RioCANBus = "rio";
     String CanivoreCANBus = "CANivore";

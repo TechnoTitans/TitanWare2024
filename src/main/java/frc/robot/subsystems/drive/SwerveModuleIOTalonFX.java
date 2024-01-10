@@ -7,6 +7,7 @@ import com.ctre.phoenix6.configs.CANcoderConfiguration;
 import com.ctre.phoenix6.configs.Slot0Configs;
 import com.ctre.phoenix6.configs.TalonFXConfiguration;
 import com.ctre.phoenix6.controls.MotionMagicExpoTorqueCurrentFOC;
+import com.ctre.phoenix6.controls.PositionVoltage;
 import com.ctre.phoenix6.controls.VelocityTorqueCurrentFOC;
 import com.ctre.phoenix6.controls.VoltageOut;
 import com.ctre.phoenix6.hardware.CANcoder;
@@ -36,6 +37,8 @@ public class SwerveModuleIOTalonFX implements SwerveModuleIO {
     private final MotionMagicExpoTorqueCurrentFOC motionMagicExpoTorqueCurrentFOC;
     private final VoltageOut voltageOut;
 
+    //TODO try motion magic expo later
+    private final PositionVoltage positionVoltage;
 
     // Cached StatusSignals
     private final StatusSignal<Double> _drivePosition;
@@ -69,6 +72,7 @@ public class SwerveModuleIOTalonFX implements SwerveModuleIO {
 
         this.velocityTorqueCurrentFOC = new VelocityTorqueCurrentFOC(0);
         this.motionMagicExpoTorqueCurrentFOC = new MotionMagicExpoTorqueCurrentFOC(0);
+        this.positionVoltage = new PositionVoltage(0);
         this.voltageOut = new VoltageOut(0);
 
         this._drivePosition = driveMotor.getPosition();
@@ -101,7 +105,7 @@ public class SwerveModuleIOTalonFX implements SwerveModuleIO {
                 .withKS(5.875);
         driveTalonFXConfiguration.TorqueCurrent.PeakForwardTorqueCurrent = Modules.SLIP_CURRENT_A;
         driveTalonFXConfiguration.TorqueCurrent.PeakReverseTorqueCurrent = -Modules.SLIP_CURRENT_A;
-        driveTalonFXConfiguration.ClosedLoopRamps.TorqueClosedLoopRampPeriod = 0.15;
+        driveTalonFXConfiguration.ClosedLoopRamps.TorqueClosedLoopRampPeriod = 0.2;
         driveTalonFXConfiguration.Feedback.SensorToMechanismRatio = Modules.DRIVER_GEAR_RATIO;
         driveTalonFXConfiguration.MotorOutput.NeutralMode = NeutralModeValue.Coast;
         driveTalonFXConfiguration.MotorOutput.Inverted = InvertedValue.CounterClockwise_Positive;
@@ -126,12 +130,11 @@ public class SwerveModuleIOTalonFX implements SwerveModuleIO {
 
         turnMotor.getConfigurator().apply(turnTalonFXConfiguration);
 
-        // TODO: does setting these control requests to be one-shot actually work?
         velocityTorqueCurrentFOC.UpdateFreqHz = 0;
         motionMagicExpoTorqueCurrentFOC.UpdateFreqHz = 0;
 
-        // TODO: check bus utilization on the canivore with these signals set to 100Hz
-        //  and the odometry signals at 250Hz, if too high, maybe some of these signals do not need to be 100Hz
+        positionVoltage.UpdateFreqHz = 0;
+
         BaseStatusSignal.setUpdateFrequencyForAll(
                 100,
                 _driveTorqueCurrent,
@@ -141,8 +144,6 @@ public class SwerveModuleIOTalonFX implements SwerveModuleIO {
                 _turnStatorCurrent,
                 _turnDeviceTemp
         );
-        // TODO: make sure we didn't lose any signals by doing this,
-        //  maybe compare bus utilization before vs. after this?
         ParentDevice.optimizeBusUtilizationForAll(driveMotor, turnMotor);
     }
 
@@ -219,13 +220,15 @@ public class SwerveModuleIOTalonFX implements SwerveModuleIO {
         final double backedOutDriveVelocity = desiredDriverVelocity - driveVelocityBackOut;
 
         driveMotor.setControl(velocityTorqueCurrentFOC.withVelocity(backedOutDriveVelocity));
-        turnMotor.setControl(motionMagicExpoTorqueCurrentFOC.withPosition(desiredTurnerRotations));
+//        turnMotor.setControl(motionMagicExpoTorqueCurrentFOC.withPosition(desiredTurnerRotations));
+        turnMotor.setControl(positionVoltage.withPosition(desiredTurnerRotations));
     }
 
     @Override
     public void setDriveCharacterizationVolts(double driveVolts, double desiredTurnerRotations) {
         driveMotor.setControl(voltageOut.withOutput(driveVolts));
-        turnMotor.setControl(motionMagicExpoTorqueCurrentFOC.withPosition(desiredTurnerRotations));
+//        turnMotor.setControl(motionMagicExpoTorqueCurrentFOC.withPosition(desiredTurnerRotations));
+        turnMotor.setControl(positionVoltage.withPosition(desiredTurnerRotations));
     }
 
     @Override

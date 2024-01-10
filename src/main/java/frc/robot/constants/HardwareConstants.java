@@ -21,16 +21,16 @@ public class HardwareConstants {
             double turnEncoderOffset
     ) {
         public enum Hardware {
-            SDSMk4i_Falcon500_CANCoder
+            SDSMk4i_TalonFX_CANCoder
         }
 
         public static SwerveModule create(
                 final SwerveModuleConstants swerveModuleConstants,
                 final Constants.RobotMode currentMode,
                 final Swerve.OdometryThreadRunner odometryThreadRunner
-                ) {
+        ) {
             return switch(swerveModuleConstants.hardware) {
-                case SDSMk4i_Falcon500_CANCoder -> SwerveModule.Builder.SDSMK4iTalonFXCANCoder(
+                case SDSMk4i_TalonFX_CANCoder -> SwerveModule.Builder.SDSMK4iTalonFXCANCoder(
                         swerveModuleConstants.name,
                         new TalonFX(swerveModuleConstants.driveMotorId, swerveModuleConstants.moduleCANBus),
                         new TalonFX(swerveModuleConstants.turnMotorId, swerveModuleConstants.moduleCANBus),
@@ -53,7 +53,7 @@ public class HardwareConstants {
     public static final SwerveModuleConstants FRONT_LEFT_MODULE = new SwerveModuleConstants(
             "FrontLeft",
             RobotMap.CanivoreCANBus,
-            SwerveModuleConstants.Hardware.SDSMk4i_Falcon500_CANCoder,
+            SwerveModuleConstants.Hardware.SDSMk4i_TalonFX_CANCoder,
             new Translation2d(WHEEL_BASE_M / 2, TRACK_WIDTH_M / 2),
             1,
             2,
@@ -64,7 +64,7 @@ public class HardwareConstants {
     public static final SwerveModuleConstants FRONT_RIGHT_MODULE = new SwerveModuleConstants(
             "FrontRight",
             RobotMap.CanivoreCANBus,
-            SwerveModuleConstants.Hardware.SDSMk4i_Falcon500_CANCoder,
+            SwerveModuleConstants.Hardware.SDSMk4i_TalonFX_CANCoder,
             new Translation2d(WHEEL_BASE_M / 2, -TRACK_WIDTH_M / 2),
             4,
             5,
@@ -75,7 +75,7 @@ public class HardwareConstants {
     public static final SwerveModuleConstants BACK_LEFT_MODULE = new SwerveModuleConstants(
             "BackLeft",
             RobotMap.CanivoreCANBus,
-            SwerveModuleConstants.Hardware.SDSMk4i_Falcon500_CANCoder,
+            SwerveModuleConstants.Hardware.SDSMk4i_TalonFX_CANCoder,
             new Translation2d(-WHEEL_BASE_M / 2, TRACK_WIDTH_M / 2),
             7,
             8,
@@ -86,7 +86,7 @@ public class HardwareConstants {
     public static final SwerveModuleConstants BACK_RIGHT_MODULE = new SwerveModuleConstants(
             "BackRight",
             RobotMap.CanivoreCANBus,
-            SwerveModuleConstants.Hardware.SDSMk4i_Falcon500_CANCoder,
+            SwerveModuleConstants.Hardware.SDSMk4i_TalonFX_CANCoder,
             new Translation2d(-WHEEL_BASE_M / 2, -TRACK_WIDTH_M / 2),
             10,
             11,

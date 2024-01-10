@@ -84,7 +84,6 @@ public class GyroIOPigeon2 implements GyroIO {
         pigeon2Configuration.MountPose.MountPoseYaw = 0;
         pigeon.getConfigurator().apply(pigeon2Configuration);
 
-        // TODO: check bus utilization on the canivore with these signals set to 100Hz
         BaseStatusSignal.setUpdateFrequencyForAll(
                 100,
                 _pitch,
@@ -96,8 +95,6 @@ public class GyroIOPigeon2 implements GyroIO {
                 4,
                 _faultHardware
         );
-        // TODO: make sure we didn't lose any signals by doing this,
-        //  maybe compare bus utilization before vs. after this?
         ParentDevice.optimizeBusUtilizationForAll(pigeon);
     }
 

@@ -10,6 +10,7 @@ import edu.wpi.first.math.filter.LinearFilter;
 import edu.wpi.first.math.filter.MedianFilter;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
+import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.math.geometry.Twist2d;
 import edu.wpi.first.math.kinematics.ChassisSpeeds;
 import edu.wpi.first.math.kinematics.SwerveDriveKinematics;
@@ -26,6 +27,8 @@ import frc.robot.constants.RobotMap;
 import frc.robot.subsystems.gyro.*;
 import frc.robot.utils.gyro.GyroUtils;
 import frc.robot.utils.logging.LogUtils;
+import frc.robot.utils.teleop.ControllerUtils;
+import frc.robot.utils.teleop.Profiler;
 import org.littletonrobotics.junction.Logger;
 
 import java.nio.ByteBuffer;
@@ -77,7 +80,6 @@ public class Swerve extends SubsystemBase {
         protected double currentTimeSeconds = 0;
         protected double averageLoopTimeSeconds = 0;
 
-        protected int successfulDAQs = 0;
         protected int failedDAQs = 0;
 
         protected int lastThreadPriority = STARTING_THREAD_PRIORITY;
@@ -140,7 +142,6 @@ public class Swerve extends SubsystemBase {
             @SuppressWarnings("unused") // this is found through reflection and used when logging
             public static final StateStruct struct = new StateStruct();
             public boolean running;
-            public int successfulDAQs;
             public int failedDAQs;
             public int statusCode;
             public int maxQueueSize;
@@ -164,13 +165,12 @@ public class Swerve extends SubsystemBase {
 
                 @Override
                 public String getSchema() {
-                    return "bool running;int32 successfulDAQs;int32 failedDAQs;int32 statusCode;int32 maxQueueSize;double odometryPeriodSeconds";
+                    return "bool running;int32 failedDAQs;int32 statusCode;int32 maxQueueSize;double odometryPeriodSeconds";
                 }
 
                 @Override
                 public State unpack(final ByteBuffer bb) {
                     final boolean running = bb.get() != 0;
-                    final int successfulDAQs = bb.getInt();
                     final int failedDAQs = bb.getInt();
                     final int statusCode = bb.getInt();
                     final int maxQueueSize = bb.getInt();
@@ -178,7 +178,6 @@ public class Swerve extends SubsystemBase {
 
                     final State state = new State();
                     state.running = running;
-                    state.successfulDAQs = successfulDAQs;
                     state.failedDAQs = failedDAQs;
                     state.statusCode = statusCode;
                     state.maxQueueSize = maxQueueSize;
@@ -189,7 +188,6 @@ public class Swerve extends SubsystemBase {
                 @Override
                 public void pack(final ByteBuffer bb, final State value) {
                     bb.put((byte)(value.running ? 1 : 0));
-                    bb.putInt(value.successfulDAQs);
                     bb.putInt(value.failedDAQs);
                     bb.putInt(value.statusCode);
                     bb.putInt(value.maxQueueSize);
@@ -199,7 +197,7 @@ public class Swerve extends SubsystemBase {
         }
 
         /**
-         * Gets the current state of the {@link OdometryThreadRunner}, describing successful & failed DAQs,
+         * Gets the current state of the {@link OdometryThreadRunner}, describing failed DAQs,
          * actual (measured) odometry period, etc...
          * @return the internal {@link State}
          */
@@ -265,11 +263,11 @@ public class Swerve extends SubsystemBase {
 
         private void run() {
             if (allSignals.isEmpty()) {
-                stop();
                 DriverStation.reportError(
                         "Attempted to start OdometryThread without any registered signals!",
                         false
                 );
+                stop();
 
                 return;
             }
@@ -287,9 +285,7 @@ public class Swerve extends SubsystemBase {
                     );
 
                     statusCodeValue = statusCode.value;
-                    if (statusCode.isOK()) {
-                        successfulDAQs++;
-                    } else {
+                    if (!statusCode.isOK()) {
                         failedDAQs++;
                     }
                 } finally {
@@ -308,14 +304,14 @@ public class Swerve extends SubsystemBase {
                     );
 
                     state.running = running;
-                    state.successfulDAQs = successfulDAQs;
                     state.failedDAQs = failedDAQs;
                     state.statusCode = statusCodeValue;
                     state.odometryPeriodSeconds = averageLoopTimeSeconds;
 
+                    int queueIndex = 0;
                     int maxQueueSize = 0;
                     for (int i = 0; i < allSignals.size(); i++) {
-                        final Queue<Double> queue = queues.get(i);
+                        final Queue<Double> queue = queues.get(queueIndex);
                         final boolean isLatencyCompensatedSignal = isLatencyCompensated.get(i);
 
                         if (isLatencyCompensatedSignal) {
@@ -333,6 +329,8 @@ public class Swerve extends SubsystemBase {
                         if (queueSize > maxQueueSize) {
                             maxQueueSize = queueSize;
                         }
+
+                        queueIndex++;
                     }
 
                     state.maxQueueSize = maxQueueSize;
@@ -562,6 +560,10 @@ public class Swerve extends SubsystemBase {
 //        );
     }
 
+    public Command zeroRotationCommand() {
+        return runOnce(this::zeroRotation);
+    }
+
     public ChassisSpeeds getRobotRelativeSpeeds() {
         return kinematics.toChassisSpeeds(
                     frontLeft.getState(),
@@ -657,12 +659,37 @@ public class Swerve extends SubsystemBase {
             final DoubleSupplier ySpeedSupplier,
             final DoubleSupplier rotSupplier
     ) {
-        return run(() -> drive(
-                xSpeedSupplier.getAsDouble(),
-                ySpeedSupplier.getAsDouble(),
-                rotSupplier.getAsDouble(),
-                true
-        ));
+        return run(() -> {
+            final Profiler.DriverProfile driverProfile = Profiler.getDriverProfile();
+            final Profiler.SwerveSpeed swerveSpeed = Profiler.getSwerveSpeed();
+
+            final double throttleWeight = swerveSpeed.getThrottleWeight();
+            final double rotWeight = swerveSpeed.getRotateWeight();
+
+            final Translation2d leftStickSpeeds = ControllerUtils.getStickXYSquaredInput(
+                    xSpeedSupplier.getAsDouble(),
+                    ySpeedSupplier.getAsDouble(),
+                    0.01,
+                    Constants.Swerve.TELEOP_MAX_SPEED_MPS,
+                    driverProfile.getThrottleSensitivity(),
+                    throttleWeight
+            );
+
+            final double rot = ControllerUtils.getStickSquaredInput(
+                    rotSupplier.getAsDouble(),
+                    0.01,
+                    Constants.Swerve.TELEOP_MAX_ANGULAR_SPEED_RAD_PER_SEC,
+                    driverProfile.getRotationalSensitivity(),
+                    rotWeight
+            );
+
+            drive(
+                    leftStickSpeeds.getX(),
+                    leftStickSpeeds.getY(),
+                    rot,
+                    true
+            );
+        });
     }
 
     public void stop() {
