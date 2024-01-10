@@ -89,12 +89,14 @@ public class HardwareConstants {
     );
 
     public record IntakeConstants(
-            String intakeCANBus,
-            int intakeRollerMotorId
+            String CANBus,
+            int rollerMotorId,
+            int deployMotorId
     ) {}
 
     public static final IntakeConstants Intake = new IntakeConstants(
             RobotMap.CanivoreCANBus,
-            13
+            13,
+            14
     );
 }

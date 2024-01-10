@@ -9,6 +9,12 @@ public interface IntakeIO {
         public double rollerMotorVelocityRotsPerSec = 0.0;
         public double rollerMotorTorqueCurrentAmps = 0.0;
         public double rollerMotorTempCelsius = 0.0;
+
+        public double deployMotorPositionRots = 0.0;
+        public double deployMotorVelocityRotsPerSec = 0.0;
+        public double deployMotorTorqueCurrentAmps = 0.0;
+        public double deployMotorTempCelsius = 0.0;
+        public String deployMotorLimitSwitch = "Unknown";
     }
 
     /**
@@ -36,5 +42,5 @@ public interface IntakeIO {
      */
     default void initialize() {}
 
-//    default void setDesiredState(final SuperstructureStates.IntakeState desiredState) {}
+//    default void setInputs() {}
 }
