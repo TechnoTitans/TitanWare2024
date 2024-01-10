@@ -17,6 +17,7 @@ import edu.wpi.first.math.kinematics.SwerveDriveKinematics;
 import edu.wpi.first.math.kinematics.SwerveModulePosition;
 import edu.wpi.first.math.kinematics.SwerveModuleState;
 import edu.wpi.first.util.struct.Struct;
+import edu.wpi.first.util.struct.StructSerializable;
 import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.Threads;
 import edu.wpi.first.wpilibj2.command.Command;
@@ -138,7 +139,7 @@ public class Swerve extends SubsystemBase {
             threadPriorityToSet = priority;
         }
 
-        public static class State {
+        public static class State implements StructSerializable {
             @SuppressWarnings("unused") // this is found through reflection and used when logging
             public static final StateStruct struct = new StateStruct();
             public boolean running;
