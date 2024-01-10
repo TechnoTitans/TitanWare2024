@@ -67,7 +67,6 @@ public class Robot extends LoggedRobot {
             default -> Logger.recordMetadata("GitDirty", "Unknown");
         }
 
-
         switch (Constants.CURRENT_MODE) {
             case REAL -> {
                 try {
