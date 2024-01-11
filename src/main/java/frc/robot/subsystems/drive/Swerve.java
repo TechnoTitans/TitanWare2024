@@ -1,6 +1,7 @@
 package frc.robot.subsystems.drive;
 
 import com.ctre.phoenix6.*;
+import com.ctre.phoenix6.controls.ControlRequest;
 import com.ctre.phoenix6.hardware.ParentDevice;
 import com.ctre.phoenix6.hardware.Pigeon2;
 import com.ctre.phoenix6.signals.NeutralModeValue;
@@ -33,11 +34,10 @@ import frc.robot.utils.teleop.Profiler;
 import org.littletonrobotics.junction.Logger;
 
 import java.nio.ByteBuffer;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Queue;
+import java.util.*;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
+import java.util.function.Consumer;
 import java.util.function.DoubleSupplier;
 
 public class Swerve extends SubsystemBase {
@@ -66,9 +66,13 @@ public class Swerve extends SubsystemBase {
 
         protected final ReentrantReadWriteLock signalQueueReadWriteLock;
         protected final ReentrantReadWriteLock signalReadWriteLock = new ReentrantReadWriteLock();
+        protected final ReentrantReadWriteLock controlReqReadWriteLock = new ReentrantReadWriteLock();
 
         protected final List<StatusSignal<Double>> allSignals = new ArrayList<>();
         protected final List<Boolean> isLatencyCompensated = new ArrayList<>();
+        protected final Map<ParentDevice, ControlRequest> outerAppliedControlReqs = new HashMap<>();
+        protected final Map<ParentDevice, ControlRequest> innerAppliedControlReqs = new HashMap<>();
+        protected final Map<ParentDevice, Consumer<ControlRequest>> controlReqAppliers = new HashMap<>();
         protected final List<Queue<Double>> queues = new ArrayList<>();
 
         protected final Thread thread;
@@ -140,7 +144,6 @@ public class Swerve extends SubsystemBase {
         }
 
         public static class State implements StructSerializable {
-            @SuppressWarnings("unused") // this is found through reflection and used when logging
             public static final StateStruct struct = new StateStruct();
             public boolean running;
             public int failedDAQs;
@@ -262,6 +265,43 @@ public class Swerve extends SubsystemBase {
             return queue;
         }
 
+        public void registerControlRequest(
+                final ParentDevice device,
+                final ControlRequest controlRequest,
+                final Consumer<ControlRequest> applyControlReq
+        ) {
+            if (outerAppliedControlReqs.containsKey(device)) {
+                throw new RuntimeException(String.format(
+                        "Attempted to register a ControlRequest for the same device" +
+                                "ID: %d (%s) more than once!", device.getDeviceID(), device.getNetwork()
+                ));
+            }
+
+            outerAppliedControlReqs.put(device, controlRequest);
+            try {
+                controlReqReadWriteLock.writeLock().lock();
+
+                innerAppliedControlReqs.put(device, controlRequest);
+                controlReqAppliers.put(device, applyControlReq);
+            } finally {
+                controlReqReadWriteLock.writeLock().unlock();
+            }
+        }
+
+        public void updateControlRequest(final ParentDevice device, final ControlRequest controlRequest) {
+            if (outerAppliedControlReqs.get(device) == controlRequest) {
+                return;
+            }
+
+            outerAppliedControlReqs.put(device, controlRequest);
+            try {
+                controlReqReadWriteLock.writeLock().lock();
+                innerAppliedControlReqs.put(device, controlRequest);
+            } finally {
+                controlReqReadWriteLock.writeLock().unlock();
+            }
+        }
+
         private void run() {
             if (allSignals.isEmpty()) {
                 DriverStation.reportError(
@@ -337,6 +377,19 @@ public class Swerve extends SubsystemBase {
                     state.maxQueueSize = maxQueueSize;
                 } finally {
                     signalQueueReadWriteLock.writeLock().unlock();
+                }
+
+                try {
+                    controlReqReadWriteLock.readLock().lock();
+                    for (final Map.Entry<ParentDevice, Consumer<ControlRequest>>
+                            controlReqApplierEntry : controlReqAppliers.entrySet()
+                    ) {
+                        controlReqApplierEntry
+                                .getValue()
+                                .accept(innerAppliedControlReqs.get(controlReqApplierEntry.getKey()));
+                    }
+                } finally {
+                    controlReqReadWriteLock.readLock().unlock();
                 }
 
                 // This is inherently synchronous, since lastThreadPriority is only written
@@ -532,6 +585,10 @@ public class Swerve extends SubsystemBase {
         return poseEstimator.getEstimatedPosition();
     }
 
+    public OdometryThreadRunner getOdometryThreadRunner() {
+        return odometryThreadRunner;
+    }
+
     public Gyro getGyro() {
         return gyro;
     }
@@ -612,16 +669,12 @@ public class Swerve extends SubsystemBase {
         };
     }
 
-    public void drive(final SwerveModuleState[] states, final double moduleMaxSpeed) {
-        SwerveDriveKinematics.desaturateWheelSpeeds(states, moduleMaxSpeed);
+    public void drive(final SwerveModuleState[] states) {
+        SwerveDriveKinematics.desaturateWheelSpeeds(states, Constants.Swerve.Modules.MODULE_MAX_SPEED_M_PER_SEC);
         frontLeft.setDesiredState(states[0]);
         frontRight.setDesiredState(states[1]);
         backLeft.setDesiredState(states[2]);
         backRight.setDesiredState(states[3]);
-    }
-
-    public void drive(final SwerveModuleState[] states) {
-        drive(states, Constants.Swerve.Modules.MODULE_MAX_SPEED_M_PER_SEC);
     }
 
     public void drive(
