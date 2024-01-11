@@ -352,7 +352,7 @@ public class SwerveModuleIOTalonFXSim implements SwerveModuleIO {
             return;
         }
 
-        final StatusCode refreshCode = driveMotor.getConfigurator().refresh(turnTalonFXConfiguration);
+        final StatusCode refreshCode = driveMotor.getConfigurator().refresh(turnTalonFXConfiguration, 0.2);
         if (!refreshCode.isOK()) {
             // warn if the refresh call failed in sim, which might happen pretty often as
             // there seems to be an issue with calling refresh while disabled in sim

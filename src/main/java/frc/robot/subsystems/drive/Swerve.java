@@ -467,7 +467,11 @@ public class Swerve extends SubsystemBase {
                 LogUtils.microsecondsToMilliseconds(Logger.getRealTimestamp() - swervePeriodicUpdateStart)
         );
 
-        Logger.recordOutput(logKey + "/OdometryThreadState", odometryThreadRunner.getState());
+        Logger.recordOutput(
+                logKey + "/OdometryThreadState",
+                OdometryThreadRunner.State.struct,
+                odometryThreadRunner.getState()
+        );
 
         //log current swerve chassis speeds
         final ChassisSpeeds robotRelativeSpeeds = getRobotRelativeSpeeds();
