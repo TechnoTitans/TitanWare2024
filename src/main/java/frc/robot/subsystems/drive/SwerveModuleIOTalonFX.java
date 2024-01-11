@@ -112,7 +112,7 @@ public class SwerveModuleIOTalonFX implements SwerveModuleIO {
         driveTalonFXConfiguration.TorqueCurrent.PeakReverseTorqueCurrent = -Modules.SLIP_CURRENT_A;
         driveTalonFXConfiguration.ClosedLoopRamps.TorqueClosedLoopRampPeriod = 0.2;
         driveTalonFXConfiguration.Feedback.SensorToMechanismRatio = Modules.DRIVER_GEAR_RATIO;
-        driveTalonFXConfiguration.MotorOutput.NeutralMode = NeutralModeValue.Coast;
+        driveTalonFXConfiguration.MotorOutput.NeutralMode = NeutralModeValue.Brake;
         driveTalonFXConfiguration.MotorOutput.Inverted = InvertedValue.CounterClockwise_Positive;
         driveMotor.getConfigurator().apply(driveTalonFXConfiguration);
 
@@ -124,7 +124,7 @@ public class SwerveModuleIOTalonFX implements SwerveModuleIO {
         turnTalonFXConfiguration.Feedback.FeedbackRemoteSensorID = turnEncoder.getDeviceID();
         turnTalonFXConfiguration.Feedback.FeedbackSensorSource = FeedbackSensorSourceValue.FusedCANcoder;
         turnTalonFXConfiguration.Feedback.RotorToSensorRatio = Modules.TURNER_GEAR_RATIO;
-        turnTalonFXConfiguration.MotorOutput.NeutralMode = NeutralModeValue.Coast;
+        turnTalonFXConfiguration.MotorOutput.NeutralMode = NeutralModeValue.Brake;
         turnTalonFXConfiguration.MotorOutput.Inverted = InvertedValue.Clockwise_Positive;
 
         turnTalonFXConfiguration.MotionMagic.MotionMagicCruiseVelocity =
@@ -225,7 +225,10 @@ public class SwerveModuleIOTalonFX implements SwerveModuleIO {
         final double backedOutDriveVelocity = desiredDriverVelocity - driveVelocityBackOut;
 
         odometryThreadRunner.updateControlRequest(driveMotor, velocityTorqueCurrentFOC);
-        driveMotor.setControl(velocityTorqueCurrentFOC.withVelocity(backedOutDriveVelocity));
+        driveMotor.setControl(velocityTorqueCurrentFOC
+                .withVelocity(backedOutDriveVelocity)
+                .withOverrideCoastDurNeutral(true)
+        );
 //        turnMotor.setControl(motionMagicExpoTorqueCurrentFOC.withPosition(desiredTurnerRotations));
         turnMotor.setControl(positionVoltage.withPosition(desiredTurnerRotations));
     }

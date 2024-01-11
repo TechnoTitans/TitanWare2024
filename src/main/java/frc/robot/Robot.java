@@ -1,7 +1,6 @@
 package frc.robot;
 
 import com.ctre.phoenix6.SignalLogger;
-import com.ctre.phoenix6.signals.NeutralModeValue;
 import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.RobotBase;
 import edu.wpi.first.wpilibj.livewindow.LiveWindow;
@@ -119,9 +118,7 @@ public class Robot extends LoggedRobot {
     }
 
     @Override
-    public void disabledInit() {
-        robotContainer.swerve.setNeutralMode(NeutralModeValue.Brake);
-    }
+    public void disabledInit() {}
 
     @Override
     public void disabledPeriodic() {}
@@ -129,8 +126,6 @@ public class Robot extends LoggedRobot {
     @Override
     public void autonomousInit() {
         autonomousCommand = robotContainer.getAutonomousCommand();
-
-        robotContainer.swerve.setNeutralMode(NeutralModeValue.Coast);
 
         if (autonomousCommand != null) {
             autonomousCommand.schedule();
@@ -146,7 +141,6 @@ public class Robot extends LoggedRobot {
             autonomousCommand.cancel();
         }
 
-        robotContainer.swerve.setNeutralMode(NeutralModeValue.Coast);
         // No need to lint this here, X and Y are flipped for robot vs. controller joystick coordinate systems, so we
         // pass the controller X into the robot Y, and vice versa
         //noinspection SuspiciousNameCombination

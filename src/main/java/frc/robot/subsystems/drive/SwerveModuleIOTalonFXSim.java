@@ -1,6 +1,8 @@
 package frc.robot.subsystems.drive;
 
-import com.ctre.phoenix6.*;
+import com.ctre.phoenix6.BaseStatusSignal;
+import com.ctre.phoenix6.StatusCode;
+import com.ctre.phoenix6.StatusSignal;
 import com.ctre.phoenix6.configs.CANcoderConfiguration;
 import com.ctre.phoenix6.configs.Slot0Configs;
 import com.ctre.phoenix6.configs.TalonFXConfiguration;
@@ -192,7 +194,10 @@ public class SwerveModuleIOTalonFXSim implements SwerveModuleIO {
 
     @Override
     public void setInputs(final double desiredDriverVelocity, final double desiredTurnerRotations) {
-        driveMotor.setControl(velocityVoltage.withVelocity(desiredDriverVelocity));
+        driveMotor.setControl(velocityVoltage
+                .withVelocity(desiredDriverVelocity)
+                .withOverrideBrakeDurNeutral(true)
+        );
         turnMotor.setControl(positionVoltage.withPosition(desiredTurnerRotations));
     }
 
