@@ -23,6 +23,7 @@ import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.Threads;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
+import edu.wpi.first.wpilibj2.command.sysid.SysIdRoutine;
 import frc.robot.constants.Constants;
 import frc.robot.constants.HardwareConstants;
 import frc.robot.constants.RobotMap;
@@ -40,6 +41,8 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.function.Consumer;
 import java.util.function.DoubleSupplier;
 
+import static edu.wpi.first.units.Units.*;
+
 public class Swerve extends SubsystemBase {
     protected static final String logKey = "Swerve";
     protected static final String odometryLogKey = "Odometry";
@@ -53,8 +56,9 @@ public class Swerve extends SubsystemBase {
     private final SwerveModule[] swerveModules;
 
     private final OdometryThreadRunner odometryThreadRunner;
-
     private final ReentrantReadWriteLock signalQueueReadWriteLock = new ReentrantReadWriteLock();
+
+    private final SysIdRoutine linearSysIdRoutine;
 
     public static class OdometryThreadRunner {
         // Increase the priority to dedicate more resources towards running the thread at the right frequency, 1 is the
@@ -428,6 +432,8 @@ public class Swerve extends SubsystemBase {
         this.gyro = gyro;
 
         this.poseEstimator = poseEstimator;
+        this.linearSysIdRoutine = makeLinearSysIdRoutine();
+
         this.odometryThreadRunner.start();
     }
 
@@ -472,6 +478,7 @@ public class Swerve extends SubsystemBase {
 //                Constants.Vision.VISION_MEASUREMENT_STD_DEVS
         );
 
+        this.linearSysIdRoutine = makeLinearSysIdRoutine();
         this.odometryThreadRunner.start();
     }
 
@@ -503,6 +510,36 @@ public class Swerve extends SubsystemBase {
         }
 
         return swerveModuleStates;
+    }
+
+    private SysIdRoutine makeLinearSysIdRoutine() {
+        return new SysIdRoutine(
+                new SysIdRoutine.Config(
+                        Volts.of(1).per(Second),
+                        Volts.of(7),
+                        Seconds.of(10),
+                        state -> SignalLogger.writeString("state", state.toString())
+                ),
+                new SysIdRoutine.Mechanism(
+                        voltageMeasure -> {
+                            final double volts = voltageMeasure.in(Volts);
+                            frontLeft.driveCharacterization(volts, 0);
+                            frontRight.driveCharacterization(volts, 0);
+                            backLeft.driveCharacterization(volts, 0);
+                            backRight.driveCharacterization(volts, 0);
+                        },
+                        null,
+                        this
+                )
+        );
+    }
+
+    public Command linearSysIdQuasistaticCommand(final SysIdRoutine.Direction direction) {
+        return linearSysIdRoutine.quasistatic(direction);
+    }
+
+    public Command linearSysIdDynamicCommand(final SysIdRoutine.Direction direction) {
+        return linearSysIdRoutine.dynamic(direction);
     }
 
     @Override

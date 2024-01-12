@@ -1,10 +1,12 @@
 package frc.robot;
 
+import com.ctre.phoenix6.SignalLogger;
 import edu.wpi.first.wpilibj.PowerDistribution;
 import edu.wpi.first.wpilibj.RobotState;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
+import edu.wpi.first.wpilibj2.command.sysid.SysIdRoutine;
 import frc.robot.constants.Constants;
 import frc.robot.constants.HardwareConstants;
 import frc.robot.constants.RobotMap;
@@ -35,6 +37,13 @@ public class RobotContainer {
 
         this.driverController = new CommandXboxController(RobotMap.MainController);
         this.coDriverController = new CommandXboxController(RobotMap.CoController);
+
+        this.coDriverController.y().whileTrue(swerve.linearSysIdQuasistaticCommand(SysIdRoutine.Direction.kForward));
+        this.coDriverController.a().whileTrue(swerve.linearSysIdQuasistaticCommand(SysIdRoutine.Direction.kReverse));
+        this.coDriverController.b().whileTrue(swerve.linearSysIdDynamicCommand(SysIdRoutine.Direction.kForward));
+        this.coDriverController.x().whileTrue(swerve.linearSysIdDynamicCommand(SysIdRoutine.Direction.kReverse));
+
+        this.coDriverController.leftBumper().onTrue(Commands.run(SignalLogger::stop));
     }
 
     public Command getAutonomousCommand() {

@@ -115,8 +115,8 @@ public class SwerveModule {
      * {@link SwerveModuleIO#setDriveCharacterizationVolts(double, double)}, while holding the turning at zero
      * @param volts the volts to apply to the drive motor
      */
-    public void driveCharacterization(final double volts) {
-        moduleIO.setDriveCharacterizationVolts(volts, 0);
+    public void driveCharacterization(final double volts, final double turnPositionRots) {
+        moduleIO.setDriveCharacterizationVolts(volts, turnPositionRots);
     }
 
     /**
