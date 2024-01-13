@@ -62,6 +62,7 @@ public class Swerve extends SubsystemBase {
 
     private final SysIdRoutine linearVoltageSysIdRoutine;
     private final SysIdRoutine linearTorqueCurrentSysIdRoutine;
+    private final SysIdRoutine angularVoltageSysIdRoutine;
 
     public static class OdometryThreadRunner {
         // Increase the priority to dedicate more resources towards running the thread at the right frequency, 1 is the
@@ -437,6 +438,7 @@ public class Swerve extends SubsystemBase {
         this.poseEstimator = poseEstimator;
         this.linearVoltageSysIdRoutine = makeLinearVoltageSysIdRoutine();
         this.linearTorqueCurrentSysIdRoutine = makeLinearTorqueCurrentSysIdRoutine();
+        this.angularVoltageSysIdRoutine = makeAngularVoltageSysIdRoutine();
 
         this.odometryThreadRunner.start();
     }
@@ -484,6 +486,7 @@ public class Swerve extends SubsystemBase {
 
         this.linearVoltageSysIdRoutine = makeLinearVoltageSysIdRoutine();
         this.linearTorqueCurrentSysIdRoutine = makeLinearTorqueCurrentSysIdRoutine();
+        this.angularVoltageSysIdRoutine = makeAngularVoltageSysIdRoutine();
         this.odometryThreadRunner.start();
     }
 
@@ -520,9 +523,9 @@ public class Swerve extends SubsystemBase {
     private SysIdRoutine makeLinearVoltageSysIdRoutine() {
         return new SysIdRoutine(
                 new SysIdRoutine.Config(
-                        Volts.of(1).per(Second),
-                        Volts.of(7),
-                        Seconds.of(10),
+                        Volts.of(0.5).per(Second),
+                        Volts.of(4),
+                        Seconds.of(20),
                         state -> SignalLogger.writeString("state", state.toString())
                 ),
                 new SysIdRoutine.Mechanism(
@@ -551,10 +554,10 @@ public class Swerve extends SubsystemBase {
         return new SysIdRoutine(
                 new SysIdRoutine.Config(
                         // this is actually amps/sec not volts/sec
-                        Volts.of(5).per(Second),
+                        Volts.of(2).per(Second),
                         // this is actually amps not volts
-                        Volts.of(20),
-                        Seconds.of(8),
+                        Volts.of(10),
+                        Seconds.of(20),
                         state -> SignalLogger.writeString("state", state.toString())
                 ),
                 new SysIdRoutine.Mechanism(
@@ -579,6 +582,38 @@ public class Swerve extends SubsystemBase {
 
     public Command linearTorqueCurrentSysIdDynamicCommand(final SysIdRoutine.Direction direction) {
         return linearTorqueCurrentSysIdRoutine.dynamic(direction);
+    }
+
+    private SysIdRoutine makeAngularVoltageSysIdRoutine() {
+        return new SysIdRoutine(
+                new SysIdRoutine.Config(
+                        // this is actually amps/sec not volts/sec
+                        Volts.of(1).per(Second),
+                        Volts.of(10),
+                        Seconds.of(20),
+                        state -> SignalLogger.writeString("state", state.toString())
+                ),
+                new SysIdRoutine.Mechanism(
+                        voltageMeasure -> {
+                            // convert the voltage measure to an amperage measure by tricking it
+                            final double volts = voltageMeasure.in(Volts);
+                            frontLeft.driveVoltageCharacterization(volts, -0.125);
+                            frontRight.driveVoltageCharacterization(volts, 0.625);
+                            backLeft.driveVoltageCharacterization(volts, 0.125);
+                            backRight.driveVoltageCharacterization(volts, -0.625);
+                        },
+                        null,
+                        this
+                )
+        );
+    }
+
+    public Command angularVoltageSysIdQuasistaticCommand(final SysIdRoutine.Direction direction) {
+        return angularVoltageSysIdRoutine.quasistatic(direction);
+    }
+
+    public Command angularVoltageSysIdDynamicCommand(final SysIdRoutine.Direction direction) {
+        return angularVoltageSysIdRoutine.dynamic(direction);
     }
 
     @Override

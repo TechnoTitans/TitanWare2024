@@ -15,7 +15,7 @@ public interface Constants {
     interface Swerve {
         double WHEEL_BASE_M = 0.7366;
         double TRACK_WIDTH_M = 0.7366;
-        double ROBOT_MAX_SPEED_MPS = Units.feetToMeters(13);
+        double ROBOT_MAX_SPEED_MPS = Units.feetToMeters(13.5);
         double ROBOT_MAX_ANGULAR_SPEED_RAD_PER_SEC = 2 * Math.PI;
         double TELEOP_MAX_SPEED_MPS = ROBOT_MAX_SPEED_MPS;
         double TELEOP_MAX_ANGULAR_SPEED_RAD_PER_SEC = ROBOT_MAX_ANGULAR_SPEED_RAD_PER_SEC;

@@ -140,13 +140,11 @@ public class SwerveModuleIOTalonFX implements SwerveModuleIO {
         positionVoltage.UpdateFreqHz = 0;
 
         BaseStatusSignal.setUpdateFrequencyForAll(
-                100,
+                250,
+                driveMotor.getMotorVoltage(),
                 _driveTorqueCurrent,
-                _driveStatorCurrent,
-                _driveDeviceTemp,
-                _turnTorqueCurrent,
-                _turnStatorCurrent,
-                _turnDeviceTemp
+                turnMotor.getMotorVoltage(),
+                _turnTorqueCurrent
         );
         ParentDevice.optimizeBusUtilizationForAll(driveMotor, turnMotor);
     }
