@@ -6,10 +6,7 @@ import com.ctre.phoenix6.StatusSignal;
 import com.ctre.phoenix6.configs.CANcoderConfiguration;
 import com.ctre.phoenix6.configs.Slot0Configs;
 import com.ctre.phoenix6.configs.TalonFXConfiguration;
-import com.ctre.phoenix6.controls.MotionMagicExpoTorqueCurrentFOC;
-import com.ctre.phoenix6.controls.PositionVoltage;
-import com.ctre.phoenix6.controls.VelocityTorqueCurrentFOC;
-import com.ctre.phoenix6.controls.VoltageOut;
+import com.ctre.phoenix6.controls.*;
 import com.ctre.phoenix6.hardware.CANcoder;
 import com.ctre.phoenix6.hardware.ParentDevice;
 import com.ctre.phoenix6.hardware.TalonFX;
@@ -34,10 +31,9 @@ public class SwerveModuleIOTalonFX implements SwerveModuleIO {
     private final TalonFXConfiguration turnTalonFXConfiguration = new TalonFXConfiguration();
 
     private final VelocityTorqueCurrentFOC velocityTorqueCurrentFOC;
-    private final MotionMagicExpoTorqueCurrentFOC motionMagicExpoTorqueCurrentFOC;
     private final VoltageOut voltageOut;
+    private final TorqueCurrentFOC torqueCurrentFOC;
 
-    //TODO try motion magic expo later
     private final PositionVoltage positionVoltage;
 
     private final Swerve.OdometryThreadRunner odometryThreadRunner;
@@ -72,7 +68,7 @@ public class SwerveModuleIOTalonFX implements SwerveModuleIO {
         this.magnetOffset = magnetOffset;
 
         this.velocityTorqueCurrentFOC = new VelocityTorqueCurrentFOC(0);
-        this.motionMagicExpoTorqueCurrentFOC = new MotionMagicExpoTorqueCurrentFOC(0);
+        this.torqueCurrentFOC = new TorqueCurrentFOC(0);
         this.positionVoltage = new PositionVoltage(0);
         this.voltageOut = new VoltageOut(0);
 
@@ -110,6 +106,8 @@ public class SwerveModuleIOTalonFX implements SwerveModuleIO {
                 .withKS(5.875);
         driveTalonFXConfiguration.TorqueCurrent.PeakForwardTorqueCurrent = Modules.SLIP_CURRENT_A;
         driveTalonFXConfiguration.TorqueCurrent.PeakReverseTorqueCurrent = -Modules.SLIP_CURRENT_A;
+        driveTalonFXConfiguration.CurrentLimits.StatorCurrentLimit = Modules.SLIP_CURRENT_A;
+        driveTalonFXConfiguration.CurrentLimits.StatorCurrentLimitEnable = true;
         driveTalonFXConfiguration.ClosedLoopRamps.TorqueClosedLoopRampPeriod = 0.2;
         driveTalonFXConfiguration.Feedback.SensorToMechanismRatio = Modules.DRIVER_GEAR_RATIO;
         driveTalonFXConfiguration.MotorOutput.NeutralMode = NeutralModeValue.Brake;
@@ -136,7 +134,7 @@ public class SwerveModuleIOTalonFX implements SwerveModuleIO {
         turnMotor.getConfigurator().apply(turnTalonFXConfiguration);
 
         velocityTorqueCurrentFOC.UpdateFreqHz = 0;
-        motionMagicExpoTorqueCurrentFOC.UpdateFreqHz = 0;
+        torqueCurrentFOC.UpdateFreqHz = 0;
 
         positionVoltage.UpdateFreqHz = 0;
 
@@ -229,7 +227,6 @@ public class SwerveModuleIOTalonFX implements SwerveModuleIO {
                 .withVelocity(backedOutDriveVelocity)
                 .withOverrideCoastDurNeutral(true)
         );
-//        turnMotor.setControl(motionMagicExpoTorqueCurrentFOC.withPosition(desiredTurnerRotations));
         turnMotor.setControl(positionVoltage.withPosition(desiredTurnerRotations));
     }
 
@@ -237,7 +234,13 @@ public class SwerveModuleIOTalonFX implements SwerveModuleIO {
     public void setDriveCharacterizationVolts(double driveVolts, double desiredTurnerRotations) {
         odometryThreadRunner.updateControlRequest(driveMotor, voltageOut);
         driveMotor.setControl(voltageOut.withOutput(driveVolts));
-//        turnMotor.setControl(motionMagicExpoTorqueCurrentFOC.withPosition(desiredTurnerRotations));
+        turnMotor.setControl(positionVoltage.withPosition(desiredTurnerRotations));
+    }
+
+    @Override
+    public void setDriveCharacterizationAmps(double driveTorqueCurrentAmps, double desiredTurnerRotations) {
+        odometryThreadRunner.updateControlRequest(driveMotor, torqueCurrentFOC);
+        driveMotor.setControl(torqueCurrentFOC.withOutput(driveTorqueCurrentAmps));
         turnMotor.setControl(positionVoltage.withPosition(desiredTurnerRotations));
     }
 
