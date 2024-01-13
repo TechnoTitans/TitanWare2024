@@ -103,7 +103,8 @@ public class SwerveModuleIOTalonFX implements SwerveModuleIO {
 
         driveTalonFXConfiguration.Slot0 = new Slot0Configs()
                 .withKP(50)
-                .withKS(5.875);
+                .withKS(4.796)
+                .withKA(2.549);
         driveTalonFXConfiguration.TorqueCurrent.PeakForwardTorqueCurrent = Modules.SLIP_CURRENT_A;
         driveTalonFXConfiguration.TorqueCurrent.PeakReverseTorqueCurrent = -Modules.SLIP_CURRENT_A;
         driveTalonFXConfiguration.CurrentLimits.StatorCurrentLimit = Modules.SLIP_CURRENT_A;
