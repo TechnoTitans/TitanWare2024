@@ -219,7 +219,7 @@ public class SwerveModule {
                         driveMotor, turnMotor, canCoder, magnetOffset, odometryThreadRunner
                 );
                 case SIM -> new SwerveModuleIOTalonFXSim(
-                        driveMotor, turnMotor, canCoder, magnetOffset
+                        driveMotor, turnMotor, canCoder, magnetOffset, odometryThreadRunner
                 );
                 case REPLAY -> new SwerveModuleIO() {};
             };

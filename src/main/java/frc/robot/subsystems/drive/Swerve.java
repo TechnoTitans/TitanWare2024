@@ -68,12 +68,15 @@ public class Swerve extends SubsystemBase {
         protected final ReentrantReadWriteLock signalReadWriteLock = new ReentrantReadWriteLock();
         protected final ReentrantReadWriteLock controlReqReadWriteLock = new ReentrantReadWriteLock();
 
+        private String network;
+
         protected final List<StatusSignal<Double>> allSignals = new ArrayList<>();
         protected final List<Boolean> isLatencyCompensated = new ArrayList<>();
-        protected final Map<ParentDevice, ControlRequest> outerAppliedControlReqs = new HashMap<>();
-        protected final Map<ParentDevice, ControlRequest> innerAppliedControlReqs = new HashMap<>();
-        protected final Map<ParentDevice, Consumer<ControlRequest>> controlReqAppliers = new HashMap<>();
+        protected final Map<Long, ControlRequest> outerAppliedControlReqs = new HashMap<>();
+        protected final Map<Long, ControlRequest> innerAppliedControlReqs = new HashMap<>();
+        protected final Map<Long, Consumer<ControlRequest>> controlReqAppliers = new HashMap<>();
         protected final List<Queue<Double>> queues = new ArrayList<>();
+        protected final List<Queue<Double>> timestamps = new ArrayList<>();
 
         protected final Thread thread;
         protected final State state = new State();
@@ -214,6 +217,11 @@ public class Swerve extends SubsystemBase {
             }
         }
 
+        //TODO: make this actually do what we need it to do
+        public Queue<Double> makeTimestampQueue() {
+            return new ArrayDeque<>(100);
+        }
+
         public record Signal<T>(
                 boolean isLatencyCompensated,
                 StatusSignal<T> baseSignal,
@@ -243,11 +251,28 @@ public class Swerve extends SubsystemBase {
                 final ParentDevice device,
                 final Signal<Double> signal
         ) {
-            final Queue<Double> queue = new ArrayBlockingQueue<>(100);
+            final Queue<Double> queue = new ArrayDeque<>(100);
             try {
                 signalReadWriteLock.writeLock().lock();
-                if (!CANBus.isNetworkFD(device.getNetwork())) {
-                    throw new RuntimeException("Attempted to register signal from a non CAN-FD device! This is a bug!");
+                final String deviceNetwork = device.getNetwork();
+                if (!CANBus.isNetworkFD(deviceNetwork)) {
+                    throw new RuntimeException(String.format(
+                            "Attempted to register signal from a non CAN-FD device ID: %d (%s)! This is a bug!",
+                            device.getDeviceID(),
+                            deviceNetwork
+                    ));
+                }
+
+                // Ensure that we cannot register devices on different networks
+                if (network != null && !network.equals(deviceNetwork)) {
+                    throw new RuntimeException(String.format(
+                            "Attempted to register signal from a device on a different network than devices already" +
+                                    "registered! Current: %s, New: %s! This is a bug!",
+                            network,
+                            deviceNetwork
+                    ));
+                } else if (network == null) {
+                    network = deviceNetwork;
                 }
 
                 allSignals.add(signal.baseSignal);
@@ -270,33 +295,47 @@ public class Swerve extends SubsystemBase {
                 final ControlRequest controlRequest,
                 final Consumer<ControlRequest> applyControlReq
         ) {
-            if (outerAppliedControlReqs.containsKey(device)) {
+            final long deviceHash = device.getDeviceHash();
+            final String deviceNetwork = device.getNetwork();
+            if (network != null && !network.equals(deviceNetwork)) {
+                throw new RuntimeException(String.format(
+                        "Attempted to register signal from a device on a different network than devices already" +
+                                "registered! Current: %s, New: %s! This is a bug!",
+                        network,
+                        deviceNetwork
+                ));
+            } else if (network == null) {
+                network = deviceNetwork;
+            }
+
+            if (outerAppliedControlReqs.containsKey(deviceHash)) {
                 throw new RuntimeException(String.format(
                         "Attempted to register a ControlRequest for the same device" +
-                                "ID: %d (%s) more than once!", device.getDeviceID(), device.getNetwork()
+                                "ID: %d (%s) more than once!", device.getDeviceID(), deviceNetwork
                 ));
             }
 
-            outerAppliedControlReqs.put(device, controlRequest);
+            outerAppliedControlReqs.put(deviceHash, controlRequest);
             try {
                 controlReqReadWriteLock.writeLock().lock();
 
-                innerAppliedControlReqs.put(device, controlRequest);
-                controlReqAppliers.put(device, applyControlReq);
+                innerAppliedControlReqs.put(deviceHash, controlRequest);
+                controlReqAppliers.put(deviceHash, applyControlReq);
             } finally {
                 controlReqReadWriteLock.writeLock().unlock();
             }
         }
 
         public void updateControlRequest(final ParentDevice device, final ControlRequest controlRequest) {
-            if (outerAppliedControlReqs.get(device) == controlRequest) {
+            final long deviceHash = device.getDeviceHash();
+            if (outerAppliedControlReqs.get(deviceHash) == controlRequest) {
                 return;
             }
 
-            outerAppliedControlReqs.put(device, controlRequest);
+            outerAppliedControlReqs.put(deviceHash, controlRequest);
             try {
                 controlReqReadWriteLock.writeLock().lock();
-                innerAppliedControlReqs.put(device, controlRequest);
+                innerAppliedControlReqs.put(deviceHash, controlRequest);
             } finally {
                 controlReqReadWriteLock.writeLock().unlock();
             }
@@ -381,7 +420,7 @@ public class Swerve extends SubsystemBase {
 
                 try {
                     controlReqReadWriteLock.readLock().lock();
-                    for (final Map.Entry<ParentDevice, Consumer<ControlRequest>>
+                    for (final Map.Entry<Long, Consumer<ControlRequest>>
                             controlReqApplierEntry : controlReqAppliers.entrySet()
                     ) {
                         controlReqApplierEntry

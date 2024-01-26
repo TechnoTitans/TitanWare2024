@@ -25,6 +25,9 @@ import frc.robot.utils.sim.SimUtils;
 import frc.robot.utils.sim.feedback.SimPhoenix6CANCoder;
 import frc.robot.utils.sim.motors.CTREPhoenix6TalonFXSim;
 
+import java.util.Queue;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
+
 public class SwerveModuleIOTalonFXSim implements SwerveModuleIO {
     private final TalonFX driveMotor;
     private final TalonFX turnMotor;
@@ -53,11 +56,17 @@ public class SwerveModuleIOTalonFXSim implements SwerveModuleIO {
     private final StatusSignal<Double> _turnStatorCurrent;
     private final StatusSignal<Double> _turnDeviceTemp;
 
+    // Odometry StatusSignal update queues and queue read/write lock
+    private final ReentrantReadWriteLock signalQueueReadWriteLock;
+    private final Queue<Double> drivePositionSignalQueue;
+    private final Queue<Double> turnPositionSignalQueue;
+
     public SwerveModuleIOTalonFXSim(
             final TalonFX driveMotor,
             final TalonFX turnMotor,
             final CANcoder turnEncoder,
-            final double magnetOffset
+            final double magnetOffset,
+            final Swerve.OdometryThreadRunner odometryThreadRunner
     ) {
         this.driveMotor = driveMotor;
         this.turnMotor = turnMotor;
@@ -100,6 +109,10 @@ public class SwerveModuleIOTalonFXSim implements SwerveModuleIO {
         this._turnTorqueCurrent = turnMotor.getTorqueCurrent();
         this._turnStatorCurrent = turnMotor.getStatorCurrent();
         this._turnDeviceTemp = turnMotor.getDeviceTemp();
+
+        this.signalQueueReadWriteLock = odometryThreadRunner.signalQueueReadWriteLock;
+        this.drivePositionSignalQueue = odometryThreadRunner.registerSignal(driveMotor, _drivePosition, _driveVelocity);
+        this.turnPositionSignalQueue = odometryThreadRunner.registerSignal(turnMotor, _turnPosition, _turnVelocity);
     }
 
     @SuppressWarnings("DuplicatedCode")
