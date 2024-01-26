@@ -58,6 +58,7 @@ public class SwerveModuleIOTalonFXSim implements SwerveModuleIO {
 
     // Odometry StatusSignal update queues and queue read/write lock
     private final ReentrantReadWriteLock signalQueueReadWriteLock;
+    private final Queue<Double> timestampQueue;
     private final Queue<Double> drivePositionSignalQueue;
     private final Queue<Double> turnPositionSignalQueue;
 
@@ -111,8 +112,13 @@ public class SwerveModuleIOTalonFXSim implements SwerveModuleIO {
         this._turnDeviceTemp = turnMotor.getDeviceTemp();
 
         this.signalQueueReadWriteLock = odometryThreadRunner.signalQueueReadWriteLock;
-        this.drivePositionSignalQueue = odometryThreadRunner.registerSignal(driveMotor, _drivePosition, _driveVelocity);
-        this.turnPositionSignalQueue = odometryThreadRunner.registerSignal(turnMotor, _turnPosition, _turnVelocity);
+        this.timestampQueue = odometryThreadRunner.makeTimestampQueue();
+        this.drivePositionSignalQueue = odometryThreadRunner.registerSignal(
+                driveMotor, _drivePosition, _driveVelocity, timestampQueue
+        );
+        this.turnPositionSignalQueue = odometryThreadRunner.registerSignal(
+                turnMotor, _turnPosition, _turnVelocity, timestampQueue
+        );
     }
 
     @SuppressWarnings("DuplicatedCode")
@@ -191,6 +197,21 @@ public class SwerveModuleIOTalonFXSim implements SwerveModuleIO {
         inputs.turnTorqueCurrentAmps = _turnTorqueCurrent.getValue();
         inputs.turnStatorCurrentAmps = _turnStatorCurrent.getValue();
         inputs.turnTempCelsius = _turnDeviceTemp.getValue();
+
+        try {
+            signalQueueReadWriteLock.writeLock().lock();
+
+            inputs.odometryTimestampsSec = timestampQueue.stream().mapToDouble(time -> time).toArray();
+            timestampQueue.clear();
+
+            inputs.odometryDrivePositionsRots = drivePositionSignalQueue.stream().mapToDouble(pos -> pos).toArray();
+            drivePositionSignalQueue.clear();
+
+            inputs.odometryTurnPositionRots = turnPositionSignalQueue.stream().mapToDouble(pos -> pos).toArray();
+            turnPositionSignalQueue.clear();
+        } finally {
+            signalQueueReadWriteLock.writeLock().unlock();
+        }
     }
 
     /**

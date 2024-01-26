@@ -26,6 +26,7 @@ public class GyroIOPigeon2 implements GyroIO {
 
     // StatusSignal queues for high-freq odometry and read lock
     private final ReentrantReadWriteLock signalQueueReadWriteLock;
+    private final Queue<Double> timestampQueue;
     private final Queue<Double> yawSignalQueue;
 
     public GyroIOPigeon2(final Pigeon2 pigeon, final Swerve.OdometryThreadRunner odometryThreadRunner) {
@@ -40,7 +41,8 @@ public class GyroIOPigeon2 implements GyroIO {
         this._faultHardware = pigeon.getFault_Hardware();
 
         this.signalQueueReadWriteLock = odometryThreadRunner.getSignalQueueReadWriteLock();
-        this.yawSignalQueue = odometryThreadRunner.registerSignal(pigeon, _yaw, _yawVelocity);
+        this.timestampQueue = odometryThreadRunner.makeTimestampQueue();
+        this.yawSignalQueue = odometryThreadRunner.registerSignal(pigeon, _yaw, _yawVelocity, timestampQueue);
     }
 
     @SuppressWarnings("DuplicatedCode")
@@ -66,6 +68,9 @@ public class GyroIOPigeon2 implements GyroIO {
 
         try {
             signalQueueReadWriteLock.writeLock().lock();
+
+            inputs.odometryTimestampsSec = timestampQueue.stream().mapToDouble(time -> time).toArray();
+            timestampQueue.clear();
 
             inputs.odometryYawPositionsDeg = yawSignalQueue.stream().mapToDouble(yaw -> yaw).toArray();
             yawSignalQueue.clear();

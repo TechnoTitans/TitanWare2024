@@ -7,6 +7,7 @@ import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.kinematics.SwerveModulePosition;
 import edu.wpi.first.math.kinematics.SwerveModuleState;
 import frc.robot.constants.Constants;
+import frc.robot.constants.Constants.Swerve.Modules;
 import frc.robot.utils.logging.LogUtils;
 import org.littletonrobotics.junction.Logger;
 
@@ -16,6 +17,7 @@ public class SwerveModule {
     private final SwerveModuleIO moduleIO;
     private final SwerveModuleIOInputsAutoLogged inputs;
 
+    private SwerveModulePosition[] odometryPositions;
     private SwerveModuleState lastDesiredState = new SwerveModuleState();
 
     public SwerveModule(final SwerveModuleIO moduleIO, final String name) {
@@ -31,10 +33,18 @@ public class SwerveModule {
     public String getName() { return name; }
 
     public void periodic() {
+        final double modulePeriodicUpdateStart = Logger.getRealTimestamp();
         moduleIO.periodic();
         moduleIO.updateInputs(inputs);
 
-        final double modulePeriodicUpdateStart = Logger.getRealTimestamp();
+        final int samples = inputs.odometryTimestampsSec.length;
+        odometryPositions = new SwerveModulePosition[samples];
+        for (int i = 0; i < samples; i++) {
+            odometryPositions[i] = new SwerveModulePosition(
+                    inputs.odometryDrivePositionsRots[i] * Modules.WHEEL_CIRCUMFERENCE_M,
+                    Rotation2d.fromRotations(inputs.odometryTurnPositionRots[i])
+            );
+        }
 
         Logger.processInputs(logKey, inputs);
 
@@ -92,7 +102,7 @@ public class SwerveModule {
      */
     public SwerveModuleState getState() {
         return new SwerveModuleState(
-                getDriveVelocity() * Constants.Swerve.Modules.WHEEL_CIRCUMFERENCE_M,
+                getDriveVelocity() * Modules.WHEEL_CIRCUMFERENCE_M,
                 getAngle()
         );
     }
@@ -105,9 +115,17 @@ public class SwerveModule {
      */
     public SwerveModulePosition getPosition() {
         return new SwerveModulePosition(
-                getDrivePosition() * Constants.Swerve.Modules.WHEEL_CIRCUMFERENCE_M,
+                getDrivePosition() * Modules.WHEEL_CIRCUMFERENCE_M,
                 getAngle()
         );
+    }
+
+    public SwerveModulePosition[] getOdometryPositions() {
+        return odometryPositions;
+    }
+
+    public double[] getOdometryTimestamps() {
+        return inputs.odometryTimestampsSec;
     }
 
     /**
@@ -140,7 +158,7 @@ public class SwerveModule {
      */
     public double computeDesiredDriverVelocity(final SwerveModuleState wantedState, final Rotation2d wheelRotation) {
         SwerveModule.scaleWithErrorCosine(wantedState, wheelRotation);
-        return wantedState.speedMetersPerSecond / Constants.Swerve.Modules.WHEEL_CIRCUMFERENCE_M;
+        return wantedState.speedMetersPerSecond / Modules.WHEEL_CIRCUMFERENCE_M;
     }
 
     /**

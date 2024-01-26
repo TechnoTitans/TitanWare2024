@@ -76,7 +76,7 @@ public class Swerve extends SubsystemBase {
         protected final Map<Long, ControlRequest> innerAppliedControlReqs = new HashMap<>();
         protected final Map<Long, Consumer<ControlRequest>> controlReqAppliers = new HashMap<>();
         protected final List<Queue<Double>> queues = new ArrayList<>();
-        protected final List<Queue<Double>> timestamps = new ArrayList<>();
+        protected final List<Queue<Double>> timestampQueues = new ArrayList<>();
 
         protected final Thread thread;
         protected final State state = new State();
@@ -217,34 +217,47 @@ public class Swerve extends SubsystemBase {
             }
         }
 
-        //TODO: make this actually do what we need it to do
         public Queue<Double> makeTimestampQueue() {
-            return new ArrayDeque<>(100);
+            final Queue<Double> queue = new ArrayDeque<>(100);
+            try {
+                signalReadWriteLock.writeLock().lock();
+                timestampQueues.add(queue);
+            } finally {
+                signalReadWriteLock.writeLock().unlock();
+            }
+
+            return queue;
         }
 
         public record Signal<T>(
                 boolean isLatencyCompensated,
                 StatusSignal<T> baseSignal,
-                StatusSignal<T> latencyCompensatorSignal
+                StatusSignal<T> latencyCompensatorSignal,
+                Queue<Double> timestampQueue
         ) {
-            public static <T> Signal<T> single(final StatusSignal<T> baseSignal) {
-                return new Signal<>(false, baseSignal, null);
+            public static <T> Signal<T> single(final StatusSignal<T> baseSignal, final Queue<Double> timestampQueue) {
+                return new Signal<>(false, baseSignal, null, timestampQueue);
             }
 
             public static <T> Signal<T> latencyCompensated(
                     final StatusSignal<T> baseSignal,
-                    final StatusSignal<T> latencyCompensatorSignal
+                    final StatusSignal<T> latencyCompensatorSignal,
+                    final Queue<Double> timestampQueue
             ) {
-                return new Signal<>(true, baseSignal, latencyCompensatorSignal);
+                return new Signal<>(true, baseSignal, latencyCompensatorSignal, timestampQueue);
             }
         }
 
         public Queue<Double> registerSignal(
                 final ParentDevice device,
                 final StatusSignal<Double> baseSignal,
-                final StatusSignal<Double> latencyCompensatorSignal
+                final StatusSignal<Double> latencyCompensatorSignal,
+                final Queue<Double> timestampQueue
         ) {
-            return registerSignal(device, Signal.latencyCompensated(baseSignal, latencyCompensatorSignal));
+            return registerSignal(
+                    device,
+                    Signal.latencyCompensated(baseSignal, latencyCompensatorSignal, timestampQueue)
+            );
         }
 
         public Queue<Double> registerSignal(
@@ -493,13 +506,13 @@ public class Swerve extends SubsystemBase {
         );
 
         final Pigeon2 pigeon2 = new Pigeon2(RobotMap.Pigeon, RobotMap.CanivoreCANBus);
-        this.gyroInputs = new GyroIOInputsAutoLogged();
         this.gyro = switch (mode) {
             case REAL -> new Gyro(new GyroIOPigeon2(pigeon2, odometryThreadRunner), pigeon2);
             case SIM -> new Gyro(new GyroIOSim(pigeon2, kinematics, odometryThreadRunner, swerveModules), pigeon2);
             case REPLAY -> new Gyro(new GyroIO() {
             }, pigeon2);
         };
+        this.gyroInputs = gyro.getInputs();
 
         //TODO add vision
         this.poseEstimator = new SwerveDrivePoseEstimator(
@@ -554,6 +567,33 @@ public class Swerve extends SubsystemBase {
         backLeft.periodic();
         backRight.periodic();
 
+        // Update PoseEstimator and Odometry
+        final double odometryUpdateStart = Logger.getRealTimestamp();
+
+        // Signals are synchronous, this means that all signals should have observed the same number of timestamps
+        final double[] sampleTimestamps = frontLeft.getOdometryTimestamps();
+        final int sampleCount = sampleTimestamps.length;
+        final int moduleCount = swerveModules.length;
+
+        for (int timestampIndex = 0; timestampIndex < sampleCount; timestampIndex++) {
+            final SwerveModulePosition[] positions = new SwerveModulePosition[moduleCount];
+            for (int moduleIndex = 0; moduleIndex < moduleCount; moduleIndex++) {
+                positions[moduleIndex] = swerveModules[moduleIndex].getOdometryPositions()[timestampIndex];
+            }
+
+            // TODO: it might be cool to see all of these updates happen at once,
+            //  so maybe build an array of poses and log it?
+            poseEstimator.updateWithTime(
+                    sampleTimestamps[timestampIndex],
+                    Rotation2d.fromDegrees(gyroInputs.odometryYawPositionsDeg[timestampIndex]),
+                    positions
+            );
+        }
+
+        final double odometryUpdatePeriodMs = LogUtils.microsecondsToMilliseconds(
+                Logger.getRealTimestamp() - odometryUpdateStart
+        );
+
         Logger.recordOutput(
                 logKey + "/PeriodicIOPeriodMs",
                 LogUtils.microsecondsToMilliseconds(Logger.getRealTimestamp() - swervePeriodicUpdateStart)
@@ -592,13 +632,7 @@ public class Swerve extends SubsystemBase {
                Constants.CURRENT_MODE == Constants.RobotMode.REAL && !gyro.isReal()
         );
 
-        // Update PoseEstimator and Odometry
-        final double odometryUpdateStart = Logger.getRealTimestamp();
-        final Pose2d estimatedPosition = poseEstimator.update(getYaw(), getModulePositions());
-        final double odometryUpdatePeriodMs = LogUtils.microsecondsToMilliseconds(
-                Logger.getRealTimestamp() - odometryUpdateStart
-        );
-
+        final Pose2d estimatedPosition = poseEstimator.getEstimatedPosition();
         Logger.recordOutput(
                 odometryLogKey + "/OdometryUpdatePeriodMs", odometryUpdatePeriodMs
         );
