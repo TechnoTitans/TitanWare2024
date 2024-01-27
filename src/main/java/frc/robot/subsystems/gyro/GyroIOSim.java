@@ -65,7 +65,7 @@ public class GyroIOSim implements GyroIO {
 
         this.signalQueueReadWriteLock = odometryThreadRunner.getSignalQueueReadWriteLock();
         this.timestampQueue = odometryThreadRunner.makeTimestampQueue();
-        this.yawSignalQueue = odometryThreadRunner.registerSignal(pigeon, _yaw, _yawVelocity, timestampQueue);
+        this.yawSignalQueue = odometryThreadRunner.registerSignal(pigeon, _yaw);
 
         pigeonSimState.setSupplyVoltage(12);
         pigeonSimState.setPitch(USE_SIMULATED_PITCH);
@@ -144,17 +144,11 @@ public class GyroIOSim implements GyroIO {
         inputs.rollVelocityDegPerSec = _rollVelocity.getValue();
         inputs.hasHardwareFault = _faultHardware.getValue();
 
-        try {
-            signalQueueReadWriteLock.writeLock().lock();
+        inputs.odometryTimestampsSec = timestampQueue.stream().mapToDouble(time -> time).toArray();
+        timestampQueue.clear();
 
-            inputs.odometryTimestampsSec = timestampQueue.stream().mapToDouble(time -> time).toArray();
-            timestampQueue.clear();
-
-            inputs.odometryYawPositionsDeg = yawSignalQueue.stream().mapToDouble(yaw -> yaw).toArray();
-            yawSignalQueue.clear();
-        } finally {
-            signalQueueReadWriteLock.writeLock().unlock();
-        }
+        inputs.odometryYawPositionsDeg = yawSignalQueue.stream().mapToDouble(yaw -> yaw).toArray();
+        yawSignalQueue.clear();
     }
 
     public double getYaw() {

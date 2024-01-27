@@ -102,8 +102,6 @@ public class Robot extends LoggedRobot {
         }
 
         robotContainer = new RobotContainer();
-        // TODO: uh the phoenix6 example does this, but do we need to?
-        robotContainer.swerve.getOdometryThreadRunner().setThreadPriority(99);
 
         SignalLogger.enableAutoLogging(true);
         SignalLogger.start();

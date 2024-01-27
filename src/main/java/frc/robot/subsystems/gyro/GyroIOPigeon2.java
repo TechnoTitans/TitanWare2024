@@ -42,7 +42,7 @@ public class GyroIOPigeon2 implements GyroIO {
 
         this.signalQueueReadWriteLock = odometryThreadRunner.getSignalQueueReadWriteLock();
         this.timestampQueue = odometryThreadRunner.makeTimestampQueue();
-        this.yawSignalQueue = odometryThreadRunner.registerSignal(pigeon, _yaw, _yawVelocity, timestampQueue);
+        this.yawSignalQueue = odometryThreadRunner.registerSignal(pigeon, _yaw);
     }
 
     @SuppressWarnings("DuplicatedCode")
@@ -66,17 +66,11 @@ public class GyroIOPigeon2 implements GyroIO {
         inputs.rollVelocityDegPerSec = _rollVelocity.getValue();
         inputs.hasHardwareFault = _faultHardware.getValue();
 
-        try {
-            signalQueueReadWriteLock.writeLock().lock();
+        inputs.odometryTimestampsSec = timestampQueue.stream().mapToDouble(time -> time).toArray();
+        timestampQueue.clear();
 
-            inputs.odometryTimestampsSec = timestampQueue.stream().mapToDouble(time -> time).toArray();
-            timestampQueue.clear();
-
-            inputs.odometryYawPositionsDeg = yawSignalQueue.stream().mapToDouble(yaw -> yaw).toArray();
-            yawSignalQueue.clear();
-        } finally {
-            signalQueueReadWriteLock.writeLock().unlock();
-        }
+        inputs.odometryYawPositionsDeg = yawSignalQueue.stream().mapToDouble(yaw -> yaw).toArray();
+        yawSignalQueue.clear();
     }
 
     // TODO: duplicated code warnings here aren't exactly amazing, but I can't really think of a way to extract

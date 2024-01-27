@@ -35,7 +35,6 @@ import org.littletonrobotics.junction.Logger;
 
 import java.nio.ByteBuffer;
 import java.util.*;
-import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.function.Consumer;
 import java.util.function.DoubleSupplier;
@@ -45,7 +44,6 @@ public class Swerve extends SubsystemBase {
     protected static final String odometryLogKey = "Odometry";
 
     private Gyro gyro;
-    private final GyroIOInputsAutoLogged gyroInputs;
     private final SwerveDriveKinematics kinematics;
     private final SwerveDrivePoseEstimator poseEstimator;
 
@@ -71,9 +69,8 @@ public class Swerve extends SubsystemBase {
         private String network;
 
         protected final List<StatusSignal<Double>> allSignals = new ArrayList<>();
-        protected final List<Boolean> isLatencyCompensated = new ArrayList<>();
-        protected final Map<Long, ControlRequest> outerAppliedControlReqs = new HashMap<>();
-        protected final Map<Long, ControlRequest> innerAppliedControlReqs = new HashMap<>();
+        protected final Map<Long, ControlRequest> outerAppliedControlRequests = new HashMap<>();
+        protected final Map<Long, ControlRequest> innerAppliedControlRequests = new HashMap<>();
         protected final Map<Long, Consumer<ControlRequest>> controlReqAppliers = new HashMap<>();
         protected final List<Queue<Double>> queues = new ArrayList<>();
         protected final List<Queue<Double>> timestampQueues = new ArrayList<>();
@@ -152,6 +149,7 @@ public class Swerve extends SubsystemBase {
             public int failedDAQs;
             public int statusCode;
             public int maxQueueSize;
+            public double timestampSeconds;
             public double odometryPeriodSeconds;
 
             public static class StateStruct implements Struct<State> {
@@ -167,12 +165,12 @@ public class Swerve extends SubsystemBase {
 
                 @Override
                 public int getSize() {
-                    return kSizeBool + (kSizeInt32 * 4) + kSizeDouble;
+                    return kSizeBool + (kSizeInt32 * 4) + (kSizeDouble * 2);
                 }
 
                 @Override
                 public String getSchema() {
-                    return "bool running;int32 failedDAQs;int32 statusCode;int32 maxQueueSize;double odometryPeriodSeconds";
+                    return "bool running;int32 failedDAQs;int32 statusCode;int32 maxQueueSize;double timestampSeconds;double odometryPeriodSeconds";
                 }
 
                 @Override
@@ -181,6 +179,7 @@ public class Swerve extends SubsystemBase {
                     final int failedDAQs = bb.getInt();
                     final int statusCode = bb.getInt();
                     final int maxQueueSize = bb.getInt();
+                    final double timestamp = bb.getDouble();
                     final double odometryPeriod = bb.getDouble();
 
                     final State state = new State();
@@ -188,6 +187,7 @@ public class Swerve extends SubsystemBase {
                     state.failedDAQs = failedDAQs;
                     state.statusCode = statusCode;
                     state.maxQueueSize = maxQueueSize;
+                    state.timestampSeconds = timestamp;
                     state.odometryPeriodSeconds = odometryPeriod;
                     return state;
                 }
@@ -198,6 +198,7 @@ public class Swerve extends SubsystemBase {
                     bb.putInt(value.failedDAQs);
                     bb.putInt(value.statusCode);
                     bb.putInt(value.maxQueueSize);
+                    bb.putDouble(value.timestampSeconds);
                     bb.putDouble(value.odometryPeriodSeconds);
                 }
             }
@@ -229,40 +230,9 @@ public class Swerve extends SubsystemBase {
             return queue;
         }
 
-        public record Signal<T>(
-                boolean isLatencyCompensated,
-                StatusSignal<T> baseSignal,
-                StatusSignal<T> latencyCompensatorSignal,
-                Queue<Double> timestampQueue
-        ) {
-            public static <T> Signal<T> single(final StatusSignal<T> baseSignal, final Queue<Double> timestampQueue) {
-                return new Signal<>(false, baseSignal, null, timestampQueue);
-            }
-
-            public static <T> Signal<T> latencyCompensated(
-                    final StatusSignal<T> baseSignal,
-                    final StatusSignal<T> latencyCompensatorSignal,
-                    final Queue<Double> timestampQueue
-            ) {
-                return new Signal<>(true, baseSignal, latencyCompensatorSignal, timestampQueue);
-            }
-        }
-
         public Queue<Double> registerSignal(
                 final ParentDevice device,
-                final StatusSignal<Double> baseSignal,
-                final StatusSignal<Double> latencyCompensatorSignal,
-                final Queue<Double> timestampQueue
-        ) {
-            return registerSignal(
-                    device,
-                    Signal.latencyCompensated(baseSignal, latencyCompensatorSignal, timestampQueue)
-            );
-        }
-
-        public Queue<Double> registerSignal(
-                final ParentDevice device,
-                final Signal<Double> signal
+                final StatusSignal<Double> signal
         ) {
             final Queue<Double> queue = new ArrayDeque<>(100);
             try {
@@ -288,13 +258,7 @@ public class Swerve extends SubsystemBase {
                     network = deviceNetwork;
                 }
 
-                allSignals.add(signal.baseSignal);
-                isLatencyCompensated.add(signal.isLatencyCompensated);
-                if (signal.isLatencyCompensated) {
-                    allSignals.add(signal.latencyCompensatorSignal);
-                    isLatencyCompensated.add(true);
-                }
-
+                allSignals.add(signal);
                 queues.add(queue);
             } finally {
                 signalReadWriteLock.writeLock().unlock();
@@ -321,18 +285,18 @@ public class Swerve extends SubsystemBase {
                 network = deviceNetwork;
             }
 
-            if (outerAppliedControlReqs.containsKey(deviceHash)) {
+            if (outerAppliedControlRequests.containsKey(deviceHash)) {
                 throw new RuntimeException(String.format(
                         "Attempted to register a ControlRequest for the same device" +
                                 "ID: %d (%s) more than once!", device.getDeviceID(), deviceNetwork
                 ));
             }
 
-            outerAppliedControlReqs.put(deviceHash, controlRequest);
+            outerAppliedControlRequests.put(deviceHash, controlRequest);
             try {
                 controlReqReadWriteLock.writeLock().lock();
 
-                innerAppliedControlReqs.put(deviceHash, controlRequest);
+                innerAppliedControlRequests.put(deviceHash, controlRequest);
                 controlReqAppliers.put(deviceHash, applyControlReq);
             } finally {
                 controlReqReadWriteLock.writeLock().unlock();
@@ -341,14 +305,14 @@ public class Swerve extends SubsystemBase {
 
         public void updateControlRequest(final ParentDevice device, final ControlRequest controlRequest) {
             final long deviceHash = device.getDeviceHash();
-            if (outerAppliedControlReqs.get(deviceHash) == controlRequest) {
+            if (outerAppliedControlRequests.get(deviceHash) == controlRequest) {
                 return;
             }
 
-            outerAppliedControlReqs.put(deviceHash, controlRequest);
+            outerAppliedControlRequests.put(deviceHash, controlRequest);
             try {
                 controlReqReadWriteLock.writeLock().lock();
-                innerAppliedControlReqs.put(deviceHash, controlRequest);
+                innerAppliedControlRequests.put(deviceHash, controlRequest);
             } finally {
                 controlReqReadWriteLock.writeLock().unlock();
             }
@@ -401,31 +365,29 @@ public class Swerve extends SubsystemBase {
                     state.statusCode = statusCodeValue;
                     state.odometryPeriodSeconds = averageLoopTimeSeconds;
 
-                    int queueIndex = 0;
+                    final int signalCount = allSignals.size();
+                    double totalLatencySeconds = 0;
                     int maxQueueSize = 0;
-                    for (int i = 0; i < allSignals.size(); i++) {
-                        final Queue<Double> queue = queues.get(queueIndex);
-                        final boolean isLatencyCompensatedSignal = isLatencyCompensated.get(i);
-
-                        if (isLatencyCompensatedSignal) {
-                            queue.offer(BaseStatusSignal.getLatencyCompensatedValue(
-                                    allSignals.get(i),
-                                    allSignals.get(i + 1)
-                            ));
-                            // skip next signal, as the next signal is the latency compensator for the current signal
-                            i++;
-                        } else {
-                            queue.offer(allSignals.get(i).getValue());
-                        }
+                    for (int i = 0; i < signalCount; i++) {
+                        final Queue<Double> queue = queues.get(i);
+                        final StatusSignal<Double> signal = allSignals.get(i);
+                        queue.offer(signal.getValue());
 
                         final int queueSize = queue.size();
                         if (queueSize > maxQueueSize) {
                             maxQueueSize = queueSize;
                         }
 
-                        queueIndex++;
+                        totalLatencySeconds += signal.getTimestamp().getLatency();
                     }
 
+                    final double realTimestampSeconds = Logger.getRealTimestamp() / 1e6;
+                    final double signalTimestampSeconds = realTimestampSeconds - (totalLatencySeconds / signalCount);
+                    for (final Queue<Double> timestampQueue : timestampQueues) {
+                        timestampQueue.offer(signalTimestampSeconds);
+                    }
+
+                    state.timestampSeconds = signalTimestampSeconds;
                     state.maxQueueSize = maxQueueSize;
                 } finally {
                     signalQueueReadWriteLock.writeLock().unlock();
@@ -438,7 +400,7 @@ public class Swerve extends SubsystemBase {
                     ) {
                         controlReqApplierEntry
                                 .getValue()
-                                .accept(innerAppliedControlReqs.get(controlReqApplierEntry.getKey()));
+                                .accept(innerAppliedControlRequests.get(controlReqApplierEntry.getKey()));
                     }
                 } finally {
                     controlReqReadWriteLock.readLock().unlock();
@@ -476,7 +438,6 @@ public class Swerve extends SubsystemBase {
         this.swerveModules = new SwerveModule[]{frontLeft, frontRight, backLeft, backRight};
         this.kinematics = kinematics;
 
-        this.gyroInputs = new GyroIOInputsAutoLogged();
         this.gyro = gyro;
 
         this.poseEstimator = poseEstimator;
@@ -512,7 +473,6 @@ public class Swerve extends SubsystemBase {
             case REPLAY -> new Gyro(new GyroIO() {
             }, pigeon2);
         };
-        this.gyroInputs = gyro.getInputs();
 
         //TODO add vision
         this.poseEstimator = new SwerveDrivePoseEstimator(
@@ -560,18 +520,24 @@ public class Swerve extends SubsystemBase {
     @Override
     public void periodic() {
         final double swervePeriodicUpdateStart = Logger.getRealTimestamp();
-        gyro.periodic();
+        try {
+            signalQueueReadWriteLock.writeLock().lock();
+            gyro.periodic();
 
-        frontLeft.periodic();
-        frontRight.periodic();
-        backLeft.periodic();
-        backRight.periodic();
+            frontLeft.periodic();
+            frontRight.periodic();
+            backLeft.periodic();
+            backRight.periodic();
+        } finally {
+            signalQueueReadWriteLock.writeLock().unlock();
+        }
 
         // Update PoseEstimator and Odometry
         final double odometryUpdateStart = Logger.getRealTimestamp();
 
         // Signals are synchronous, this means that all signals should have observed the same number of timestamps
         final double[] sampleTimestamps = frontLeft.getOdometryTimestamps();
+        final double[] gyroYawPositions = gyro.getOdometryYawPositions();
         final int sampleCount = sampleTimestamps.length;
         final int moduleCount = swerveModules.length;
 
@@ -585,7 +551,7 @@ public class Swerve extends SubsystemBase {
             //  so maybe build an array of poses and log it?
             poseEstimator.updateWithTime(
                     sampleTimestamps[timestampIndex],
-                    Rotation2d.fromDegrees(gyroInputs.odometryYawPositionsDeg[timestampIndex]),
+                    Rotation2d.fromDegrees(gyroYawPositions[timestampIndex]),
                     positions
             );
         }
@@ -622,7 +588,7 @@ public class Swerve extends SubsystemBase {
         Logger.recordOutput(logKey + "/CurrentStates", currentStates);
 
         // only update gyro from wheel odometry if we're not simulating and the gyro has failed
-        if (Constants.CURRENT_MODE == Constants.RobotMode.REAL && gyroInputs.hasHardwareFault && gyro.isReal()) {
+        if (Constants.CURRENT_MODE == Constants.RobotMode.REAL && gyro.hasHardwareFault() && gyro.isReal()) {
             final Pigeon2 pigeon2 = gyro.getPigeon();
             gyro = new Gyro(new GyroIOSim(pigeon2, kinematics, odometryThreadRunner, swerveModules), pigeon2);
         }

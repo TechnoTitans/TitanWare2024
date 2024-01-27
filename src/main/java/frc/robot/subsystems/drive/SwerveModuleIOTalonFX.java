@@ -6,7 +6,6 @@ import com.ctre.phoenix6.StatusSignal;
 import com.ctre.phoenix6.configs.CANcoderConfiguration;
 import com.ctre.phoenix6.configs.Slot0Configs;
 import com.ctre.phoenix6.configs.TalonFXConfiguration;
-import com.ctre.phoenix6.controls.MotionMagicExpoTorqueCurrentFOC;
 import com.ctre.phoenix6.controls.PositionVoltage;
 import com.ctre.phoenix6.controls.VelocityTorqueCurrentFOC;
 import com.ctre.phoenix6.controls.VoltageOut;
@@ -34,7 +33,6 @@ public class SwerveModuleIOTalonFX implements SwerveModuleIO {
     private final TalonFXConfiguration turnTalonFXConfiguration = new TalonFXConfiguration();
 
     private final VelocityTorqueCurrentFOC velocityTorqueCurrentFOC;
-    private final MotionMagicExpoTorqueCurrentFOC motionMagicExpoTorqueCurrentFOC;
     private final VoltageOut voltageOut;
 
     //TODO try motion magic expo later
@@ -73,7 +71,6 @@ public class SwerveModuleIOTalonFX implements SwerveModuleIO {
         this.magnetOffset = magnetOffset;
 
         this.velocityTorqueCurrentFOC = new VelocityTorqueCurrentFOC(0);
-        this.motionMagicExpoTorqueCurrentFOC = new MotionMagicExpoTorqueCurrentFOC(0);
         this.positionVoltage = new PositionVoltage(0);
         this.voltageOut = new VoltageOut(0);
 
@@ -94,12 +91,8 @@ public class SwerveModuleIOTalonFX implements SwerveModuleIO {
 
         this.signalQueueReadWriteLock = odometryThreadRunner.signalQueueReadWriteLock;
         this.timestampQueue = odometryThreadRunner.makeTimestampQueue();
-        this.drivePositionSignalQueue = odometryThreadRunner.registerSignal(
-                driveMotor, _drivePosition, _driveVelocity, timestampQueue
-        );
-        this.turnPositionSignalQueue = odometryThreadRunner.registerSignal(
-                turnMotor, _turnPosition, _turnVelocity, timestampQueue
-        );
+        this.drivePositionSignalQueue = odometryThreadRunner.registerSignal(driveMotor, _drivePosition);
+        this.turnPositionSignalQueue = odometryThreadRunner.registerSignal(turnMotor, _turnPosition);
     }
 
     @SuppressWarnings("DuplicatedCode")
@@ -142,15 +135,15 @@ public class SwerveModuleIOTalonFX implements SwerveModuleIO {
         turnMotor.getConfigurator().apply(turnTalonFXConfiguration);
 
         velocityTorqueCurrentFOC.UpdateFreqHz = 0;
-        motionMagicExpoTorqueCurrentFOC.UpdateFreqHz = 0;
-
         positionVoltage.UpdateFreqHz = 0;
 
         BaseStatusSignal.setUpdateFrequencyForAll(
                 100,
+                _driveVelocity,
                 _driveTorqueCurrent,
                 _driveStatorCurrent,
                 _driveDeviceTemp,
+                _turnVelocity,
                 _turnTorqueCurrent,
                 _turnStatorCurrent,
                 _turnDeviceTemp
@@ -186,20 +179,14 @@ public class SwerveModuleIOTalonFX implements SwerveModuleIO {
         inputs.turnStatorCurrentAmps = _turnStatorCurrent.getValue();
         inputs.turnTempCelsius = _turnDeviceTemp.getValue();
 
-        try {
-            signalQueueReadWriteLock.writeLock().lock();
+        inputs.odometryTimestampsSec = timestampQueue.stream().mapToDouble(time -> time).toArray();
+        timestampQueue.clear();
 
-            inputs.odometryTimestampsSec = timestampQueue.stream().mapToDouble(time -> time).toArray();
-            timestampQueue.clear();
+        inputs.odometryDrivePositionsRots = drivePositionSignalQueue.stream().mapToDouble(pos -> pos).toArray();
+        drivePositionSignalQueue.clear();
 
-            inputs.odometryDrivePositionsRots = drivePositionSignalQueue.stream().mapToDouble(pos -> pos).toArray();
-            drivePositionSignalQueue.clear();
-
-            inputs.odometryTurnPositionRots = turnPositionSignalQueue.stream().mapToDouble(pos -> pos).toArray();
-            turnPositionSignalQueue.clear();
-        } finally {
-            signalQueueReadWriteLock.writeLock().unlock();
-        }
+        inputs.odometryTurnPositionRots = turnPositionSignalQueue.stream().mapToDouble(pos -> pos).toArray();
+        turnPositionSignalQueue.clear();
     }
 
     /**
@@ -238,7 +225,6 @@ public class SwerveModuleIOTalonFX implements SwerveModuleIO {
                 .withVelocity(backedOutDriveVelocity)
                 .withOverrideCoastDurNeutral(true)
         );
-//        turnMotor.setControl(motionMagicExpoTorqueCurrentFOC.withPosition(desiredTurnerRotations));
         turnMotor.setControl(positionVoltage.withPosition(desiredTurnerRotations));
     }
 
@@ -246,7 +232,6 @@ public class SwerveModuleIOTalonFX implements SwerveModuleIO {
     public void setDriveCharacterizationVolts(double driveVolts, double desiredTurnerRotations) {
         odometryThreadRunner.updateControlRequest(driveMotor, voltageOut);
         driveMotor.setControl(voltageOut.withOutput(driveVolts));
-//        turnMotor.setControl(motionMagicExpoTorqueCurrentFOC.withPosition(desiredTurnerRotations));
         turnMotor.setControl(positionVoltage.withPosition(desiredTurnerRotations));
     }
 

@@ -43,8 +43,8 @@ public class Gyro {
         Logger.recordOutput("FilteredPitchVelocityDPS", getFilteredPitchVelocity());
     }
 
-    public GyroIOInputsAutoLogged getInputs() {
-        return inputs;
+    public boolean hasHardwareFault() {
+        return inputs.hasHardwareFault;
     }
 
     /**

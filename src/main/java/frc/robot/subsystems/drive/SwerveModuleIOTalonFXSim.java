@@ -113,12 +113,8 @@ public class SwerveModuleIOTalonFXSim implements SwerveModuleIO {
 
         this.signalQueueReadWriteLock = odometryThreadRunner.signalQueueReadWriteLock;
         this.timestampQueue = odometryThreadRunner.makeTimestampQueue();
-        this.drivePositionSignalQueue = odometryThreadRunner.registerSignal(
-                driveMotor, _drivePosition, _driveVelocity, timestampQueue
-        );
-        this.turnPositionSignalQueue = odometryThreadRunner.registerSignal(
-                turnMotor, _turnPosition, _turnVelocity, timestampQueue
-        );
+        this.drivePositionSignalQueue = odometryThreadRunner.registerSignal(driveMotor, _drivePosition);
+        this.turnPositionSignalQueue = odometryThreadRunner.registerSignal(turnMotor, _turnPosition);
     }
 
     @SuppressWarnings("DuplicatedCode")
@@ -198,20 +194,14 @@ public class SwerveModuleIOTalonFXSim implements SwerveModuleIO {
         inputs.turnStatorCurrentAmps = _turnStatorCurrent.getValue();
         inputs.turnTempCelsius = _turnDeviceTemp.getValue();
 
-        try {
-            signalQueueReadWriteLock.writeLock().lock();
+        inputs.odometryTimestampsSec = timestampQueue.stream().mapToDouble(time -> time).toArray();
+        timestampQueue.clear();
 
-            inputs.odometryTimestampsSec = timestampQueue.stream().mapToDouble(time -> time).toArray();
-            timestampQueue.clear();
+        inputs.odometryDrivePositionsRots = drivePositionSignalQueue.stream().mapToDouble(pos -> pos).toArray();
+        drivePositionSignalQueue.clear();
 
-            inputs.odometryDrivePositionsRots = drivePositionSignalQueue.stream().mapToDouble(pos -> pos).toArray();
-            drivePositionSignalQueue.clear();
-
-            inputs.odometryTurnPositionRots = turnPositionSignalQueue.stream().mapToDouble(pos -> pos).toArray();
-            turnPositionSignalQueue.clear();
-        } finally {
-            signalQueueReadWriteLock.writeLock().unlock();
-        }
+        inputs.odometryTurnPositionRots = turnPositionSignalQueue.stream().mapToDouble(pos -> pos).toArray();
+        turnPositionSignalQueue.clear();
     }
 
     /**
