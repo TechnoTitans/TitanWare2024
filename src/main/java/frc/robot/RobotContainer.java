@@ -14,7 +14,7 @@ import frc.robot.subsystems.shooter.Shooter;
 public class RobotContainer {
     public final PowerDistribution powerDistribution;
 
-    public final Swerve swerve;
+//    public final Swerve swerve;
     public final Shooter shooter;
 
     public final CommandXboxController driverController;
@@ -27,13 +27,13 @@ public class RobotContainer {
         );
         this.powerDistribution.clearStickyFaults();
 
-        this.swerve = new Swerve(
-                Constants.CURRENT_MODE,
-                HardwareConstants.FRONT_LEFT_MODULE,
-                HardwareConstants.FRONT_RIGHT_MODULE,
-                HardwareConstants.BACK_LEFT_MODULE,
-                HardwareConstants.BACK_RIGHT_MODULE
-        );
+//        this.swerve = new Swerve(
+//                Constants.CURRENT_MODE,
+//                HardwareConstants.FRONT_LEFT_MODULE,
+//                HardwareConstants.FRONT_RIGHT_MODULE,
+//                HardwareConstants.BACK_LEFT_MODULE,
+//                HardwareConstants.BACK_RIGHT_MODULE
+//        );
 
         this.shooter = new Shooter(
                 Constants.CURRENT_MODE,

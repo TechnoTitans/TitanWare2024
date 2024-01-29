@@ -119,7 +119,7 @@ public class Robot extends LoggedRobot {
 
     @Override
     public void disabledInit() {
-        robotContainer.swerve.setNeutralMode(NeutralModeValue.Brake);
+//        robotContainer.swerve.setNeutralMode(NeutralModeValue.Brake);
     }
 
     @Override
@@ -129,7 +129,7 @@ public class Robot extends LoggedRobot {
     public void autonomousInit() {
         autonomousCommand = robotContainer.getAutonomousCommand();
 
-        robotContainer.swerve.setNeutralMode(NeutralModeValue.Coast);
+//        robotContainer.swerve.setNeutralMode(NeutralModeValue.Coast);
 
         if (autonomousCommand != null) {
             autonomousCommand.schedule();
@@ -145,17 +145,17 @@ public class Robot extends LoggedRobot {
             autonomousCommand.cancel();
         }
 
-        robotContainer.swerve.setNeutralMode(NeutralModeValue.Coast);
+//        robotContainer.swerve.setNeutralMode(NeutralModeValue.Coast);
         // No need to lint this here, X and Y are flipped for robot vs. controller joystick coordinate systems, so we
         // pass the controller X into the robot Y, and vice versa
         //noinspection SuspiciousNameCombination
-        robotContainer.swerve.setDefaultCommand(
-                robotContainer.swerve.teleopDriveCommand(
-                        robotContainer.driverController::getLeftY,
-                        robotContainer.driverController::getLeftX,
-                        robotContainer.driverController::getRightX
-                )
-        );
+//        robotContainer.swerve.setDefaultCommand(
+//                robotContainer.swerve.teleopDriveCommand(
+//                        robotContainer.driverController::getLeftY,
+//                        robotContainer.driverController::getLeftX,
+//                        robotContainer.driverController::getRightX
+//                )
+//        );
 
         robotContainer.shooter.setDefaultCommand(robotContainer.shooter.setInputsFromTuner());
     }

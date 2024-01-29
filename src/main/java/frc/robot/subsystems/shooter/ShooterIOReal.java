@@ -10,6 +10,7 @@ import com.ctre.phoenix6.hardware.TalonFX;
 import com.ctre.phoenix6.signals.InvertedValue;
 import com.ctre.phoenix6.signals.NeutralModeValue;
 import edu.wpi.first.math.controller.BangBangController;
+import edu.wpi.first.math.controller.SimpleMotorFeedforward;
 import frc.robot.constants.HardwareConstants;
 
 public class ShooterIOReal implements ShooterIO {
@@ -21,6 +22,9 @@ public class ShooterIOReal implements ShooterIO {
 
     private final BangBangController topBangBangController;
     private final BangBangController bottomBangBangController;
+
+    private final SimpleMotorFeedforward topFF;
+    private final SimpleMotorFeedforward bottomFF;
 
     private double topVelocitySetpoint;
     private double bottomVelocitySetpoint;
@@ -46,6 +50,9 @@ public class ShooterIOReal implements ShooterIO {
 
         this.topBangBangController = new BangBangController(10);
         this.bottomBangBangController = new BangBangController(10);
+
+        this.topFF = new SimpleMotorFeedforward(0, 0);
+        this.bottomFF = new SimpleMotorFeedforward(0, 0);
 
         this._topPosition = topMotor.getPosition();
         this._topVelocity = topMotor.getVelocity();

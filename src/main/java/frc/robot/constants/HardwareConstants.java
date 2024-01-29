@@ -96,7 +96,7 @@ public class HardwareConstants {
 
     public static final ShooterConstants SHOOTER = new ShooterConstants(
             RobotMap.RioCANBus,
-            13,
-            14
+            1,
+            3
     );
 }
