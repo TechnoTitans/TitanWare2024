@@ -10,7 +10,6 @@ import frc.robot.subsystems.drive.Swerve;
 import frc.robot.utils.ctre.Phoenix6Utils;
 
 import java.util.Queue;
-import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 public class GyroIOPigeon2 implements GyroIO {
     private final Pigeon2 pigeon;
@@ -24,8 +23,7 @@ public class GyroIOPigeon2 implements GyroIO {
     private final StatusSignal<Double> _rollVelocity;
     private final StatusSignal<Boolean> _faultHardware;
 
-    // StatusSignal queues for high-freq odometry and read lock
-    private final ReentrantReadWriteLock signalQueueReadWriteLock;
+    // StatusSignal queues for high-freq odometry
     private final Queue<Double> timestampQueue;
     private final Queue<Double> yawSignalQueue;
 
@@ -40,7 +38,6 @@ public class GyroIOPigeon2 implements GyroIO {
         this._rollVelocity = pigeon.getAngularVelocityXWorld();
         this._faultHardware = pigeon.getFault_Hardware();
 
-        this.signalQueueReadWriteLock = odometryThreadRunner.getSignalQueueReadWriteLock();
         this.timestampQueue = odometryThreadRunner.makeTimestampQueue();
         this.yawSignalQueue = odometryThreadRunner.registerSignal(pigeon, _yaw);
     }

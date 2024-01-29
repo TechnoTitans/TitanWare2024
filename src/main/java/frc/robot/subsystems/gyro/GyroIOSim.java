@@ -16,7 +16,6 @@ import frc.robot.subsystems.drive.SwerveModule;
 import org.littletonrobotics.junction.Logger;
 
 import java.util.Queue;
-import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 public class GyroIOSim implements GyroIO {
     public static final double USE_SIMULATED_PITCH = 0;
@@ -39,8 +38,7 @@ public class GyroIOSim implements GyroIO {
     private final StatusSignal<Double> _rollVelocity;
     private final StatusSignal<Boolean> _faultHardware;
 
-    // StatusSignal queues for high-freq odometry and read lock
-    private final ReentrantReadWriteLock signalQueueReadWriteLock;
+    // StatusSignal queues for high-freq odometry
     private final Queue<Double> timestampQueue;
     private final Queue<Double> yawSignalQueue;
 
@@ -63,7 +61,6 @@ public class GyroIOSim implements GyroIO {
         this._rollVelocity = pigeon.getAngularVelocityYWorld();
         this._faultHardware = pigeon.getFault_Hardware();
 
-        this.signalQueueReadWriteLock = odometryThreadRunner.getSignalQueueReadWriteLock();
         this.timestampQueue = odometryThreadRunner.makeTimestampQueue();
         this.yawSignalQueue = odometryThreadRunner.registerSignal(pigeon, _yaw);
 

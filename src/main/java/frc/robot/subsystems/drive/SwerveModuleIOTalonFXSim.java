@@ -26,7 +26,6 @@ import frc.robot.utils.sim.feedback.SimPhoenix6CANCoder;
 import frc.robot.utils.sim.motors.CTREPhoenix6TalonFXSim;
 
 import java.util.Queue;
-import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 public class SwerveModuleIOTalonFXSim implements SwerveModuleIO {
     private final TalonFX driveMotor;
@@ -56,8 +55,7 @@ public class SwerveModuleIOTalonFXSim implements SwerveModuleIO {
     private final StatusSignal<Double> _turnStatorCurrent;
     private final StatusSignal<Double> _turnDeviceTemp;
 
-    // Odometry StatusSignal update queues and queue read/write lock
-    private final ReentrantReadWriteLock signalQueueReadWriteLock;
+    // Odometry StatusSignal update queues
     private final Queue<Double> timestampQueue;
     private final Queue<Double> drivePositionSignalQueue;
     private final Queue<Double> turnPositionSignalQueue;
@@ -111,7 +109,6 @@ public class SwerveModuleIOTalonFXSim implements SwerveModuleIO {
         this._turnStatorCurrent = turnMotor.getStatorCurrent();
         this._turnDeviceTemp = turnMotor.getDeviceTemp();
 
-        this.signalQueueReadWriteLock = odometryThreadRunner.signalQueueReadWriteLock;
         this.timestampQueue = odometryThreadRunner.makeTimestampQueue();
         this.drivePositionSignalQueue = odometryThreadRunner.registerSignal(driveMotor, _drivePosition);
         this.turnPositionSignalQueue = odometryThreadRunner.registerSignal(turnMotor, _turnPosition);
