@@ -87,4 +87,16 @@ public class HardwareConstants {
             12,
             0
     );
+
+    public record ShooterConstants(
+            String CANbus,
+            int topMotorId,
+            int bottomMotorId
+    ) {}
+
+    public static final ShooterConstants SHOOTER = new ShooterConstants(
+            RobotMap.RioCANBus,
+            13,
+            14
+    );
 }

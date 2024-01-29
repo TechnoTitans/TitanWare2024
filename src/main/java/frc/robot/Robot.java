@@ -156,6 +156,8 @@ public class Robot extends LoggedRobot {
                         robotContainer.driverController::getRightX
                 )
         );
+
+        robotContainer.shooter.setDefaultCommand(robotContainer.shooter.setInputsFromTuner());
     }
 
     @Override

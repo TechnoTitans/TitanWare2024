@@ -9,11 +9,13 @@ import frc.robot.constants.Constants;
 import frc.robot.constants.HardwareConstants;
 import frc.robot.constants.RobotMap;
 import frc.robot.subsystems.drive.Swerve;
+import frc.robot.subsystems.shooter.Shooter;
 
 public class RobotContainer {
     public final PowerDistribution powerDistribution;
 
     public final Swerve swerve;
+    public final Shooter shooter;
 
     public final CommandXboxController driverController;
     public final CommandXboxController coDriverController;
@@ -31,6 +33,11 @@ public class RobotContainer {
                 HardwareConstants.FRONT_RIGHT_MODULE,
                 HardwareConstants.BACK_LEFT_MODULE,
                 HardwareConstants.BACK_RIGHT_MODULE
+        );
+
+        this.shooter = new Shooter(
+                Constants.CURRENT_MODE,
+                HardwareConstants.SHOOTER
         );
 
         this.driverController = new CommandXboxController(RobotMap.MainController);
