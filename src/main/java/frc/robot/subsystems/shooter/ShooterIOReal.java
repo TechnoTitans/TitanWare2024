@@ -4,7 +4,7 @@ import com.ctre.phoenix6.BaseStatusSignal;
 import com.ctre.phoenix6.StatusSignal;
 import com.ctre.phoenix6.configs.Slot0Configs;
 import com.ctre.phoenix6.configs.TalonFXConfiguration;
-import com.ctre.phoenix6.controls.VelocityVoltage;
+import com.ctre.phoenix6.controls.VelocityTorqueCurrentFOC;
 import com.ctre.phoenix6.controls.VoltageOut;
 import com.ctre.phoenix6.hardware.ParentDevice;
 import com.ctre.phoenix6.hardware.TalonFX;
@@ -16,7 +16,7 @@ public class ShooterIOReal implements ShooterIO {
     private final TalonFX topMotor;
     private final TalonFX bottomMotor;
 
-    private final VelocityVoltage velocityVoltage;
+    private final VelocityTorqueCurrentFOC velocityTorqueCurrentFOC;
     private final VoltageOut voltageOut;
 
     // Cached StatusSignals
@@ -35,8 +35,7 @@ public class ShooterIOReal implements ShooterIO {
         this.topMotor = new TalonFX(shooterConstants.topMotorId(), shooterConstants.CANbus());
         this.bottomMotor = new TalonFX(shooterConstants.bottomMotorId(), shooterConstants.CANbus());
 
-        // TODO: try VelocityTorqueCurrentFOC (SysId needs to be redone!!)
-        this.velocityVoltage = new VelocityVoltage(0);
+        this.velocityTorqueCurrentFOC = new VelocityTorqueCurrentFOC(0);
         this.voltageOut = new VoltageOut(0);
 
         this._topPosition = topMotor.getPosition();
@@ -55,6 +54,7 @@ public class ShooterIOReal implements ShooterIO {
     @Override
     public void config() {
         final TalonFXConfiguration topTalonFXConfiguration = new TalonFXConfiguration();
+        //TODO TUNE FOR velocityTorqueCurrentFOC
         topTalonFXConfiguration.Slot0 = new Slot0Configs()
                 .withKS(0.094)
                 .withKV(0.121)
@@ -67,6 +67,7 @@ public class ShooterIOReal implements ShooterIO {
         topMotor.getConfigurator().apply(topTalonFXConfiguration);
 
         final TalonFXConfiguration bottomTalonFXConfiguration = new TalonFXConfiguration();
+        //TODO TUNE FOR velocityTorqueCurrentFOC
         bottomTalonFXConfiguration.Slot0 = new Slot0Configs()
                 .withKS(0.11)
                 .withKV(0.122)
@@ -128,8 +129,8 @@ public class ShooterIOReal implements ShooterIO {
 
     @Override
     public void setInputs(final double desiredTopVelocity, final double desiredBottomVelocity) {
-        topMotor.setControl(velocityVoltage.withVelocity(desiredTopVelocity));
-        bottomMotor.setControl(velocityVoltage.withVelocity(desiredBottomVelocity));
+        topMotor.setControl(velocityTorqueCurrentFOC.withVelocity(desiredTopVelocity));
+        bottomMotor.setControl(velocityTorqueCurrentFOC.withVelocity(desiredBottomVelocity));
     }
 
     @Override

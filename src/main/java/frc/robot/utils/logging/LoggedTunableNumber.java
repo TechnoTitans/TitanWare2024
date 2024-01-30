@@ -12,10 +12,8 @@ import java.util.Map;
 public class LoggedTunableNumber {
     private static final String tableKey = "TunableNumbers";
 
-    private final String key;
-    private double defaultValue;
-    private LoggedDashboardNumber dashboardNumber;
-    private Map<Integer, Double> lastHasChangedValues = new HashMap<>();
+    private final LoggedDashboardNumber dashboardNumber;
+    private final Map<Integer, Double> lastHasChangedValues = new HashMap<>();
 
     /**
      * Create a new LoggedTunableNumber with the default value
@@ -24,9 +22,10 @@ public class LoggedTunableNumber {
      * @param defaultValue Default value
      */
     public LoggedTunableNumber(String dashboardKey, double defaultValue) {
-        this.key = tableKey + "/" + dashboardKey;
-        this.defaultValue = defaultValue;
-        this.dashboardNumber = new LoggedDashboardNumber(key, defaultValue);
+        this.dashboardNumber = new LoggedDashboardNumber(
+                tableKey + "/" + dashboardKey,
+                defaultValue
+        );
     }
 
     /**
