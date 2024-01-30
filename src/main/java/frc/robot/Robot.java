@@ -1,7 +1,6 @@
 package frc.robot;
 
 import com.ctre.phoenix6.SignalLogger;
-import com.ctre.phoenix6.signals.NeutralModeValue;
 import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.RobotBase;
 import edu.wpi.first.wpilibj.livewindow.LiveWindow;
@@ -157,7 +156,7 @@ public class Robot extends LoggedRobot {
 //                )
 //        );
 
-        robotContainer.shooter.setDefaultCommand(robotContainer.shooter.setInputsFromTuner());
+        robotContainer.shooter.setDefaultCommand(robotContainer.shooter.tunableNumbersInputCommand());
     }
 
     @Override

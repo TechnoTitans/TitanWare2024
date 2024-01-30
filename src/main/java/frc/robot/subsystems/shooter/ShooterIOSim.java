@@ -2,22 +2,17 @@ package frc.robot.subsystems.shooter;
 
 import com.ctre.phoenix6.BaseStatusSignal;
 import com.ctre.phoenix6.StatusSignal;
-import com.ctre.phoenix6.configs.Slot0Configs;
 import com.ctre.phoenix6.configs.TalonFXConfiguration;
 import com.ctre.phoenix6.controls.DutyCycleOut;
-import com.ctre.phoenix6.controls.VelocityVoltage;
 import com.ctre.phoenix6.hardware.TalonFX;
 import com.ctre.phoenix6.signals.InvertedValue;
 import com.ctre.phoenix6.signals.NeutralModeValue;
 import edu.wpi.first.math.controller.BangBangController;
 import edu.wpi.first.math.system.plant.DCMotor;
 import edu.wpi.first.wpilibj.simulation.DCMotorSim;
-import frc.robot.constants.Constants;
 import frc.robot.constants.HardwareConstants;
 import frc.robot.utils.control.DeltaTime;
-import frc.robot.utils.sim.SimUtils;
 import frc.robot.utils.sim.motors.CTREPhoenix6TalonFXSim;
-import org.littletonrobotics.junction.Logger;
 
 public class ShooterIOSim implements ShooterIO {
     private final DeltaTime deltaTime;
@@ -100,14 +95,14 @@ public class ShooterIOSim implements ShooterIO {
     @Override
     public void config() {
         final TalonFXConfiguration topTalonFXConfiguration = new TalonFXConfiguration();
-        topTalonFXConfiguration.CurrentLimits.StatorCurrentLimit = 50;
+        topTalonFXConfiguration.CurrentLimits.StatorCurrentLimit = 80;
         topTalonFXConfiguration.CurrentLimits.StatorCurrentLimitEnable = true;
         topTalonFXConfiguration.MotorOutput.Inverted = InvertedValue.Clockwise_Positive;
         topTalonFXConfiguration.MotorOutput.NeutralMode = NeutralModeValue.Coast;
         topMotor.getConfigurator().apply(topTalonFXConfiguration);
 
         final TalonFXConfiguration bottomTalonFXConfiguration = new TalonFXConfiguration();
-        bottomTalonFXConfiguration.CurrentLimits.StatorCurrentLimit = 50;
+        bottomTalonFXConfiguration.CurrentLimits.StatorCurrentLimit = 80;
         bottomTalonFXConfiguration.CurrentLimits.StatorCurrentLimitEnable = true;
         bottomTalonFXConfiguration.MotorOutput.Inverted = InvertedValue.CounterClockwise_Positive;
         bottomTalonFXConfiguration.MotorOutput.NeutralMode = NeutralModeValue.Coast;
@@ -143,13 +138,6 @@ public class ShooterIOSim implements ShooterIO {
 
     @Override
     public void periodic() {
-        topMotor.setControl(topDutyCycleOut.withOutput(
-                topBangBangController.calculate(_topVelocity.getValue(), topVelocitySetpoint))
-        );
-        bottomMotor.setControl(bottomDutyCycleOut.withOutput(
-                bottomBangBangController.calculate(_bottomVelocity.getValue(), bottomVelocitySetpoint))
-        );
-
         final double dtSeconds = deltaTime.get();
         topMotorSim.update(dtSeconds);
         bottomMotorSim.update(dtSeconds);
@@ -157,7 +145,11 @@ public class ShooterIOSim implements ShooterIO {
 
     @Override
     public void setInputs(final double desiredTopVelocity, final double desiredBottomVelocity) {
-        this.topVelocitySetpoint = desiredTopVelocity;
-        this.bottomVelocitySetpoint = desiredBottomVelocity;
+        topMotor.setControl(topDutyCycleOut.withOutput(
+                topBangBangController.calculate(_topVelocity.getValue(), topVelocitySetpoint))
+        );
+        bottomMotor.setControl(bottomDutyCycleOut.withOutput(
+                bottomBangBangController.calculate(_bottomVelocity.getValue(), bottomVelocitySetpoint))
+        );
     }
 }

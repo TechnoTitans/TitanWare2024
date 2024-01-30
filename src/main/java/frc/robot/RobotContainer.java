@@ -4,11 +4,9 @@ import edu.wpi.first.wpilibj.PowerDistribution;
 import edu.wpi.first.wpilibj.RobotState;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
-import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
 import frc.robot.constants.Constants;
 import frc.robot.constants.HardwareConstants;
 import frc.robot.constants.RobotMap;
-import frc.robot.subsystems.drive.Swerve;
 import frc.robot.subsystems.shooter.Shooter;
 
 public class RobotContainer {
@@ -17,13 +15,13 @@ public class RobotContainer {
 //    public final Swerve swerve;
     public final Shooter shooter;
 
-    public final CommandXboxController driverController;
-    public final CommandXboxController coDriverController;
+//    public final CommandXboxController driverController;
+//    public final CommandXboxController coDriverController;
 
     public RobotContainer() {
         this.powerDistribution = new PowerDistribution(
                 RobotMap.PowerDistributionHub,
-                PowerDistribution.ModuleType.kRev
+                PowerDistribution.ModuleType.kCTRE
         );
         this.powerDistribution.clearStickyFaults();
 
@@ -40,8 +38,15 @@ public class RobotContainer {
                 HardwareConstants.SHOOTER
         );
 
-        this.driverController = new CommandXboxController(RobotMap.MainController);
-        this.coDriverController = new CommandXboxController(RobotMap.CoController);
+//        this.driverController = new CommandXboxController(RobotMap.MainController);
+//        this.coDriverController = new CommandXboxController(RobotMap.CoController);
+//
+//        this.coDriverController.y().whileTrue(shooter.sysIdQuasistaticTestCommand(SysIdRoutine.Direction.kForward));
+//        this.coDriverController.a().whileTrue(shooter.sysIdQuasistaticTestCommand(SysIdRoutine.Direction.kReverse));
+//        this.coDriverController.b().whileTrue(shooter.sysIdDynamicTestCommand(SysIdRoutine.Direction.kForward));
+//        this.coDriverController.x().whileTrue(shooter.sysIdDynamicTestCommand(SysIdRoutine.Direction.kReverse));
+//
+//        this.coDriverController.leftBumper().onTrue(Commands.run(SignalLogger::stop));
     }
 
     public Command getAutonomousCommand() {
