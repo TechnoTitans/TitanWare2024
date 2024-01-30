@@ -7,13 +7,11 @@ public interface ShooterIO {
     class ShooterIOInputs {
         double topPositionRots = 0.0;
         double topVelocityRotsPerSec = 0.0;
-        double topPercentOutput = 0.0;
         double topCurrentAmps = 0.0;
         double topTempCelsius = 0.0;
 
         double bottomPositionRots = 0.0;
         double bottomVelocityRotsPerSec = 0.0;
-        double bottomPercentOutput = 0.0;
         double bottomCurrentAmps = 0.0;
         double bottomTempCelsius = 0.0;
     }
