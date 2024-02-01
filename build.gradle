@@ -1,6 +1,6 @@
 plugins {
     id "java"
-    id "edu.wpi.first.GradleRIO" version "2024.1.1"
+    id "edu.wpi.first.GradleRIO" version "2024.2.1"
 
     // add recommended GVersion plugin on AdvantageKit documentation
     // allows automatic tracking of git versions/commit hashes and dirty branches
