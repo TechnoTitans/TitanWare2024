@@ -43,6 +43,10 @@ public class Gyro {
         Logger.recordOutput("FilteredPitchVelocityDPS", getFilteredPitchVelocity());
     }
 
+    public boolean hasHardwareFault() {
+        return inputs.hasHardwareFault;
+    }
+
     /**
      * Get the underlying Pigeon object from CTRE (no guarantees are made about real/sim)
      * @return the {@link Pigeon2}
@@ -80,6 +84,14 @@ public class Gyro {
      * @return the current yaw velocity (deg/sec)
      */
     public double getYawVelocity() { return inputs.yawVelocityDegPerSec; }
+
+    public double[] getOdometryTimestamps() {
+        return inputs.odometryTimestampsSec;
+    }
+
+    public double[] getOdometryYawPositions() {
+        return inputs.odometryYawPositionsDeg;
+    }
 
     /**
      * Get the current yaw (heading) velocity (AngularVelocityZ) as a {@link Rotation2d}

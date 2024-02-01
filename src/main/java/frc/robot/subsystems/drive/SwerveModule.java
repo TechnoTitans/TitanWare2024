@@ -7,6 +7,7 @@ import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.kinematics.SwerveModulePosition;
 import edu.wpi.first.math.kinematics.SwerveModuleState;
 import frc.robot.constants.Constants;
+import frc.robot.constants.Constants.Swerve.Modules;
 import frc.robot.utils.logging.LogUtils;
 import org.littletonrobotics.junction.Logger;
 
@@ -16,6 +17,7 @@ public class SwerveModule {
     private final SwerveModuleIO moduleIO;
     private final SwerveModuleIOInputsAutoLogged inputs;
 
+    private SwerveModulePosition[] odometryPositions;
     private SwerveModuleState lastDesiredState = new SwerveModuleState();
 
     public SwerveModule(final SwerveModuleIO moduleIO, final String name) {
@@ -28,25 +30,21 @@ public class SwerveModule {
         this.inputs = new SwerveModuleIOInputsAutoLogged();
     }
 
-    /**
-     * Scales a {@link SwerveModuleState} by the cosine of the error between the {@link SwerveModuleState#angle} and
-     * the measured angle (wheel rotation) by mutating its {@link SwerveModuleState#speedMetersPerSecond}.
-     * <p> This should be called <b>AFTER</b> {@link SwerveModuleState#optimize(SwerveModuleState, Rotation2d)}</p>
-     * @param state the {@link SwerveModuleState} to scale (this is mutated!)
-     * @param wheelRotation the measured wheel {@link Rotation2d}
-     */
-    public static void scaleWithErrorCosine(final SwerveModuleState state, final Rotation2d wheelRotation) {
-        // see https://github.com/wpilibsuite/allwpilib/issues/5749
-        state.speedMetersPerSecond *= state.angle.minus(wheelRotation).getCos();
-    }
-
     public String getName() { return name; }
 
     public void periodic() {
+        final double modulePeriodicUpdateStart = Logger.getRealTimestamp();
         moduleIO.periodic();
         moduleIO.updateInputs(inputs);
 
-        final double modulePeriodicUpdateStart = Logger.getRealTimestamp();
+        final int samples = inputs.odometryTimestampsSec.length;
+        odometryPositions = new SwerveModulePosition[samples];
+        for (int i = 0; i < samples; i++) {
+            odometryPositions[i] = new SwerveModulePosition(
+                    inputs.odometryDrivePositionsRots[i] * Modules.WHEEL_CIRCUMFERENCE_M,
+                    Rotation2d.fromRotations(inputs.odometryTurnPositionRots[i])
+            );
+        }
 
         Logger.processInputs(logKey, inputs);
 
@@ -54,7 +52,10 @@ public class SwerveModule {
         Logger.recordOutput(logKey + "/LastDesiredState", lastDesiredState);
         Logger.recordOutput(
                 logKey + "/DriveDesiredVelocityRotsPerSec",
-                computeDesiredDriverVelocity(lastDesiredState)
+                computeDesiredDriverVelocity(
+                        lastDesiredState,
+                        Rotation2d.fromRotations(inputs.turnAbsolutePositionRots)
+                )
         );
 
         Logger.recordOutput(
@@ -67,12 +68,6 @@ public class SwerveModule {
                 LogUtils.microsecondsToMilliseconds(Logger.getRealTimestamp() - modulePeriodicUpdateStart)
         );
     }
-
-    /**
-     * Get the current draw (stator current) of the {@link SwerveModule} (drive & turn motors)
-     * @return the total current draw of the {@link SwerveModule}, in amps
-     */
-    public double getCurrentDrawAmps() { return inputs.driveStatorCurrentAmps + inputs.driveStatorCurrentAmps; }
 
     /**
      * Get a {@link Rotation2d} of the current absolute turn position (computed from encoder rotations)
@@ -107,37 +102,86 @@ public class SwerveModule {
      */
     public SwerveModuleState getState() {
         return new SwerveModuleState(
-                getDriveVelocity() * Constants.Swerve.Modules.WHEEL_CIRCUMFERENCE_M,
+                getDriveVelocity() * Modules.WHEEL_CIRCUMFERENCE_M,
                 getAngle()
         );
     }
 
     /**
-     * Get the current module observed {@link SwerveModulePosition} (position, angle)
+     * Gets the current module observed {@link SwerveModulePosition} (position, angle)
      * Velocity is wheel linear position, angle is wheel absolute position
      * @return the module's current position as a {@link SwerveModulePosition}
      * @see SwerveModulePosition
      */
     public SwerveModulePosition getPosition() {
         return new SwerveModulePosition(
-                getDrivePosition() * Constants.Swerve.Modules.WHEEL_CIRCUMFERENCE_M,
+                getDrivePosition() * Modules.WHEEL_CIRCUMFERENCE_M,
                 getAngle()
         );
     }
 
+    public SwerveModulePosition[] getOdometryPositions() {
+        return odometryPositions;
+    }
+
+    public double[] getOdometryTimestamps() {
+        return inputs.odometryTimestampsSec;
+    }
+
     /**
-     * Compute the desired drive motor velocity given a desired {@link SwerveModuleState}
+     * Characterizes the driving motor of the {@link SwerveModule} using
+     * {@link SwerveModuleIO#setDriveCharacterizationVolts(double, double)}, while holding the turning at zero
+     * @param volts the volts to apply to the drive motor
+     */
+    public void driveCharacterization(final double volts) {
+        moduleIO.setDriveCharacterizationVolts(volts, 0);
+    }
+
+    /**
+     * Computes the desired drive motor velocity given a desired {@link SwerveModuleState}
+     * Characterizes the driving motor of the {@link SwerveModule} using
+     * {@link SwerveModuleIO#setDriveCharacterizationVolts(double, double)}, while holding the turning at zero
+     * @param driveVolts the volts to apply to the drive motor
+     */
+    public void driveVoltageCharacterization(final double driveVolts, final double turnPositionRots) {
+        moduleIO.setDriveCharacterizationVolts(driveVolts, turnPositionRots);
+    }
+
+    /**
+     * Characterizes the driving motor of the {@link SwerveModule} using
+     * {@link SwerveModuleIO#setDriveCharacterizationAmps(double, double)}, while holding the turning at zero
+     * @param driveTorqueCurrentAmps the torque current amps to apply to the drive motor
+     */
+    public void driveTorqueCurrentCharacterization(final double driveTorqueCurrentAmps, final double turnPositionRots) {
+        moduleIO.setDriveCharacterizationAmps(driveTorqueCurrentAmps, turnPositionRots);
+    }
+
+    /**
+     * Scales a {@link SwerveModuleState} by the cosine of the error between the {@link SwerveModuleState#angle} and
+     * the measured angle (wheel rotation) by mutating its {@link SwerveModuleState#speedMetersPerSecond}.
+     * <p> This should be called <b>AFTER</b> {@link SwerveModuleState#optimize(SwerveModuleState, Rotation2d)}</p>
+     * @param state the {@link SwerveModuleState} to scale (this is mutated!)
+     * @param wheelRotation the measured wheel {@link Rotation2d}
+     */
+    public static void scaleWithErrorCosine(final SwerveModuleState state, final Rotation2d wheelRotation) {
+        // see https://github.com/wpilibsuite/allwpilib/issues/5749
+        state.speedMetersPerSecond *= state.angle.minus(wheelRotation).getCos();
+    }
+
+    /**
+     * Computes the desired drive motor velocity given a desired {@link SwerveModuleState}
      * i.e. the rotor velocity given wheel velocity (rps)
      * @param wantedState the wanted state of the module
      * @return the desired rotor velocity
      * @see SwerveModuleState
      */
-    public double computeDesiredDriverVelocity(final SwerveModuleState wantedState) {
-        return wantedState.speedMetersPerSecond / Constants.Swerve.Modules.WHEEL_CIRCUMFERENCE_M;
+    public double computeDesiredDriverVelocity(final SwerveModuleState wantedState, final Rotation2d wheelRotation) {
+        SwerveModule.scaleWithErrorCosine(wantedState, wheelRotation);
+        return wantedState.speedMetersPerSecond / Modules.WHEEL_CIRCUMFERENCE_M;
     }
 
     /**
-     * Compute the desired turn motor velocity given a desired {@link SwerveModuleState}
+     * Computes the desired turn motor velocity given a desired {@link SwerveModuleState}
      * i.e. the rotor position given wheel rotational position (rots)
      * @param wantedState the wanted state of the module
      * @return the desired rotor position
@@ -148,7 +192,7 @@ public class SwerveModule {
     }
 
     /**
-     * Set the desired {@link SwerveModuleState} of the module
+     * Sets the desired {@link SwerveModuleState} of the module
      * @param state the desired {@link SwerveModuleState}
      * @see SwerveModuleState
      */
@@ -156,9 +200,7 @@ public class SwerveModule {
         final Rotation2d currentWheelRotation = getAngle();
 
         final SwerveModuleState wantedState = SwerveModuleState.optimize(state, currentWheelRotation);
-        SwerveModule.scaleWithErrorCosine(wantedState, currentWheelRotation);
-
-        final double desiredDriverVelocity = computeDesiredDriverVelocity(wantedState);
+        final double desiredDriverVelocity = computeDesiredDriverVelocity(wantedState, currentWheelRotation);
         final double desiredTurnerRotations = computeDesiredTurnerRotations(wantedState);
 
         this.lastDesiredState = wantedState;
@@ -166,7 +208,7 @@ public class SwerveModule {
     }
 
     /**
-     * Get the last desired {@link SwerveModuleState} set in {@link SwerveModule#setDesiredState(SwerveModuleState)}
+     * Gets the last desired {@link SwerveModuleState} set in {@link SwerveModule#setDesiredState(SwerveModuleState)}
      * <p>
      * Note: this {@link SwerveModuleState} has been optimized and does not guarantee that it matches the last set state
      * @return the last desired {@link SwerveModuleState}
@@ -197,6 +239,7 @@ public class SwerveModule {
          * @param canCoder                the turn {@link CANcoder}
          * @param magnetOffset            the magnet offset of the turn {@link CANcoder}
          * @param robotMode               the {@link Constants.RobotMode} describing the current mode
+         * @param odometryThreadRunner    the swerve {@link frc.robot.subsystems.drive.Swerve.OdometryThreadRunner}
          * @return the constructed {@link SwerveModule}
          */
         public static SwerveModule SDSMK4iTalonFXCANCoder(
@@ -205,17 +248,17 @@ public class SwerveModule {
                 final TalonFX turnMotor,
                 final CANcoder canCoder,
                 final double magnetOffset,
-                final Constants.RobotMode robotMode
+                final Constants.RobotMode robotMode,
+                final Swerve.OdometryThreadRunner odometryThreadRunner
         ) {
             final SwerveModuleIO swerveModuleIO = switch (robotMode) {
                 case REAL -> new SwerveModuleIOTalonFX(
-                        driveMotor, turnMotor, canCoder, magnetOffset
+                        driveMotor, turnMotor, canCoder, magnetOffset, odometryThreadRunner
                 );
                 case SIM -> new SwerveModuleIOTalonFXSim(
-                        driveMotor, turnMotor, canCoder, magnetOffset
+                        driveMotor, turnMotor, canCoder, magnetOffset, odometryThreadRunner
                 );
-                case REPLAY -> new SwerveModuleIO() {
-                };
+                case REPLAY -> new SwerveModuleIO() {};
             };
 
             return new SwerveModule(swerveModuleIO, name);

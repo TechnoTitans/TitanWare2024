@@ -1,6 +1,6 @@
 plugins {
     id "java"
-    id "edu.wpi.first.GradleRIO" version "2024.1.1-beta-4"
+    id "edu.wpi.first.GradleRIO" version "2024.1.1"
 
     // add recommended GVersion plugin on AdvantageKit documentation
     // allows automatic tracking of git versions/commit hashes and dirty branches
@@ -27,9 +27,16 @@ repositories {
     }
 }
 
-configurations.all {
+configurations.configureEach {
     exclude group: "edu.wpi.first.wpilibj"
 }
+
+tasks.register('checkAkitInstall', JavaExec) {
+    dependsOn "classes"
+    mainClass = "org.littletonrobotics.junction.CheckInstall"
+    classpath = sourceSets.main.runtimeClasspath
+}
+compileJava.finalizedBy checkAkitInstall
 
 // Define my targets (RoboRIO) and artifacts (deployable files)
 // This is added by GradleRIO's backing project DeployUtils.
