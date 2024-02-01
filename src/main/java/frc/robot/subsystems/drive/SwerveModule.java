@@ -138,6 +138,25 @@ public class SwerveModule {
     }
 
     /**
+     * Computes the desired drive motor velocity given a desired {@link SwerveModuleState}
+     * Characterizes the driving motor of the {@link SwerveModule} using
+     * {@link SwerveModuleIO#setDriveCharacterizationVolts(double, double)}, while holding the turning at zero
+     * @param driveVolts the volts to apply to the drive motor
+     */
+    public void driveVoltageCharacterization(final double driveVolts, final double turnPositionRots) {
+        moduleIO.setDriveCharacterizationVolts(driveVolts, turnPositionRots);
+    }
+
+    /**
+     * Characterizes the driving motor of the {@link SwerveModule} using
+     * {@link SwerveModuleIO#setDriveCharacterizationAmps(double, double)}, while holding the turning at zero
+     * @param driveTorqueCurrentAmps the torque current amps to apply to the drive motor
+     */
+    public void driveTorqueCurrentCharacterization(final double driveTorqueCurrentAmps, final double turnPositionRots) {
+        moduleIO.setDriveCharacterizationAmps(driveTorqueCurrentAmps, turnPositionRots);
+    }
+
+    /**
      * Scales a {@link SwerveModuleState} by the cosine of the error between the {@link SwerveModuleState#angle} and
      * the measured angle (wheel rotation) by mutating its {@link SwerveModuleState#speedMetersPerSecond}.
      * <p> This should be called <b>AFTER</b> {@link SwerveModuleState#optimize(SwerveModuleState, Rotation2d)}</p>

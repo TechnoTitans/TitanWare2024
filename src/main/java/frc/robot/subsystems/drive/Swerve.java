@@ -17,12 +17,15 @@ import edu.wpi.first.math.kinematics.ChassisSpeeds;
 import edu.wpi.first.math.kinematics.SwerveDriveKinematics;
 import edu.wpi.first.math.kinematics.SwerveModulePosition;
 import edu.wpi.first.math.kinematics.SwerveModuleState;
+import edu.wpi.first.units.Current;
+import edu.wpi.first.units.Measure;
 import edu.wpi.first.util.struct.Struct;
 import edu.wpi.first.util.struct.StructSerializable;
 import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.Threads;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
+import edu.wpi.first.wpilibj2.command.sysid.SysIdRoutine;
 import frc.robot.constants.Constants;
 import frc.robot.constants.HardwareConstants;
 import frc.robot.constants.RobotMap;
@@ -42,6 +45,8 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.function.Consumer;
 import java.util.function.DoubleSupplier;
 
+import static edu.wpi.first.units.Units.*;
+
 public class Swerve extends SubsystemBase {
     protected static final String logKey = "Swerve";
     protected static final String odometryLogKey = "Odometry";
@@ -54,8 +59,11 @@ public class Swerve extends SubsystemBase {
     private final SwerveModule[] swerveModules;
 
     private final OdometryThreadRunner odometryThreadRunner;
-
     private final ReentrantReadWriteLock signalQueueReadWriteLock = new ReentrantReadWriteLock();
+
+    private final SysIdRoutine linearVoltageSysIdRoutine;
+    private final SysIdRoutine linearTorqueCurrentSysIdRoutine;
+    private final SysIdRoutine angularVoltageSysIdRoutine;
 
     public static class OdometryThreadRunner {
         // Increase the priority to dedicate more resources towards running the thread at the right frequency, 1 is the
@@ -444,6 +452,10 @@ public class Swerve extends SubsystemBase {
         this.gyro = gyro;
 
         this.poseEstimator = poseEstimator;
+        this.linearVoltageSysIdRoutine = makeLinearVoltageSysIdRoutine();
+        this.linearTorqueCurrentSysIdRoutine = makeLinearTorqueCurrentSysIdRoutine();
+        this.angularVoltageSysIdRoutine = makeAngularVoltageSysIdRoutine();
+
         this.odometryThreadRunner.start();
     }
 
@@ -487,6 +499,9 @@ public class Swerve extends SubsystemBase {
 //                Constants.Vision.VISION_MEASUREMENT_STD_DEVS
         );
 
+        this.linearVoltageSysIdRoutine = makeLinearVoltageSysIdRoutine();
+        this.linearTorqueCurrentSysIdRoutine = makeLinearTorqueCurrentSysIdRoutine();
+        this.angularVoltageSysIdRoutine = makeAngularVoltageSysIdRoutine();
         this.odometryThreadRunner.start();
     }
 
@@ -518,6 +533,102 @@ public class Swerve extends SubsystemBase {
         }
 
         return swerveModuleStates;
+    }
+
+    private SysIdRoutine makeLinearVoltageSysIdRoutine() {
+        return new SysIdRoutine(
+                new SysIdRoutine.Config(
+                        Volts.of(0.5).per(Second),
+                        Volts.of(4),
+                        Seconds.of(20),
+                        state -> SignalLogger.writeString("state", state.toString())
+                ),
+                new SysIdRoutine.Mechanism(
+                        voltageMeasure -> {
+                            final double volts = voltageMeasure.in(Volts);
+                            frontLeft.driveVoltageCharacterization(volts, 0);
+                            frontRight.driveVoltageCharacterization(volts, 0);
+                            backLeft.driveVoltageCharacterization(volts, 0);
+                            backRight.driveVoltageCharacterization(volts, 0);
+                        },
+                        null,
+                        this
+                )
+        );
+    }
+
+    public Command linearVoltageSysIdQuasistaticCommand(final SysIdRoutine.Direction direction) {
+        return linearVoltageSysIdRoutine.quasistatic(direction);
+    }
+
+    public Command linearVoltageSysIdDynamicCommand(final SysIdRoutine.Direction direction) {
+        return linearVoltageSysIdRoutine.dynamic(direction);
+    }
+
+    private SysIdRoutine makeLinearTorqueCurrentSysIdRoutine() {
+        return new SysIdRoutine(
+                new SysIdRoutine.Config(
+                        // this is actually amps/sec not volts/sec
+                        Volts.of(2).per(Second),
+                        // this is actually amps not volts
+                        Volts.of(10),
+                        Seconds.of(20),
+                        state -> SignalLogger.writeString("state", state.toString())
+                ),
+                new SysIdRoutine.Mechanism(
+                        voltageMeasure -> {
+                            // convert the voltage measure to an amperage measure by tricking it
+                            final Measure<Current> currentMeasure = Amps.of(voltageMeasure.magnitude());
+                            final double amps = currentMeasure.in(Amps);
+                            frontLeft.driveTorqueCurrentCharacterization(amps, 0);
+                            frontRight.driveTorqueCurrentCharacterization(amps, 0);
+                            backLeft.driveTorqueCurrentCharacterization(amps, 0);
+                            backRight.driveTorqueCurrentCharacterization(amps, 0);
+                        },
+                        null,
+                        this
+                )
+        );
+    }
+
+    public Command linearTorqueCurrentSysIdQuasistaticCommand(final SysIdRoutine.Direction direction) {
+        return linearTorqueCurrentSysIdRoutine.quasistatic(direction);
+    }
+
+    public Command linearTorqueCurrentSysIdDynamicCommand(final SysIdRoutine.Direction direction) {
+        return linearTorqueCurrentSysIdRoutine.dynamic(direction);
+    }
+
+    private SysIdRoutine makeAngularVoltageSysIdRoutine() {
+        return new SysIdRoutine(
+                new SysIdRoutine.Config(
+                        // this is actually amps/sec not volts/sec
+                        Volts.of(1).per(Second),
+                        Volts.of(10),
+                        Seconds.of(20),
+                        state -> SignalLogger.writeString("state", state.toString())
+                ),
+                new SysIdRoutine.Mechanism(
+                        voltageMeasure -> {
+                            // convert the voltage measure to an amperage measure by tricking it
+                            final double volts = voltageMeasure.in(Volts);
+                            frontLeft.driveVoltageCharacterization(volts, -0.125);
+                            frontRight.driveVoltageCharacterization(volts, 0.625);
+                            backLeft.driveVoltageCharacterization(volts, 0.125);
+                            backRight.driveVoltageCharacterization(volts, -0.625);
+                        },
+                        null,
+                        this
+                )
+        );
+    }
+
+    public Command angularVoltageSysIdQuasistaticCommand(final SysIdRoutine.Direction direction) {
+        return angularVoltageSysIdRoutine.quasistatic(direction);
+    }
+
+    public Command angularVoltageSysIdDynamicCommand(final SysIdRoutine.Direction direction) {
+        return angularVoltageSysIdRoutine.dynamic(direction);
     }
 
     @Override

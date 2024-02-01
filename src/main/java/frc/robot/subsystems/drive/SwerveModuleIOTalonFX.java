@@ -7,6 +7,7 @@ import com.ctre.phoenix6.configs.CANcoderConfiguration;
 import com.ctre.phoenix6.configs.Slot0Configs;
 import com.ctre.phoenix6.configs.TalonFXConfiguration;
 import com.ctre.phoenix6.controls.PositionVoltage;
+import com.ctre.phoenix6.controls.TorqueCurrentFOC;
 import com.ctre.phoenix6.controls.VelocityTorqueCurrentFOC;
 import com.ctre.phoenix6.controls.VoltageOut;
 import com.ctre.phoenix6.hardware.CANcoder;
@@ -33,8 +34,8 @@ public class SwerveModuleIOTalonFX implements SwerveModuleIO {
 
     private final VelocityTorqueCurrentFOC velocityTorqueCurrentFOC;
     private final VoltageOut voltageOut;
+    private final TorqueCurrentFOC torqueCurrentFOC;
 
-    //TODO try motion magic expo later
     private final PositionVoltage positionVoltage;
 
     private final Swerve.OdometryThreadRunner odometryThreadRunner;
@@ -69,6 +70,7 @@ public class SwerveModuleIOTalonFX implements SwerveModuleIO {
         this.magnetOffset = magnetOffset;
 
         this.velocityTorqueCurrentFOC = new VelocityTorqueCurrentFOC(0);
+        this.torqueCurrentFOC = new TorqueCurrentFOC(0);
         this.positionVoltage = new PositionVoltage(0);
         this.voltageOut = new VoltageOut(0);
 
@@ -103,9 +105,12 @@ public class SwerveModuleIOTalonFX implements SwerveModuleIO {
 
         driveTalonFXConfiguration.Slot0 = new Slot0Configs()
                 .withKP(50)
-                .withKS(5.875);
+                .withKS(4.796)
+                .withKA(2.549);
         driveTalonFXConfiguration.TorqueCurrent.PeakForwardTorqueCurrent = Modules.SLIP_CURRENT_A;
         driveTalonFXConfiguration.TorqueCurrent.PeakReverseTorqueCurrent = -Modules.SLIP_CURRENT_A;
+        driveTalonFXConfiguration.CurrentLimits.StatorCurrentLimit = Modules.SLIP_CURRENT_A;
+        driveTalonFXConfiguration.CurrentLimits.StatorCurrentLimitEnable = true;
         driveTalonFXConfiguration.ClosedLoopRamps.TorqueClosedLoopRampPeriod = 0.2;
         driveTalonFXConfiguration.Feedback.SensorToMechanismRatio = Modules.DRIVER_GEAR_RATIO;
         driveTalonFXConfiguration.MotorOutput.NeutralMode = NeutralModeValue.Brake;
@@ -229,6 +234,13 @@ public class SwerveModuleIOTalonFX implements SwerveModuleIO {
     public void setDriveCharacterizationVolts(double driveVolts, double desiredTurnerRotations) {
         odometryThreadRunner.updateControlRequest(driveMotor, voltageOut);
         driveMotor.setControl(voltageOut.withOutput(driveVolts));
+        turnMotor.setControl(positionVoltage.withPosition(desiredTurnerRotations));
+    }
+
+    @Override
+    public void setDriveCharacterizationAmps(double driveTorqueCurrentAmps, double desiredTurnerRotations) {
+        odometryThreadRunner.updateControlRequest(driveMotor, torqueCurrentFOC);
+        driveMotor.setControl(torqueCurrentFOC.withOutput(driveTorqueCurrentAmps));
         turnMotor.setControl(positionVoltage.withPosition(desiredTurnerRotations));
     }
 
