@@ -38,7 +38,8 @@ public interface GyroIO {
          */
         public double yawVelocityDegPerSec = 0.0;
 
-        public double[] odometryYawPositionsDeg = new double[0];
+        public double[] odometryTimestampsSec = new double[] {};
+        public double[] odometryYawPositionsDeg = new double[] {};
     }
 
     /**

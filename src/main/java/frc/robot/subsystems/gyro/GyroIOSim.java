@@ -16,7 +16,6 @@ import frc.robot.subsystems.drive.SwerveModule;
 import org.littletonrobotics.junction.Logger;
 
 import java.util.Queue;
-import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 public class GyroIOSim implements GyroIO {
     public static final double USE_SIMULATED_PITCH = 0;
@@ -39,8 +38,8 @@ public class GyroIOSim implements GyroIO {
     private final StatusSignal<Double> _rollVelocity;
     private final StatusSignal<Boolean> _faultHardware;
 
-    // StatusSignal queues for high-freq odometry and read lock
-    private final ReentrantReadWriteLock signalQueueReadWriteLock;
+    // StatusSignal queues for high-freq odometry
+    private final Queue<Double> timestampQueue;
     private final Queue<Double> yawSignalQueue;
 
     public GyroIOSim(
@@ -62,8 +61,8 @@ public class GyroIOSim implements GyroIO {
         this._rollVelocity = pigeon.getAngularVelocityYWorld();
         this._faultHardware = pigeon.getFault_Hardware();
 
-        this.signalQueueReadWriteLock = odometryThreadRunner.getSignalQueueReadWriteLock();
-        this.yawSignalQueue = odometryThreadRunner.registerSignal(pigeon, _yaw, _yawVelocity);
+        this.timestampQueue = odometryThreadRunner.makeTimestampQueue();
+        this.yawSignalQueue = odometryThreadRunner.registerSignal(pigeon, _yaw);
 
         pigeonSimState.setSupplyVoltage(12);
         pigeonSimState.setPitch(USE_SIMULATED_PITCH);
@@ -142,14 +141,11 @@ public class GyroIOSim implements GyroIO {
         inputs.rollVelocityDegPerSec = _rollVelocity.getValue();
         inputs.hasHardwareFault = _faultHardware.getValue();
 
-        try {
-            signalQueueReadWriteLock.writeLock().lock();
+        inputs.odometryTimestampsSec = timestampQueue.stream().mapToDouble(time -> time).toArray();
+        timestampQueue.clear();
 
-            inputs.odometryYawPositionsDeg = yawSignalQueue.stream().mapToDouble(yaw -> yaw).toArray();
-            yawSignalQueue.clear();
-        } finally {
-            signalQueueReadWriteLock.writeLock().unlock();
-        }
+        inputs.odometryYawPositionsDeg = yawSignalQueue.stream().mapToDouble(yaw -> yaw).toArray();
+        yawSignalQueue.clear();
     }
 
     public double getYaw() {

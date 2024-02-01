@@ -6,6 +6,9 @@ import com.ctre.phoenix6.StatusSignal;
 import com.ctre.phoenix6.configs.CANcoderConfiguration;
 import com.ctre.phoenix6.configs.Slot0Configs;
 import com.ctre.phoenix6.configs.TalonFXConfiguration;
+import com.ctre.phoenix6.controls.PositionVoltage;
+import com.ctre.phoenix6.controls.VelocityTorqueCurrentFOC;
+import com.ctre.phoenix6.controls.VoltageOut;
 import com.ctre.phoenix6.controls.*;
 import com.ctre.phoenix6.hardware.CANcoder;
 import com.ctre.phoenix6.hardware.ParentDevice;
@@ -20,6 +23,8 @@ import frc.robot.utils.ctre.Phoenix6Utils;
 
 import java.util.Queue;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
+
+import java.util.Queue;
 
 public class SwerveModuleIOTalonFX implements SwerveModuleIO {
     private final TalonFX driveMotor;
@@ -49,8 +54,8 @@ public class SwerveModuleIOTalonFX implements SwerveModuleIO {
     private final StatusSignal<Double> _turnStatorCurrent;
     private final StatusSignal<Double> _turnDeviceTemp;
 
-    // Odometry StatusSignal update queues and queue read/write lock
-    private final ReentrantReadWriteLock signalQueueReadWriteLock;
+    // Odometry StatusSignal update queues
+    private final Queue<Double> timestampQueue;
     private final Queue<Double> drivePositionSignalQueue;
     private final Queue<Double> turnPositionSignalQueue;
 
@@ -87,9 +92,9 @@ public class SwerveModuleIOTalonFX implements SwerveModuleIO {
         this._turnStatorCurrent = turnMotor.getStatorCurrent();
         this._turnDeviceTemp = turnMotor.getDeviceTemp();
 
-        this.signalQueueReadWriteLock = odometryThreadRunner.signalQueueReadWriteLock;
-        this.drivePositionSignalQueue = odometryThreadRunner.registerSignal(driveMotor, _drivePosition, _driveVelocity);
-        this.turnPositionSignalQueue = odometryThreadRunner.registerSignal(turnMotor, _turnPosition, _turnVelocity);
+        this.timestampQueue = odometryThreadRunner.makeTimestampQueue();
+        this.drivePositionSignalQueue = odometryThreadRunner.registerSignal(driveMotor, _drivePosition);
+        this.turnPositionSignalQueue = odometryThreadRunner.registerSignal(turnMotor, _turnPosition);
     }
 
     @SuppressWarnings("DuplicatedCode")
@@ -135,16 +140,18 @@ public class SwerveModuleIOTalonFX implements SwerveModuleIO {
         turnMotor.getConfigurator().apply(turnTalonFXConfiguration);
 
         velocityTorqueCurrentFOC.UpdateFreqHz = 0;
-        torqueCurrentFOC.UpdateFreqHz = 0;
-
         positionVoltage.UpdateFreqHz = 0;
 
         BaseStatusSignal.setUpdateFrequencyForAll(
-                250,
-                driveMotor.getMotorVoltage(),
+                100,
+                _driveVelocity,
                 _driveTorqueCurrent,
-                turnMotor.getMotorVoltage(),
-                _turnTorqueCurrent
+                _driveStatorCurrent,
+                _driveDeviceTemp,
+                _turnVelocity,
+                _turnTorqueCurrent,
+                _turnStatorCurrent,
+                _turnDeviceTemp
         );
         ParentDevice.optimizeBusUtilizationForAll(driveMotor, turnMotor);
     }
@@ -177,17 +184,14 @@ public class SwerveModuleIOTalonFX implements SwerveModuleIO {
         inputs.turnStatorCurrentAmps = _turnStatorCurrent.getValue();
         inputs.turnTempCelsius = _turnDeviceTemp.getValue();
 
-        try {
-            signalQueueReadWriteLock.writeLock().lock();
+        inputs.odometryTimestampsSec = timestampQueue.stream().mapToDouble(time -> time).toArray();
+        timestampQueue.clear();
 
-            inputs.odometryDrivePositionsRots = drivePositionSignalQueue.stream().mapToDouble(pos -> pos).toArray();
-            drivePositionSignalQueue.clear();
+        inputs.odometryDrivePositionsRots = drivePositionSignalQueue.stream().mapToDouble(pos -> pos).toArray();
+        drivePositionSignalQueue.clear();
 
-            inputs.odometryTurnPositionRots = turnPositionSignalQueue.stream().mapToDouble(pos -> pos).toArray();
-            turnPositionSignalQueue.clear();
-        } finally {
-            signalQueueReadWriteLock.writeLock().unlock();
-        }
+        inputs.odometryTurnPositionRots = turnPositionSignalQueue.stream().mapToDouble(pos -> pos).toArray();
+        turnPositionSignalQueue.clear();
     }
 
     /**

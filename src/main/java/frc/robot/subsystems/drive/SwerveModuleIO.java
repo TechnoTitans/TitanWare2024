@@ -48,8 +48,9 @@ public interface SwerveModuleIO {
          */
         public double turnTempCelsius = 0.0;
 
-        public double[] odometryDrivePositionsRots = new double[0];
-        public double[] odometryTurnPositionRots = new double[0];
+        public double[] odometryTimestampsSec = new double[] {};
+        public double[] odometryDrivePositionsRots = new double[] {};
+        public double[] odometryTurnPositionRots = new double[] {};
     }
 
     /**
