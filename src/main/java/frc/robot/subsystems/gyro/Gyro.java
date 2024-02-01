@@ -35,8 +35,6 @@ public class Gyro {
                 logKey + "/PeriodicIOPeriodMs",
                 LogUtils.microsecondsToMilliseconds(Logger.getRealTimestamp() - gyroPeriodicUpdateStart)
         );
-
-        Logger.recordOutput("FilteredPitchVelocityDPS", getFilteredPitchVelocity());
     }
 
     public boolean hasHardwareFault() {
