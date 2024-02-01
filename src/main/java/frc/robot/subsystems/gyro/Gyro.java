@@ -15,15 +15,11 @@ public class Gyro {
     private final GyroIOInputsAutoLogged inputs;
     private final boolean isReal;
 
-    private final LinearFilter pitchVelocityFilter;
-
     public Gyro(final GyroIO gyroIO, final Pigeon2 pigeon2) {
         this.gyroIO = gyroIO;
         this.pigeon2 = pigeon2;
         this.inputs = new GyroIOInputsAutoLogged();
         this.isReal = Constants.CURRENT_MODE == Constants.RobotMode.REAL;
-
-        this.pitchVelocityFilter = LinearFilter.movingAverage(16);
 
         this.gyroIO.config();
     }
@@ -119,10 +115,6 @@ public class Gyro {
 
     public double getPitchVelocity() {
         return inputs.pitchVelocityDegPerSec;
-    }
-
-    public double getFilteredPitchVelocity() {
-        return pitchVelocityFilter.calculate(getPitchVelocity());
     }
 
     /**
