@@ -1,6 +1,14 @@
 # This gitignore has been specially created by the WPILib team.
 # If you remove items from this file, intellisense might break.
 
+# Add AdvantageKit recommended gitignore for BuildConstants.java
+# see https://github.com/Mechanical-Advantage/AdvantageKit/blob/main/docs/INSTALLATION.md#gversion-plugin-git-metadata
+src/main/java/frc/robot/BuildConstants.java
+
+# Ignore wpilib, ctre(hoot) logs
+*.wpilog
+*.hoot
+
 ### C++ ###
 # Prerequisites
 *.d
@@ -170,3 +178,6 @@ out/
 
 # Simulation GUI and other tools window save file
 *-window.json
+
+# Ignore files for simulated CTRE Status Signals
+/ctre_sim/
