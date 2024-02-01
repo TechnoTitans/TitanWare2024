@@ -220,7 +220,7 @@ public class SwerveModuleIOTalonFX implements SwerveModuleIO {
                 (_turnVelocity.getValue() * Modules.COUPLING_GEAR_RATIO)
                         / Modules.DRIVER_GEAR_RATIO
         );
-        final double backedOutDriveVelocity = desiredDriverVelocity - driveVelocityBackOut;
+        final double backedOutDriveVelocity = desiredDriverVelocity + driveVelocityBackOut;
 
         odometryThreadRunner.updateControlRequest(driveMotor, velocityTorqueCurrentFOC);
         driveMotor.setControl(velocityTorqueCurrentFOC
