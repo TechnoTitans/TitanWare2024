@@ -37,6 +37,9 @@ public interface GyroIO {
          * The gyro reported yaw (Z-axis) velocity (in absolute [-1999, 1999) deg/sec)
          */
         public double yawVelocityDegPerSec = 0.0;
+
+        public double[] odometryTimestampsSec = new double[] {};
+        public double[] odometryYawPositionsDeg = new double[] {};
     }
 
     /**

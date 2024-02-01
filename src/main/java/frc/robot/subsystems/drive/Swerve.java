@@ -1,26 +1,45 @@
 package frc.robot.subsystems.drive;
 
+import com.ctre.phoenix6.*;
+import com.ctre.phoenix6.controls.ControlRequest;
+import com.ctre.phoenix6.hardware.ParentDevice;
 import com.ctre.phoenix6.hardware.Pigeon2;
 import com.ctre.phoenix6.signals.NeutralModeValue;
 import edu.wpi.first.math.MathUtil;
 import edu.wpi.first.math.estimator.SwerveDrivePoseEstimator;
+import edu.wpi.first.math.filter.LinearFilter;
+import edu.wpi.first.math.filter.MedianFilter;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
+import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.math.geometry.Twist2d;
 import edu.wpi.first.math.kinematics.ChassisSpeeds;
 import edu.wpi.first.math.kinematics.SwerveDriveKinematics;
 import edu.wpi.first.math.kinematics.SwerveModulePosition;
 import edu.wpi.first.math.kinematics.SwerveModuleState;
+import edu.wpi.first.util.struct.Struct;
+import edu.wpi.first.util.struct.StructSerializable;
+import edu.wpi.first.wpilibj.DriverStation;
+import edu.wpi.first.wpilibj.Threads;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import frc.robot.constants.Constants;
 import frc.robot.constants.HardwareConstants;
 import frc.robot.constants.RobotMap;
-import frc.robot.subsystems.gyro.*;
+import frc.robot.subsystems.gyro.Gyro;
+import frc.robot.subsystems.gyro.GyroIO;
+import frc.robot.subsystems.gyro.GyroIOPigeon2;
+import frc.robot.subsystems.gyro.GyroIOSim;
 import frc.robot.utils.gyro.GyroUtils;
 import frc.robot.utils.logging.LogUtils;
+import frc.robot.utils.teleop.ControllerUtils;
+import frc.robot.utils.teleop.Profiler;
 import org.littletonrobotics.junction.Logger;
 
+import java.nio.ByteBuffer;
+import java.util.*;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
+import java.util.function.Consumer;
 import java.util.function.DoubleSupplier;
 
 public class Swerve extends SubsystemBase {
@@ -28,12 +47,379 @@ public class Swerve extends SubsystemBase {
     protected static final String odometryLogKey = "Odometry";
 
     private Gyro gyro;
-    private final GyroIOInputsAutoLogged gyroInputs;
     private final SwerveDriveKinematics kinematics;
     private final SwerveDrivePoseEstimator poseEstimator;
 
     private final SwerveModule frontLeft, frontRight, backLeft, backRight;
     private final SwerveModule[] swerveModules;
+
+    private final OdometryThreadRunner odometryThreadRunner;
+
+    private final ReentrantReadWriteLock signalQueueReadWriteLock = new ReentrantReadWriteLock();
+
+    public static class OdometryThreadRunner {
+        // Increase the priority to dedicate more resources towards running the thread at the right frequency, 1 is the
+        // minimum realtime priority and should work well enough
+        protected static final int STARTING_THREAD_PRIORITY = 1;
+        // 250Hz should work well when on a CAN-FD network, if only on CAN 2.0 or other, this should probably be
+        // set to <= 100Hz
+        protected static final double UPDATE_FREQUENCY_HZ = 250;
+
+        protected final ReentrantReadWriteLock signalQueueReadWriteLock;
+        protected final ReentrantReadWriteLock signalReadWriteLock = new ReentrantReadWriteLock();
+        protected final ReentrantReadWriteLock controlReqReadWriteLock = new ReentrantReadWriteLock();
+
+        private String network;
+
+        protected final List<StatusSignal<Double>> allSignals = new ArrayList<>();
+        protected final Map<Long, ControlRequest> outerAppliedControlRequests = new HashMap<>();
+        protected final Map<Long, ControlRequest> innerAppliedControlRequests = new HashMap<>();
+        protected final Map<Long, Consumer<ControlRequest>> controlReqAppliers = new HashMap<>();
+        protected final List<Queue<Double>> queues = new ArrayList<>();
+        protected final List<Queue<Double>> timestampQueues = new ArrayList<>();
+
+        protected final Thread thread;
+        protected final State state = new State();
+        protected volatile boolean running = false;
+
+        protected final MedianFilter peakRemover = new MedianFilter(3);
+        protected final LinearFilter lowPass = LinearFilter.movingAverage(50);
+        protected double lastTimeSeconds = 0;
+        protected double currentTimeSeconds = 0;
+        protected double averageLoopTimeSeconds = 0;
+
+        protected int failedDAQs = 0;
+
+        protected int lastThreadPriority = STARTING_THREAD_PRIORITY;
+        protected volatile int threadPriorityToSet = lastThreadPriority;
+
+        public OdometryThreadRunner(final ReentrantReadWriteLock signalQueueReadWriteLock) {
+            this.thread = new Thread(this::run);
+            this.thread.setDaemon(true);
+
+            this.signalQueueReadWriteLock = signalQueueReadWriteLock;
+        }
+
+        /**
+         * Starts the odometry thread.
+         */
+        public void start() {
+            running = true;
+            thread.start();
+        }
+
+        /**
+         * Stops the odometry thread.
+         */
+        public void stop() {
+            stop(0);
+        }
+
+        /**
+         * Stops the odometry thread with a timeout.
+         * @param timeoutMillis The time to wait in milliseconds
+         */
+        public void stop(final long timeoutMillis) {
+            running = false;
+            try {
+                thread.join(timeoutMillis);
+            } catch (final InterruptedException interruptedException) {
+                Thread.currentThread().interrupt();
+            }
+        }
+
+        /**
+         * Gets a reference to the signal queue {@link ReentrantReadWriteLock} used to lock
+         * read/write operations on any signal queue
+         * @return the {@link ReentrantReadWriteLock}
+         */
+        public ReentrantReadWriteLock getSignalQueueReadWriteLock() {
+            return signalQueueReadWriteLock;
+        }
+
+        /**
+         * Sets the DAQ thread priority to a real time priority under the specified priority level
+         * @param priority Priority level to set the DAQ thread to. This is a value between 0 and 99,
+         *                 with 99 indicating higher priority and 0 indicating lower priority.
+         */
+        public void setThreadPriority(int priority) {
+            threadPriorityToSet = priority;
+        }
+
+        public static class State implements StructSerializable {
+            public static final StateStruct struct = new StateStruct();
+            public boolean running;
+            public int failedDAQs;
+            public int statusCode;
+            public int maxQueueSize;
+            public double timestampSeconds;
+            public double odometryPeriodSeconds;
+
+            public static class StateStruct implements Struct<State> {
+                @Override
+                public Class<State> getTypeClass() {
+                    return State.class;
+                }
+
+                @Override
+                public String getTypeString() {
+                    return "struct:Swerve.OdometryThreadRunner.State";
+                }
+
+                @Override
+                public int getSize() {
+                    return kSizeBool + (kSizeInt32 * 4) + (kSizeDouble * 2);
+                }
+
+                @Override
+                public String getSchema() {
+                    return "bool running;int32 failedDAQs;int32 statusCode;int32 maxQueueSize;double timestampSeconds;double odometryPeriodSeconds";
+                }
+
+                @Override
+                public State unpack(final ByteBuffer bb) {
+                    final boolean running = bb.get() != 0;
+                    final int failedDAQs = bb.getInt();
+                    final int statusCode = bb.getInt();
+                    final int maxQueueSize = bb.getInt();
+                    final double timestamp = bb.getDouble();
+                    final double odometryPeriod = bb.getDouble();
+
+                    final State state = new State();
+                    state.running = running;
+                    state.failedDAQs = failedDAQs;
+                    state.statusCode = statusCode;
+                    state.maxQueueSize = maxQueueSize;
+                    state.timestampSeconds = timestamp;
+                    state.odometryPeriodSeconds = odometryPeriod;
+                    return state;
+                }
+
+                @Override
+                public void pack(final ByteBuffer bb, final State value) {
+                    bb.put((byte)(value.running ? 1 : 0));
+                    bb.putInt(value.failedDAQs);
+                    bb.putInt(value.statusCode);
+                    bb.putInt(value.maxQueueSize);
+                    bb.putDouble(value.timestampSeconds);
+                    bb.putDouble(value.odometryPeriodSeconds);
+                }
+            }
+        }
+
+        /**
+         * Gets the current state of the {@link OdometryThreadRunner}, describing failed DAQs,
+         * actual (measured) odometry period, etc...
+         * @return the internal {@link State}
+         */
+        public State getState() {
+            try {
+                signalQueueReadWriteLock.readLock().lock();
+                return state;
+            } finally {
+                signalQueueReadWriteLock.readLock().unlock();
+            }
+        }
+
+        public Queue<Double> makeTimestampQueue() {
+            final Queue<Double> queue = new ArrayDeque<>(100);
+            try {
+                signalReadWriteLock.writeLock().lock();
+                timestampQueues.add(queue);
+            } finally {
+                signalReadWriteLock.writeLock().unlock();
+            }
+
+            return queue;
+        }
+
+        public Queue<Double> registerSignal(
+                final ParentDevice device,
+                final StatusSignal<Double> signal
+        ) {
+            final Queue<Double> queue = new ArrayDeque<>(100);
+            try {
+                signalReadWriteLock.writeLock().lock();
+                final String deviceNetwork = device.getNetwork();
+                if (!CANBus.isNetworkFD(deviceNetwork)) {
+                    throw new RuntimeException(String.format(
+                            "Attempted to register signal from a non CAN-FD device ID: %d (%s)! This is a bug!",
+                            device.getDeviceID(),
+                            deviceNetwork
+                    ));
+                }
+
+                // Ensure that we cannot register devices on different networks
+                if (network != null && !network.equals(deviceNetwork)) {
+                    throw new RuntimeException(String.format(
+                            "Attempted to register signal from a device on a different network than devices already" +
+                                    "registered! Current: %s, New: %s! This is a bug!",
+                            network,
+                            deviceNetwork
+                    ));
+                } else if (network == null) {
+                    network = deviceNetwork;
+                }
+
+                allSignals.add(signal);
+                queues.add(queue);
+            } finally {
+                signalReadWriteLock.writeLock().unlock();
+            }
+
+            return queue;
+        }
+
+        public void registerControlRequest(
+                final ParentDevice device,
+                final ControlRequest controlRequest,
+                final Consumer<ControlRequest> applyControlReq
+        ) {
+            final long deviceHash = device.getDeviceHash();
+            final String deviceNetwork = device.getNetwork();
+            if (network != null && !network.equals(deviceNetwork)) {
+                throw new RuntimeException(String.format(
+                        "Attempted to register signal from a device on a different network than devices already" +
+                                "registered! Current: %s, New: %s! This is a bug!",
+                        network,
+                        deviceNetwork
+                ));
+            } else if (network == null) {
+                network = deviceNetwork;
+            }
+
+            if (outerAppliedControlRequests.containsKey(deviceHash)) {
+                throw new RuntimeException(String.format(
+                        "Attempted to register a ControlRequest for the same device" +
+                                "ID: %d (%s) more than once!", device.getDeviceID(), deviceNetwork
+                ));
+            }
+
+            outerAppliedControlRequests.put(deviceHash, controlRequest);
+            try {
+                controlReqReadWriteLock.writeLock().lock();
+
+                innerAppliedControlRequests.put(deviceHash, controlRequest);
+                controlReqAppliers.put(deviceHash, applyControlReq);
+            } finally {
+                controlReqReadWriteLock.writeLock().unlock();
+            }
+        }
+
+        public void updateControlRequest(final ParentDevice device, final ControlRequest controlRequest) {
+            final long deviceHash = device.getDeviceHash();
+            if (outerAppliedControlRequests.get(deviceHash) == controlRequest) {
+                return;
+            }
+
+            outerAppliedControlRequests.put(deviceHash, controlRequest);
+            try {
+                controlReqReadWriteLock.writeLock().lock();
+                innerAppliedControlRequests.put(deviceHash, controlRequest);
+            } finally {
+                controlReqReadWriteLock.writeLock().unlock();
+            }
+        }
+
+        private void run() {
+            if (allSignals.isEmpty()) {
+                DriverStation.reportError(
+                        "Attempted to start OdometryThread without any registered signals!",
+                        false
+                );
+                stop();
+
+                return;
+            }
+
+            final BaseStatusSignal[] allSignalsArray = allSignals.toArray(BaseStatusSignal[]::new);
+            BaseStatusSignal.setUpdateFrequencyForAll(UPDATE_FREQUENCY_HZ, allSignalsArray);
+            Threads.setCurrentThreadPriority(true, STARTING_THREAD_PRIORITY);
+
+            while (running) {
+                final int statusCodeValue;
+                try {
+                    signalReadWriteLock.writeLock().lock();
+                    final StatusCode statusCode = BaseStatusSignal.waitForAll(
+                            2.0 / UPDATE_FREQUENCY_HZ, allSignalsArray
+                    );
+
+                    statusCodeValue = statusCode.value;
+                    if (!statusCode.isOK()) {
+                        failedDAQs++;
+                    }
+                } finally {
+                    signalReadWriteLock.writeLock().unlock();
+                }
+
+                try {
+                    signalQueueReadWriteLock.writeLock().lock();
+                    lastTimeSeconds = currentTimeSeconds;
+                    currentTimeSeconds = Utils.getCurrentTimeSeconds();
+
+                    // We don't care about the peaks, as they correspond to GC events,
+                    // and we want the period generally low passed
+                    averageLoopTimeSeconds = lowPass.calculate(
+                            peakRemover.calculate(currentTimeSeconds - lastTimeSeconds)
+                    );
+
+                    state.running = running;
+                    state.failedDAQs = failedDAQs;
+                    state.statusCode = statusCodeValue;
+                    state.odometryPeriodSeconds = averageLoopTimeSeconds;
+
+                    final int signalCount = allSignals.size();
+                    double totalLatencySeconds = 0;
+                    int maxQueueSize = 0;
+                    for (int i = 0; i < signalCount; i++) {
+                        final Queue<Double> queue = queues.get(i);
+                        final StatusSignal<Double> signal = allSignals.get(i);
+                        queue.offer(signal.getValue());
+
+                        final int queueSize = queue.size();
+                        if (queueSize > maxQueueSize) {
+                            maxQueueSize = queueSize;
+                        }
+
+                        totalLatencySeconds += signal.getTimestamp().getLatency();
+                    }
+
+                    final double realTimestampSeconds = Logger.getRealTimestamp() / 1e6;
+                    final double signalTimestampSeconds = realTimestampSeconds - (totalLatencySeconds / signalCount);
+                    for (final Queue<Double> timestampQueue : timestampQueues) {
+                        timestampQueue.offer(signalTimestampSeconds);
+                    }
+
+                    state.timestampSeconds = signalTimestampSeconds;
+                    state.maxQueueSize = maxQueueSize;
+                } finally {
+                    signalQueueReadWriteLock.writeLock().unlock();
+                }
+
+                try {
+                    controlReqReadWriteLock.readLock().lock();
+                    for (final Map.Entry<Long, Consumer<ControlRequest>>
+                            controlReqApplierEntry : controlReqAppliers.entrySet()
+                    ) {
+                        controlReqApplierEntry
+                                .getValue()
+                                .accept(innerAppliedControlRequests.get(controlReqApplierEntry.getKey()));
+                    }
+                } finally {
+                    controlReqReadWriteLock.readLock().unlock();
+                }
+
+                // This is inherently synchronous, since lastThreadPriority is only written
+                // here and threadPriorityToSet is only read here
+                if (threadPriorityToSet != lastThreadPriority) {
+                    Threads.setCurrentThreadPriority(true, threadPriorityToSet);
+                    lastThreadPriority = threadPriorityToSet;
+                }
+            }
+
+            state.running = running;
+        }
+    }
 
     Swerve(
             final Gyro gyro,
@@ -42,20 +428,23 @@ public class Swerve extends SubsystemBase {
             final SwerveModule backLeft,
             final SwerveModule backRight,
             final SwerveDriveKinematics kinematics,
-            final SwerveDrivePoseEstimator poseEstimator
+            final SwerveDrivePoseEstimator poseEstimator,
+            final OdometryThreadRunner odometryThreadRunner
     ) {
+        this.odometryThreadRunner = odometryThreadRunner;
+
         this.frontLeft = frontLeft;
         this.frontRight = frontRight;
         this.backLeft = backLeft;
         this.backRight = backRight;
 
-        this.swerveModules = new SwerveModule[] {frontLeft, frontRight, backLeft, backRight};
+        this.swerveModules = new SwerveModule[]{frontLeft, frontRight, backLeft, backRight};
         this.kinematics = kinematics;
 
-        this.gyroInputs = new GyroIOInputsAutoLogged();
         this.gyro = gyro;
 
         this.poseEstimator = poseEstimator;
+        this.odometryThreadRunner.start();
     }
 
     public Swerve(
@@ -65,14 +454,14 @@ public class Swerve extends SubsystemBase {
             final HardwareConstants.SwerveModuleConstants backLeftConstants,
             final HardwareConstants.SwerveModuleConstants backRightConstants
     ) {
-        final Pigeon2 pigeon2 = new Pigeon2(RobotMap.Pigeon, RobotMap.CanivoreCANBus);
+        this.odometryThreadRunner = new OdometryThreadRunner(signalQueueReadWriteLock);
 
-        this.frontLeft = frontLeftConstants.create(mode);
-        this.frontRight = frontRightConstants.create(mode);
-        this.backLeft = backLeftConstants.create(mode);
-        this.backRight = backRightConstants.create(mode);
+        this.frontLeft = frontLeftConstants.create(mode, odometryThreadRunner);
+        this.frontRight = frontRightConstants.create(mode, odometryThreadRunner);
+        this.backLeft = backLeftConstants.create(mode, odometryThreadRunner);
+        this.backRight = backRightConstants.create(mode, odometryThreadRunner);
 
-        this.swerveModules = new SwerveModule[] {frontLeft, frontRight, backLeft, backRight};
+        this.swerveModules = new SwerveModule[]{frontLeft, frontRight, backLeft, backRight};
         this.kinematics = new SwerveDriveKinematics(
                 frontLeftConstants.translationOffset(),
                 frontRightConstants.translationOffset(),
@@ -80,11 +469,12 @@ public class Swerve extends SubsystemBase {
                 backRightConstants.translationOffset()
         );
 
-        this.gyroInputs = new GyroIOInputsAutoLogged();
+        final Pigeon2 pigeon2 = new Pigeon2(RobotMap.Pigeon, RobotMap.CanivoreCANBus);
         this.gyro = switch (mode) {
-            case REAL -> new Gyro(new GyroIOPigeon2(pigeon2), pigeon2);
-            case SIM -> new Gyro(new GyroIOSim(pigeon2, kinematics, swerveModules), pigeon2);
-            case REPLAY -> new Gyro(new GyroIO() {}, pigeon2);
+            case REAL -> new Gyro(new GyroIOPigeon2(pigeon2, odometryThreadRunner), pigeon2);
+            case SIM -> new Gyro(new GyroIOSim(pigeon2, kinematics, odometryThreadRunner, swerveModules), pigeon2);
+            case REPLAY -> new Gyro(new GyroIO() {
+            }, pigeon2);
         };
 
         //TODO add vision
@@ -96,6 +486,8 @@ public class Swerve extends SubsystemBase {
 //                Constants.Vision.STATE_STD_DEVS,
 //                Constants.Vision.VISION_MEASUREMENT_STD_DEVS
         );
+
+        this.odometryThreadRunner.start();
     }
 
     /**
@@ -110,6 +502,7 @@ public class Swerve extends SubsystemBase {
      * <p>
      * Note: Do <b>NOT</b> use this for anything other than displaying SwerveModuleStates
      * </p>
+     *
      * @param swerveModuleStates raw SwerveModuleStates retrieved directly from the modules
      * @return modified SwerveModuleStates
      */
@@ -130,16 +523,55 @@ public class Swerve extends SubsystemBase {
     @Override
     public void periodic() {
         final double swervePeriodicUpdateStart = Logger.getRealTimestamp();
-        gyro.periodic();
+        try {
+            signalQueueReadWriteLock.writeLock().lock();
+            gyro.periodic();
 
-        frontLeft.periodic();
-        frontRight.periodic();
-        backLeft.periodic();
-        backRight.periodic();
+            frontLeft.periodic();
+            frontRight.periodic();
+            backLeft.periodic();
+            backRight.periodic();
+        } finally {
+            signalQueueReadWriteLock.writeLock().unlock();
+        }
+
+        // Update PoseEstimator and Odometry
+        final double odometryUpdateStart = Logger.getRealTimestamp();
+
+        // Signals are synchronous, this means that all signals should have observed the same number of timestamps
+        final double[] sampleTimestamps = frontLeft.getOdometryTimestamps();
+        final double[] gyroYawPositions = gyro.getOdometryYawPositions();
+        final int sampleCount = sampleTimestamps.length;
+        final int moduleCount = swerveModules.length;
+
+        for (int timestampIndex = 0; timestampIndex < sampleCount; timestampIndex++) {
+            final SwerveModulePosition[] positions = new SwerveModulePosition[moduleCount];
+            for (int moduleIndex = 0; moduleIndex < moduleCount; moduleIndex++) {
+                positions[moduleIndex] = swerveModules[moduleIndex].getOdometryPositions()[timestampIndex];
+            }
+
+            // TODO: it might be cool to see all of these updates happen at once,
+            //  so maybe build an array of poses and log it?
+            poseEstimator.updateWithTime(
+                    sampleTimestamps[timestampIndex],
+                    Rotation2d.fromDegrees(gyroYawPositions[timestampIndex]),
+                    positions
+            );
+        }
+
+        final double odometryUpdatePeriodMs = LogUtils.microsecondsToMilliseconds(
+                Logger.getRealTimestamp() - odometryUpdateStart
+        );
 
         Logger.recordOutput(
                 logKey + "/PeriodicIOPeriodMs",
                 LogUtils.microsecondsToMilliseconds(Logger.getRealTimestamp() - swervePeriodicUpdateStart)
+        );
+
+        Logger.recordOutput(
+                logKey + "/OdometryThreadState",
+                OdometryThreadRunner.State.struct,
+                odometryThreadRunner.getState()
         );
 
         //log current swerve chassis speeds
@@ -159,9 +591,9 @@ public class Swerve extends SubsystemBase {
         Logger.recordOutput(logKey + "/CurrentStates", currentStates);
 
         // only update gyro from wheel odometry if we're not simulating and the gyro has failed
-        if (Constants.CURRENT_MODE == Constants.RobotMode.REAL && gyroInputs.hasHardwareFault && gyro.isReal()) {
+        if (Constants.CURRENT_MODE == Constants.RobotMode.REAL && gyro.hasHardwareFault() && gyro.isReal()) {
             final Pigeon2 pigeon2 = gyro.getPigeon();
-            gyro = new Gyro(new GyroIOSim(pigeon2, kinematics, swerveModules), pigeon2);
+            gyro = new Gyro(new GyroIOSim(pigeon2, kinematics, odometryThreadRunner, swerveModules), pigeon2);
         }
 
         Logger.recordOutput(
@@ -169,13 +601,7 @@ public class Swerve extends SubsystemBase {
                Constants.CURRENT_MODE == Constants.RobotMode.REAL && !gyro.isReal()
         );
 
-        // Update PoseEstimator and Odometry
-        final double odometryUpdateStart = Logger.getRealTimestamp();
-        final Pose2d estimatedPosition = poseEstimator.update(getYaw(), getModulePositions());
-        final double odometryUpdatePeriodMs = LogUtils.microsecondsToMilliseconds(
-                Logger.getRealTimestamp() - odometryUpdateStart
-        );
-
+        final Pose2d estimatedPosition = poseEstimator.getEstimatedPosition();
         Logger.recordOutput(
                 odometryLogKey + "/OdometryUpdatePeriodMs", odometryUpdatePeriodMs
         );
@@ -199,6 +625,10 @@ public class Swerve extends SubsystemBase {
      */
     public Pose2d getEstimatedPosition() {
         return poseEstimator.getEstimatedPosition();
+    }
+
+    public OdometryThreadRunner getOdometryThreadRunner() {
+        return odometryThreadRunner;
     }
 
     public Gyro getGyro() {
@@ -232,6 +662,10 @@ public class Swerve extends SubsystemBase {
 //                photonVision.getEstimatedPosition(),
 //                Rotation2d.fromDegrees(0)
 //        );
+    }
+
+    public Command zeroRotationCommand() {
+        return runOnce(this::zeroRotation);
     }
 
     public ChassisSpeeds getRobotRelativeSpeeds() {
@@ -277,16 +711,12 @@ public class Swerve extends SubsystemBase {
         };
     }
 
-    public void drive(final SwerveModuleState[] states, final double moduleMaxSpeed) {
-        SwerveDriveKinematics.desaturateWheelSpeeds(states, moduleMaxSpeed);
+    public void drive(final SwerveModuleState[] states) {
+        SwerveDriveKinematics.desaturateWheelSpeeds(states, Constants.Swerve.Modules.MODULE_MAX_SPEED_M_PER_SEC);
         frontLeft.setDesiredState(states[0]);
         frontRight.setDesiredState(states[1]);
         backLeft.setDesiredState(states[2]);
         backRight.setDesiredState(states[3]);
-    }
-
-    public void drive(final SwerveModuleState[] states) {
-        drive(states, Constants.Swerve.Modules.MODULE_MAX_SPEED_M_PER_SEC);
     }
 
     public void drive(
@@ -329,12 +759,37 @@ public class Swerve extends SubsystemBase {
             final DoubleSupplier ySpeedSupplier,
             final DoubleSupplier rotSupplier
     ) {
-        return run(() -> drive(
-                xSpeedSupplier.getAsDouble(),
-                ySpeedSupplier.getAsDouble(),
-                rotSupplier.getAsDouble(),
-                true
-        ));
+        return run(() -> {
+            final Profiler.DriverProfile driverProfile = Profiler.getDriverProfile();
+            final Profiler.SwerveSpeed swerveSpeed = Profiler.getSwerveSpeed();
+
+            final double throttleWeight = swerveSpeed.getThrottleWeight();
+            final double rotWeight = swerveSpeed.getRotateWeight();
+
+            final Translation2d leftStickSpeeds = ControllerUtils.getStickXYSquaredInput(
+                    xSpeedSupplier.getAsDouble(),
+                    ySpeedSupplier.getAsDouble(),
+                    0.01,
+                    Constants.Swerve.TELEOP_MAX_SPEED_MPS,
+                    driverProfile.getThrottleSensitivity(),
+                    throttleWeight
+            );
+
+            final double rot = ControllerUtils.getStickSquaredInput(
+                    rotSupplier.getAsDouble(),
+                    0.01,
+                    Constants.Swerve.TELEOP_MAX_ANGULAR_SPEED_RAD_PER_SEC,
+                    driverProfile.getRotationalSensitivity(),
+                    rotWeight
+            );
+
+            drive(
+                    leftStickSpeeds.getX(),
+                    leftStickSpeeds.getY(),
+                    rot,
+                    true
+            );
+        });
     }
 
     public void stop() {
@@ -380,8 +835,6 @@ public class Swerve extends SubsystemBase {
     public Command zeroCommand() {
         return runOnce(() -> rawSet(0, 0, 0, 0, 0, 0, 0, 0));
     }
-
-
 
     /**
      * Put modules into an X pattern (significantly reduces the swerve's ability to coast/roll)

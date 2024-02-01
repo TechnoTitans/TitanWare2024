@@ -24,6 +24,7 @@ import org.mockito.Spy;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.util.Arrays;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.stream.Stream;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -66,6 +67,9 @@ public class SwerveTest {
             new Pose2d()
     );
 
+    private final Swerve.OdometryThreadRunner odometryThreadRunner =
+            new Swerve.OdometryThreadRunner(new ReentrantReadWriteLock());
+
     private Swerve swerve;
 
     @BeforeAll
@@ -82,7 +86,8 @@ public class SwerveTest {
                 backLeft,
                 backRight,
                 kinematics,
-                poseEstimator
+                poseEstimator,
+                odometryThreadRunner
         );
     }
 

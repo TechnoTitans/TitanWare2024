@@ -47,6 +47,10 @@ public interface SwerveModuleIO {
          * Temperature of the turn motor, in Celsius
          */
         public double turnTempCelsius = 0.0;
+
+        public double[] odometryTimestampsSec = new double[] {};
+        public double[] odometryDrivePositionsRots = new double[] {};
+        public double[] odometryTurnPositionRots = new double[] {};
     }
 
     /**
@@ -73,6 +77,13 @@ public interface SwerveModuleIO {
      * @param desiredTurnerRotations the desired turner motor rotations (in mechanism rotations)
      */
     default void setInputs(final double desiredDriverVelocity, final double desiredTurnerRotations) {}
+
+    /**
+     * Characterize the driving motor by applying a voltage, while holding/keeping the turning motor at a constant angle
+     * @param driveVolts volts to apply to the drive motor
+     * @param desiredTurnerRotations rotations to hold the turn motor at
+     */
+    default void setDriveCharacterizationVolts(final double driveVolts, final double desiredTurnerRotations) {}
 
     /**
      * Set the desired {@link NeutralModeValue} of the drive motor on this module

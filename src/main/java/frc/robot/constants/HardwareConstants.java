@@ -3,6 +3,7 @@ package frc.robot.constants;
 import com.ctre.phoenix6.hardware.CANcoder;
 import com.ctre.phoenix6.hardware.TalonFX;
 import edu.wpi.first.math.geometry.Translation2d;
+import frc.robot.subsystems.drive.Swerve;
 import frc.robot.subsystems.drive.SwerveModule;
 
 import static frc.robot.constants.Constants.Swerve.TRACK_WIDTH_M;
@@ -25,7 +26,8 @@ public class HardwareConstants {
 
         public static SwerveModule create(
                 final SwerveModuleConstants swerveModuleConstants,
-                final Constants.RobotMode currentMode
+                final Constants.RobotMode currentMode,
+                final Swerve.OdometryThreadRunner odometryThreadRunner
         ) {
             return switch(swerveModuleConstants.hardware) {
                 case SDSMk4i_TalonFX_CANCoder -> SwerveModule.Builder.SDSMK4iTalonFXCANCoder(
@@ -34,13 +36,17 @@ public class HardwareConstants {
                         new TalonFX(swerveModuleConstants.turnMotorId, swerveModuleConstants.moduleCANBus),
                         new CANcoder(swerveModuleConstants.turnEncoderId, swerveModuleConstants.moduleCANBus),
                         swerveModuleConstants.turnEncoderOffset,
-                        currentMode
+                        currentMode,
+                        odometryThreadRunner
                 );
             };
         }
 
-        public SwerveModule create(final Constants.RobotMode currentMode) {
-            return SwerveModuleConstants.create(this, currentMode);
+        public SwerveModule create(
+                final Constants.RobotMode currentMode,
+                final Swerve.OdometryThreadRunner odometryThreadRunner
+        ) {
+            return SwerveModuleConstants.create(this, currentMode, odometryThreadRunner);
         }
     }
 
@@ -52,7 +58,7 @@ public class HardwareConstants {
             1,
             2,
             3,
-            0
+            0.320556640625
     );
 
     public static final SwerveModuleConstants FRONT_RIGHT_MODULE = new SwerveModuleConstants(
@@ -63,7 +69,7 @@ public class HardwareConstants {
             4,
             5,
             6,
-            0
+            0.33251953125
     );
 
     public static final SwerveModuleConstants BACK_LEFT_MODULE = new SwerveModuleConstants(
@@ -74,7 +80,7 @@ public class HardwareConstants {
             7,
             8,
             9,
-            0
+            0.0478515625
     );
 
     public static final SwerveModuleConstants BACK_RIGHT_MODULE = new SwerveModuleConstants(
@@ -85,6 +91,6 @@ public class HardwareConstants {
             10,
             11,
             12,
-            0
+            0.283203125
     );
 }
