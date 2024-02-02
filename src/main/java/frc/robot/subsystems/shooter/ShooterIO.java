@@ -37,4 +37,6 @@ public interface ShooterIO {
     default void setInputs(final double desiredTopVelocity, final double desiredBottomVelocity) {}
 
     default void setCharacterizationVolts(final double topVolts, final double bottomVolts) {}
+
+    default void setCharacterizationTorqueCurrent(final double topTorqueCurrentAmps, final double bottomTorqueCurrentAmps) {}
 }

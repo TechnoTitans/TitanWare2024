@@ -10,7 +10,7 @@ import frc.robot.utils.logging.LogUtils;
 import frc.robot.utils.logging.LoggedTunableNumber;
 import org.littletonrobotics.junction.Logger;
 
-import static edu.wpi.first.units.Units.Volts;
+import static edu.wpi.first.units.Units.*;
 
 public class Shooter extends SubsystemBase {
     protected static final String logKey = "Shooter";
@@ -40,13 +40,16 @@ public class Shooter extends SubsystemBase {
         this.inputs = new ShooterIOInputsAutoLogged();
         this.shooterSysId = new SysIdRoutine(
                 new SysIdRoutine.Config(
-                        null,
-                        null,
-                        null,
+                        Volts.of(2).per(Second),
+                        Volts.of(10),
+                        Seconds.of(5),
                         state -> SignalLogger.writeString("state", state.toString())
                 ),
                 new SysIdRoutine.Mechanism(
-                        voltageMeasure -> shooterIO.setCharacterizationVolts(voltageMeasure.in(Volts), voltageMeasure.in(Volts)),
+                        voltageMeasure -> shooterIO.setCharacterizationTorqueCurrent(
+                                voltageMeasure.in(Volts),
+                                voltageMeasure.in(Volts)
+                        ),
                         null,
                         this
                 )

@@ -4,6 +4,7 @@ import com.ctre.phoenix6.BaseStatusSignal;
 import com.ctre.phoenix6.StatusSignal;
 import com.ctre.phoenix6.configs.Slot0Configs;
 import com.ctre.phoenix6.configs.TalonFXConfiguration;
+import com.ctre.phoenix6.controls.TorqueCurrentFOC;
 import com.ctre.phoenix6.controls.VelocityTorqueCurrentFOC;
 import com.ctre.phoenix6.controls.VoltageOut;
 import com.ctre.phoenix6.hardware.ParentDevice;
@@ -17,6 +18,7 @@ public class ShooterIOReal implements ShooterIO {
     private final TalonFX bottomMotor;
 
     private final VelocityTorqueCurrentFOC velocityTorqueCurrentFOC;
+    private final TorqueCurrentFOC torqueCurrentFOC;
     private final VoltageOut voltageOut;
 
     // Cached StatusSignals
@@ -36,6 +38,7 @@ public class ShooterIOReal implements ShooterIO {
         this.bottomMotor = new TalonFX(shooterConstants.bottomMotorId(), shooterConstants.CANbus());
 
         this.velocityTorqueCurrentFOC = new VelocityTorqueCurrentFOC(0);
+        this.torqueCurrentFOC = new TorqueCurrentFOC(0);
         this.voltageOut = new VoltageOut(0);
 
         this._topPosition = topMotor.getPosition();
@@ -56,10 +59,10 @@ public class ShooterIOReal implements ShooterIO {
         final TalonFXConfiguration topTalonFXConfiguration = new TalonFXConfiguration();
         //TODO TUNE FOR velocityTorqueCurrentFOC
         topTalonFXConfiguration.Slot0 = new Slot0Configs()
-                .withKS(0.094)
-                .withKV(0.121)
-                .withKA(0.01)
-                .withKP(1); // TODO: tune Kp
+                .withKS(2.1842)
+                .withKV(0)
+                .withKA(0.86467)
+                .withKP(8); // TODO: tune Kp
         topTalonFXConfiguration.CurrentLimits.StatorCurrentLimit = 80;
         topTalonFXConfiguration.CurrentLimits.StatorCurrentLimitEnable = true;
         topTalonFXConfiguration.MotorOutput.Inverted = InvertedValue.CounterClockwise_Positive;
@@ -69,10 +72,10 @@ public class ShooterIOReal implements ShooterIO {
         final TalonFXConfiguration bottomTalonFXConfiguration = new TalonFXConfiguration();
         //TODO TUNE FOR velocityTorqueCurrentFOC
         bottomTalonFXConfiguration.Slot0 = new Slot0Configs()
-                .withKS(0.11)
-                .withKV(0.122)
-                .withKA(0.011)
-                .withKP(1); // TODO: tune Kp
+                .withKS(2.4625)
+                .withKV(0)
+                .withKA(0.34276)
+                .withKP(8); // TODO: tune Kp
         bottomTalonFXConfiguration.CurrentLimits.StatorCurrentLimit = 80;
         bottomTalonFXConfiguration.CurrentLimits.StatorCurrentLimitEnable = true;
         bottomTalonFXConfiguration.MotorOutput.Inverted = InvertedValue.Clockwise_Positive;
@@ -137,5 +140,11 @@ public class ShooterIOReal implements ShooterIO {
     public void setCharacterizationVolts(double topVolts, double bottomVolts) {
         topMotor.setControl(voltageOut.withOutput(topVolts));
         bottomMotor.setControl(voltageOut.withOutput(bottomVolts));
+    }
+
+    @Override
+    public void setCharacterizationTorqueCurrent(double topTorqueCurrentAmps, double bottomTorqueCurrentAmps) {
+        topMotor.setControl(torqueCurrentFOC.withOutput(topTorqueCurrentAmps));
+        bottomMotor.setControl(torqueCurrentFOC.withOutput(bottomTorqueCurrentAmps));
     }
 }
