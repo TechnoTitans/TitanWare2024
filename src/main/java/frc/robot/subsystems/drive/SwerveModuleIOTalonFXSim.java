@@ -1,6 +1,8 @@
 package frc.robot.subsystems.drive;
 
-import com.ctre.phoenix6.*;
+import com.ctre.phoenix6.BaseStatusSignal;
+import com.ctre.phoenix6.StatusCode;
+import com.ctre.phoenix6.StatusSignal;
 import com.ctre.phoenix6.configs.CANcoderConfiguration;
 import com.ctre.phoenix6.configs.Slot0Configs;
 import com.ctre.phoenix6.configs.TalonFXConfiguration;
@@ -23,9 +25,7 @@ import frc.robot.utils.sim.SimUtils;
 import frc.robot.utils.sim.feedback.SimPhoenix6CANCoder;
 import frc.robot.utils.sim.motors.CTREPhoenix6TalonFXSim;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.concurrent.locks.ReentrantLock;
+import java.util.Queue;
 
 public class SwerveModuleIOTalonFXSim implements SwerveModuleIO {
     private final TalonFX driveMotor;
@@ -55,156 +55,17 @@ public class SwerveModuleIOTalonFXSim implements SwerveModuleIO {
     private final StatusSignal<Double> _turnStatorCurrent;
     private final StatusSignal<Double> _turnDeviceTemp;
 
-    @SuppressWarnings("unused")
-    private static class StatusSignalQueue extends Thread {
-        private static final int DEFAULT_CAPACITY = 8;
-        private record StatusSignalMeasurement<T>(
-                T value,
-                StatusCode statusCode,
-                Timestamp bestTimestamp,
-                AllTimestamps allTimestamps
-        ) {
-            public StatusSignalMeasurement(final StatusSignal<T> signal) {
-                this(signal.getValue(), signal.getStatus(), signal.getTimestamp(), signal.getAllTimestamps());
-            }
-
-            public static StatusSignalMeasurement<Double> latencyCompensatedMeasurement(
-                    final StatusSignal<Double> signal,
-                    final StatusSignal<Double> deltaSignal
-            ) {
-                return new StatusSignalMeasurement<>(
-                        BaseStatusSignal.getLatencyCompensatedValue(signal, deltaSignal),
-                        signal.getStatus(),
-                        signal.getTimestamp(),
-                        signal.getAllTimestamps()
-                );
-            }
-        }
-
-        public record SignalMeasurementArrayQueue<T>(T[] values, double[] timestamps) {}
-
-        private final ReentrantLock signalQueueLock;
-        private final List<StatusSignal<?>> statusSignals;
-        private final StatusSignal<Double> drivePosition;
-        private final StatusSignal<Double> driveVelocity;
-        private final StatusSignal<Double> turnPosition;
-        private final StatusSignal<Double> turnVelocity;
-
-        private final List<StatusCode> statusCodeBadQueue;
-        private final List<StatusSignalMeasurement<Double>> drivePositionSignalQueue;
-        private final List<StatusSignalMeasurement<Double>> driveVelocitySignalQueue;
-        private final List<StatusSignalMeasurement<Double>> turnPositionSignalQueue;
-        private final List<StatusSignalMeasurement<Double>> turnVelocitySignalQueue;
-
-        public StatusSignalQueue(
-                final StatusSignal<Double> drivePosition,
-                final StatusSignal<Double> driveVelocity,
-                final StatusSignal<Double> turnPosition,
-                final StatusSignal<Double> turnVelocity
-        ) {
-            super();
-
-            this.signalQueueLock = new ReentrantLock();
-            this.statusSignals = List.of(drivePosition, driveVelocity, turnPosition, turnVelocity);
-
-            this.drivePosition = drivePosition;
-            this.driveVelocity = driveVelocity;
-            this.turnPosition = turnPosition;
-            this.turnVelocity = turnVelocity;
-
-            this.statusCodeBadQueue = new ArrayList<>(DEFAULT_CAPACITY);
-            this.drivePositionSignalQueue = new ArrayList<>(DEFAULT_CAPACITY);
-            this.driveVelocitySignalQueue = new ArrayList<>(DEFAULT_CAPACITY);
-            this.turnPositionSignalQueue = new ArrayList<>(DEFAULT_CAPACITY);
-            this.turnVelocitySignalQueue = new ArrayList<>(DEFAULT_CAPACITY);
-        }
-
-        @SuppressWarnings("InfiniteLoopStatement")
-        @Override
-        public void run() {
-            final StatusSignal<?>[] statusSignalsArray = statusSignals.toArray(StatusSignal[]::new);
-            while (true) {
-                final StatusCode statusCode = BaseStatusSignal.waitForAll(0.1, statusSignalsArray);
-                if (!statusCode.isOK()) {
-                    signalQueueLock.lock();
-                    try {
-                        statusCodeBadQueue.add(statusCode);
-                    } finally {
-                        signalQueueLock.unlock();
-                    }
-
-                    continue;
-                }
-
-                signalQueueLock.lock();
-                try {
-                    drivePositionSignalQueue.add(StatusSignalMeasurement.latencyCompensatedMeasurement(
-                            drivePosition,
-                            driveVelocity
-                    ));
-                    driveVelocitySignalQueue.add(new StatusSignalMeasurement<>(driveVelocity));
-
-                    turnPositionSignalQueue.add(StatusSignalMeasurement.latencyCompensatedMeasurement(
-                            turnPosition,
-                            turnVelocity
-                    ));
-                    turnVelocitySignalQueue.add(new StatusSignalMeasurement<>(turnVelocity));
-                } finally {
-                    signalQueueLock.unlock();
-                }
-            }
-        }
-
-        private SignalMeasurementArrayQueue<Double> getDoubleMeasurementArrayQueue(
-                final List<StatusSignalMeasurement<Double>> measurements
-        ) {
-            if (signalQueueLock.tryLock()) {
-                final int signalCount = measurements.size();
-                final Double[] values = new Double[signalCount];
-                final double[] timestamps = new double[signalCount];
-
-                try {
-                    int i = 0;
-                    for (final StatusSignalMeasurement<Double> measurement : measurements) {
-                        values[i] = measurement.value;
-                        timestamps[i] = measurement.bestTimestamp.getTime();
-                    }
-                } finally {
-                    signalQueueLock.unlock();
-                }
-
-                return new SignalMeasurementArrayQueue<>(values, timestamps);
-            } else {
-                return new SignalMeasurementArrayQueue<>(new Double[0], new double[0]);
-            }
-        }
-
-        public StatusCode[] getBadStatusCodeQueue() {
-            return statusCodeBadQueue.toArray(StatusCode[]::new);
-        }
-
-        public SignalMeasurementArrayQueue<Double> getDrivePositionSignalQueue() {
-            return getDoubleMeasurementArrayQueue(drivePositionSignalQueue);
-        }
-
-        public SignalMeasurementArrayQueue<Double> getDriveVelocitySignalQueue() {
-            return getDoubleMeasurementArrayQueue(driveVelocitySignalQueue);
-        }
-
-        public SignalMeasurementArrayQueue<Double> getTurnPositionSignalQueue() {
-            return getDoubleMeasurementArrayQueue(turnPositionSignalQueue);
-        }
-
-        public SignalMeasurementArrayQueue<Double> getTurnVelocitySignalQueue() {
-            return getDoubleMeasurementArrayQueue(turnVelocitySignalQueue);
-        }
-    }
+    // Odometry StatusSignal update queues
+    private final Queue<Double> timestampQueue;
+    private final Queue<Double> drivePositionSignalQueue;
+    private final Queue<Double> turnPositionSignalQueue;
 
     public SwerveModuleIOTalonFXSim(
             final TalonFX driveMotor,
             final TalonFX turnMotor,
             final CANcoder turnEncoder,
-            final double magnetOffset
+            final double magnetOffset,
+            final Swerve.OdometryThreadRunner odometryThreadRunner
     ) {
         this.driveMotor = driveMotor;
         this.turnMotor = turnMotor;
@@ -247,6 +108,10 @@ public class SwerveModuleIOTalonFXSim implements SwerveModuleIO {
         this._turnTorqueCurrent = turnMotor.getTorqueCurrent();
         this._turnStatorCurrent = turnMotor.getStatorCurrent();
         this._turnDeviceTemp = turnMotor.getDeviceTemp();
+
+        this.timestampQueue = odometryThreadRunner.makeTimestampQueue();
+        this.drivePositionSignalQueue = odometryThreadRunner.registerSignal(driveMotor, _drivePosition);
+        this.turnPositionSignalQueue = odometryThreadRunner.registerSignal(turnMotor, _turnPosition);
     }
 
     @SuppressWarnings("DuplicatedCode")
@@ -325,6 +190,15 @@ public class SwerveModuleIOTalonFXSim implements SwerveModuleIO {
         inputs.turnTorqueCurrentAmps = _turnTorqueCurrent.getValue();
         inputs.turnStatorCurrentAmps = _turnStatorCurrent.getValue();
         inputs.turnTempCelsius = _turnDeviceTemp.getValue();
+
+        inputs.odometryTimestampsSec = timestampQueue.stream().mapToDouble(time -> time).toArray();
+        timestampQueue.clear();
+
+        inputs.odometryDrivePositionsRots = drivePositionSignalQueue.stream().mapToDouble(pos -> pos).toArray();
+        drivePositionSignalQueue.clear();
+
+        inputs.odometryTurnPositionRots = turnPositionSignalQueue.stream().mapToDouble(pos -> pos).toArray();
+        turnPositionSignalQueue.clear();
     }
 
     /**
@@ -341,7 +215,10 @@ public class SwerveModuleIOTalonFXSim implements SwerveModuleIO {
 
     @Override
     public void setInputs(final double desiredDriverVelocity, final double desiredTurnerRotations) {
-        driveMotor.setControl(velocityVoltage.withVelocity(desiredDriverVelocity));
+        driveMotor.setControl(velocityVoltage
+                .withVelocity(desiredDriverVelocity)
+                .withOverrideBrakeDurNeutral(true)
+        );
         turnMotor.setControl(positionVoltage.withPosition(desiredTurnerRotations));
     }
 
@@ -352,7 +229,7 @@ public class SwerveModuleIOTalonFXSim implements SwerveModuleIO {
             return;
         }
 
-        final StatusCode refreshCode = driveMotor.getConfigurator().refresh(turnTalonFXConfiguration);
+        final StatusCode refreshCode = driveMotor.getConfigurator().refresh(turnTalonFXConfiguration, 0.2);
         if (!refreshCode.isOK()) {
             // warn if the refresh call failed in sim, which might happen pretty often as
             // there seems to be an issue with calling refresh while disabled in sim

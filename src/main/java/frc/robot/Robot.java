@@ -68,8 +68,6 @@ public class Robot extends LoggedRobot {
 
         switch (Constants.CURRENT_MODE) {
             case REAL -> {
-                // TODO: I don't think SignalLogger.setPath will create the non-existent directories if they don't exist
-                //  verify this, and then it might be worth it to make the directory ourselves
                 try {
                     Files.createDirectories(Paths.get(HOOT_LOG_PATH));
                     SignalLogger.setPath(HOOT_LOG_PATH);
@@ -104,6 +102,7 @@ public class Robot extends LoggedRobot {
         }
 
         robotContainer = new RobotContainer();
+
         SignalLogger.enableAutoLogging(true);
         SignalLogger.start();
         ToClose.add(SignalLogger::stop);
@@ -117,9 +116,7 @@ public class Robot extends LoggedRobot {
     }
 
     @Override
-    public void disabledInit() {
-//        robotContainer.swerve.setNeutralMode(NeutralModeValue.Brake);
-    }
+    public void disabledInit() {}
 
     @Override
     public void disabledPeriodic() {}
@@ -127,8 +124,6 @@ public class Robot extends LoggedRobot {
     @Override
     public void autonomousInit() {
         autonomousCommand = robotContainer.getAutonomousCommand();
-
-//        robotContainer.swerve.setNeutralMode(NeutralModeValue.Coast);
 
         if (autonomousCommand != null) {
             autonomousCommand.schedule();
@@ -144,19 +139,16 @@ public class Robot extends LoggedRobot {
             autonomousCommand.cancel();
         }
 
-//        robotContainer.swerve.setNeutralMode(NeutralModeValue.Coast);
         // No need to lint this here, X and Y are flipped for robot vs. controller joystick coordinate systems, so we
         // pass the controller X into the robot Y, and vice versa
         //noinspection SuspiciousNameCombination
-//        robotContainer.swerve.setDefaultCommand(
-//                robotContainer.swerve.teleopDriveCommand(
-//                        robotContainer.driverController::getLeftY,
-//                        robotContainer.driverController::getLeftX,
-//                        robotContainer.driverController::getRightX
-//                )
-//        );
-
-        robotContainer.shooter.setDefaultCommand(robotContainer.shooter.tunableNumbersInputCommand());
+        robotContainer.swerve.setDefaultCommand(
+                robotContainer.swerve.teleopDriveCommand(
+                        robotContainer.driverController::getLeftY,
+                        robotContainer.driverController::getLeftX,
+                        robotContainer.driverController::getRightX
+                )
+        );
     }
 
     @Override
