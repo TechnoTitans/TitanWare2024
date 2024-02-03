@@ -1,8 +1,9 @@
 package frc.robot;
 
+import com.choreo.lib.Choreo;
+import com.choreo.lib.ChoreoTrajectory;
 import com.ctre.phoenix6.SignalLogger;
 import edu.wpi.first.wpilibj.PowerDistribution;
-import edu.wpi.first.wpilibj.RobotState;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
@@ -47,6 +48,11 @@ public class RobotContainer {
     }
 
     public Command getAutonomousCommand() {
-        return Commands.waitUntil(() -> !RobotState.isAutonomous());
+//        return Commands.waitUntil(() -> !RobotState.isAutonomous());
+        final ChoreoTrajectory trajectory = Choreo.getTrajectory("LineTest");
+        return Commands.sequence(
+                Commands.runOnce(() -> swerve.resetPosition(trajectory.getInitialPose())),
+                swerve.followChoreoPathCommand(trajectory)
+        );
     }
 }

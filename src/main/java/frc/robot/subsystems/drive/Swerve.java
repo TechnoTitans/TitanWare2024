@@ -1,11 +1,14 @@
 package frc.robot.subsystems.drive;
 
+import com.choreo.lib.Choreo;
+import com.choreo.lib.ChoreoTrajectory;
 import com.ctre.phoenix6.*;
 import com.ctre.phoenix6.controls.ControlRequest;
 import com.ctre.phoenix6.hardware.ParentDevice;
 import com.ctre.phoenix6.hardware.Pigeon2;
 import com.ctre.phoenix6.signals.NeutralModeValue;
 import edu.wpi.first.math.MathUtil;
+import edu.wpi.first.math.controller.PIDController;
 import edu.wpi.first.math.estimator.SwerveDrivePoseEstimator;
 import edu.wpi.first.math.filter.LinearFilter;
 import edu.wpi.first.math.filter.MedianFilter;
@@ -591,10 +594,12 @@ public class Swerve extends SubsystemBase {
         );
     }
 
+    @SuppressWarnings("unused")
     public Command linearTorqueCurrentSysIdQuasistaticCommand(final SysIdRoutine.Direction direction) {
         return linearTorqueCurrentSysIdRoutine.quasistatic(direction);
     }
 
+    @SuppressWarnings("unused")
     public Command linearTorqueCurrentSysIdDynamicCommand(final SysIdRoutine.Direction direction) {
         return linearTorqueCurrentSysIdRoutine.dynamic(direction);
     }
@@ -623,10 +628,12 @@ public class Swerve extends SubsystemBase {
         );
     }
 
+    @SuppressWarnings("unused")
     public Command angularVoltageSysIdQuasistaticCommand(final SysIdRoutine.Direction direction) {
         return angularVoltageSysIdRoutine.quasistatic(direction);
     }
 
+    @SuppressWarnings("unused")
     public Command angularVoltageSysIdDynamicCommand(final SysIdRoutine.Direction direction) {
         return angularVoltageSysIdRoutine.dynamic(direction);
     }
@@ -765,14 +772,12 @@ public class Swerve extends SubsystemBase {
         gyro.setAngle(angle);
     }
 
-    //TODO add vision
     public void zeroRotation() {
-//    public void zeroRotation(final PhotonVision photonVision) {
         gyro.zeroRotation();
-//        photonVision.resetPosition(
-//                photonVision.getEstimatedPosition(),
-//                Rotation2d.fromDegrees(0)
-//        );
+    }
+
+    public void resetPosition(final Pose2d robotPose) {
+        poseEstimator.resetPosition(gyro.getYawRotation2d(), getModulePositions(), robotPose);
     }
 
     public Command zeroRotationCommand() {
@@ -969,5 +974,21 @@ public class Swerve extends SubsystemBase {
         frontRight.setNeutralMode(neutralMode);
         backLeft.setNeutralMode(neutralMode);
         backRight.setNeutralMode(neutralMode);
+    }
+
+    public Command followChoreoPathCommand(final ChoreoTrajectory choreoTrajectory) {
+        return Choreo.choreoSwerveCommand(
+                choreoTrajectory,
+                this::getEstimatedPosition,
+                new PIDController(5, 0, 0),
+                new PIDController(5, 0, 0),
+                new PIDController(5, 0, 0),
+                this::drive,
+                () -> {
+                    final Optional<DriverStation.Alliance> alliance = DriverStation.getAlliance();
+                    return alliance.isPresent() && alliance.get() == DriverStation.Alliance.Red;
+                },
+                this
+        );
     }
 }
