@@ -76,6 +76,8 @@ public class ShooterIOReal implements ShooterIO {
                 .withKV(0.099933)
                 .withKA(0.20584)
                 .withKP(1.2235);
+        bottomTalonFXConfiguration.TorqueCurrent.PeakForwardTorqueCurrent = 80;
+        bottomTalonFXConfiguration.TorqueCurrent.PeakReverseTorqueCurrent = -80;
         bottomTalonFXConfiguration.CurrentLimits.StatorCurrentLimit = 80;
         bottomTalonFXConfiguration.CurrentLimits.StatorCurrentLimitEnable = true;
         bottomTalonFXConfiguration.MotorOutput.Inverted = InvertedValue.Clockwise_Positive;
