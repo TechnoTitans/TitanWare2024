@@ -42,7 +42,7 @@ public class Shooter extends SubsystemBase {
                 new SysIdRoutine.Config(
                         Volts.of(2).per(Second),
                         Volts.of(10),
-                        Seconds.of(5),
+                        Seconds.of(10),
                         state -> SignalLogger.writeString("state", state.toString())
                 ),
                 new SysIdRoutine.Mechanism(
