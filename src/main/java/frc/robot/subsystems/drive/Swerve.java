@@ -3,7 +3,6 @@ package frc.robot.subsystems.drive;
 import com.ctre.phoenix6.*;
 import com.ctre.phoenix6.controls.ControlRequest;
 import com.ctre.phoenix6.hardware.ParentDevice;
-import com.ctre.phoenix6.hardware.Pigeon2;
 import com.ctre.phoenix6.signals.NeutralModeValue;
 import edu.wpi.first.math.MathUtil;
 import edu.wpi.first.math.estimator.SwerveDrivePoseEstimator;
@@ -28,11 +27,7 @@ import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import edu.wpi.first.wpilibj2.command.sysid.SysIdRoutine;
 import frc.robot.constants.Constants;
 import frc.robot.constants.HardwareConstants;
-import frc.robot.constants.RobotMap;
 import frc.robot.subsystems.gyro.Gyro;
-import frc.robot.subsystems.gyro.GyroIO;
-import frc.robot.subsystems.gyro.GyroIOPigeon2;
-import frc.robot.subsystems.gyro.GyroIOSim;
 import frc.robot.utils.gyro.GyroUtils;
 import frc.robot.utils.logging.LogUtils;
 import frc.robot.utils.teleop.ControllerUtils;
@@ -52,6 +47,7 @@ public class Swerve extends SubsystemBase {
     protected static final String odometryLogKey = "Odometry";
 
     private Gyro gyro;
+    private final HardwareConstants.GyroConstants gyroConstants;
     private final SwerveDriveKinematics kinematics;
     private final SwerveDrivePoseEstimator poseEstimator;
 
@@ -450,6 +446,7 @@ public class Swerve extends SubsystemBase {
         this.kinematics = kinematics;
 
         this.gyro = gyro;
+        this.gyroConstants = gyro.getGyroConstants();
 
         this.poseEstimator = poseEstimator;
         this.linearVoltageSysIdRoutine = makeLinearVoltageSysIdRoutine();
@@ -461,11 +458,13 @@ public class Swerve extends SubsystemBase {
 
     public Swerve(
             final Constants.RobotMode mode,
+            final HardwareConstants.GyroConstants gyroConstants,
             final HardwareConstants.SwerveModuleConstants frontLeftConstants,
             final HardwareConstants.SwerveModuleConstants frontRightConstants,
             final HardwareConstants.SwerveModuleConstants backLeftConstants,
             final HardwareConstants.SwerveModuleConstants backRightConstants
     ) {
+        this.gyroConstants = gyroConstants;
         this.odometryThreadRunner = new OdometryThreadRunner(signalQueueReadWriteLock);
 
         this.frontLeft = frontLeftConstants.create(mode, odometryThreadRunner);
@@ -481,13 +480,7 @@ public class Swerve extends SubsystemBase {
                 backRightConstants.translationOffset()
         );
 
-        final Pigeon2 pigeon2 = new Pigeon2(RobotMap.Pigeon, RobotMap.CanivoreCANBus);
-        this.gyro = switch (mode) {
-            case REAL -> new Gyro(new GyroIOPigeon2(pigeon2, odometryThreadRunner), pigeon2);
-            case SIM -> new Gyro(new GyroIOSim(pigeon2, kinematics, odometryThreadRunner, swerveModules), pigeon2);
-            case REPLAY -> new Gyro(new GyroIO() {
-            }, pigeon2);
-        };
+        this.gyro = new Gyro(mode, gyroConstants, odometryThreadRunner, kinematics, swerveModules);
 
         //TODO add vision
         this.poseEstimator = new SwerveDrivePoseEstimator(
@@ -703,8 +696,7 @@ public class Swerve extends SubsystemBase {
 
         // only update gyro from wheel odometry if we're not simulating and the gyro has failed
         if (Constants.CURRENT_MODE == Constants.RobotMode.REAL && gyro.hasHardwareFault() && gyro.isReal()) {
-            final Pigeon2 pigeon2 = gyro.getPigeon();
-            gyro = new Gyro(new GyroIOSim(pigeon2, kinematics, odometryThreadRunner, swerveModules), pigeon2);
+            gyro = new Gyro(Constants.RobotMode.SIM, gyroConstants, odometryThreadRunner, kinematics, swerveModules);
         }
 
         Logger.recordOutput(

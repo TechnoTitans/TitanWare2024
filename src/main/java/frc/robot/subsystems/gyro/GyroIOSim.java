@@ -11,6 +11,7 @@ import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.geometry.Twist2d;
 import edu.wpi.first.math.kinematics.SwerveDriveKinematics;
 import edu.wpi.first.math.kinematics.SwerveModulePosition;
+import frc.robot.constants.HardwareConstants;
 import frc.robot.subsystems.drive.Swerve;
 import frc.robot.subsystems.drive.SwerveModule;
 import org.littletonrobotics.junction.Logger;
@@ -43,12 +44,12 @@ public class GyroIOSim implements GyroIO {
     private final Queue<Double> yawSignalQueue;
 
     public GyroIOSim(
-            final Pigeon2 pigeon,
-            final SwerveDriveKinematics kinematics,
+            final HardwareConstants.GyroConstants gyroConstants,
             final Swerve.OdometryThreadRunner odometryThreadRunner,
+            final SwerveDriveKinematics kinematics,
             final SwerveModule[] swerveModules
     ) {
-        this.pigeon = pigeon;
+        this.pigeon = new Pigeon2(gyroConstants.gyroId(), gyroConstants.CANBus());
         this.pigeonSimState = pigeon.getSimState();
         this.kinematics = kinematics;
         this.swerveModules = swerveModules;
