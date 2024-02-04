@@ -3,7 +3,11 @@ package frc.robot.subsystems.gyro;
 import com.ctre.phoenix6.hardware.Pigeon2;
 import edu.wpi.first.math.filter.LinearFilter;
 import edu.wpi.first.math.geometry.Rotation2d;
+import edu.wpi.first.math.kinematics.SwerveDriveKinematics;
 import frc.robot.constants.Constants;
+import frc.robot.constants.HardwareConstants;
+import frc.robot.subsystems.drive.Swerve;
+import frc.robot.subsystems.drive.SwerveModule;
 import frc.robot.utils.logging.LogUtils;
 import org.littletonrobotics.junction.Logger;
 
@@ -11,13 +15,25 @@ public class Gyro {
     protected static final String logKey = "Gyro";
 
     private final GyroIO gyroIO;
-    private final Pigeon2 pigeon2;
+
+    private final HardwareConstants.GyroConstants gyroConstants;
     private final GyroIOInputsAutoLogged inputs;
     private final boolean isReal;
 
-    public Gyro(final GyroIO gyroIO, final Pigeon2 pigeon2) {
-        this.gyroIO = gyroIO;
-        this.pigeon2 = pigeon2;
+    public Gyro(
+            final Constants.RobotMode mode,
+            final HardwareConstants.GyroConstants gyroConstants,
+            final Swerve.OdometryThreadRunner odometryThreadRunner,
+            final SwerveDriveKinematics kinematics,
+            final SwerveModule[] swerveModules
+    ) {
+        this.gyroConstants = gyroConstants;
+        this.gyroIO = switch (mode) {
+            case REAL -> new GyroIOPigeon2(gyroConstants, odometryThreadRunner);
+            case SIM -> new GyroIOSim(gyroConstants, odometryThreadRunner, kinematics, swerveModules);
+            case REPLAY -> new GyroIO() {};
+        };
+
         this.inputs = new GyroIOInputsAutoLogged();
         this.isReal = Constants.CURRENT_MODE == Constants.RobotMode.REAL;
 
@@ -42,11 +58,13 @@ public class Gyro {
     }
 
     /**
-     * Get the underlying Pigeon object from CTRE (no guarantees are made about real/sim)
-     * @return the {@link Pigeon2}
-     * @see Pigeon2
+     * Get the gyro constants
+     * @return the {@link frc.robot.constants.HardwareConstants.GyroConstants}
+     * @see frc.robot.constants.HardwareConstants.GyroConstants
      */
-    public Pigeon2 getPigeon() { return pigeon2; }
+    public HardwareConstants.GyroConstants getGyroConstants() {
+        return gyroConstants;
+    }
 
     /**
      * Get whether this Gyro is real (true/real if hardware exists, false if hardware does not exist - i.e. in a sim)

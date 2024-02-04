@@ -93,4 +93,14 @@ public class HardwareConstants {
             12,
             0.283203125
     );
+
+    public record GyroConstants(
+            String CANBus,
+            int gyroId
+    ) {}
+
+    public static final GyroConstants GYRO = new GyroConstants(
+            RobotMap.CanivoreCANBus,
+            13
+    );
 }
