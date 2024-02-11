@@ -38,7 +38,7 @@ public class SwerveModuleIOTalonFX implements SwerveModuleIO {
 
     private final PositionVoltage positionVoltage;
 
-    private final Swerve.OdometryThreadRunner odometryThreadRunner;
+    private final OdometryThreadRunner odometryThreadRunner;
     // Cached StatusSignals
     private final StatusSignal<Double> _drivePosition;
     private final StatusSignal<Double> _driveVelocity;
@@ -61,7 +61,7 @@ public class SwerveModuleIOTalonFX implements SwerveModuleIO {
             final TalonFX turnMotor,
             final CANcoder turnEncoder,
             final double magnetOffset,
-            final Swerve.OdometryThreadRunner odometryThreadRunner
+            final OdometryThreadRunner odometryThreadRunner
     ) {
         this.driveMotor = driveMotor;
         this.turnMotor = turnMotor;

@@ -239,7 +239,7 @@ public class SwerveModule {
          * @param canCoder                the turn {@link CANcoder}
          * @param magnetOffset            the magnet offset of the turn {@link CANcoder}
          * @param robotMode               the {@link Constants.RobotMode} describing the current mode
-         * @param odometryThreadRunner    the swerve {@link frc.robot.subsystems.drive.Swerve.OdometryThreadRunner}
+         * @param odometryThreadRunner    the swerve {@link frc.robot.subsystems.drive.OdometryThreadRunner}
          * @return the constructed {@link SwerveModule}
          */
         public static SwerveModule SDSMK4iTalonFXCANCoder(
@@ -249,7 +249,7 @@ public class SwerveModule {
                 final CANcoder canCoder,
                 final double magnetOffset,
                 final Constants.RobotMode robotMode,
-                final Swerve.OdometryThreadRunner odometryThreadRunner
+                final OdometryThreadRunner odometryThreadRunner
         ) {
             final SwerveModuleIO swerveModuleIO = switch (robotMode) {
                 case REAL -> new SwerveModuleIOTalonFX(

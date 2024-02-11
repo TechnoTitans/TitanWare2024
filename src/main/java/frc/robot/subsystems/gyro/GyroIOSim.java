@@ -12,7 +12,7 @@ import edu.wpi.first.math.geometry.Twist2d;
 import edu.wpi.first.math.kinematics.SwerveDriveKinematics;
 import edu.wpi.first.math.kinematics.SwerveModulePosition;
 import frc.robot.constants.HardwareConstants;
-import frc.robot.subsystems.drive.Swerve;
+import frc.robot.subsystems.drive.OdometryThreadRunner;
 import frc.robot.subsystems.drive.SwerveModule;
 import org.littletonrobotics.junction.Logger;
 
@@ -45,7 +45,7 @@ public class GyroIOSim implements GyroIO {
 
     public GyroIOSim(
             final HardwareConstants.GyroConstants gyroConstants,
-            final Swerve.OdometryThreadRunner odometryThreadRunner,
+            final OdometryThreadRunner odometryThreadRunner,
             final SwerveDriveKinematics kinematics,
             final SwerveModule[] swerveModules
     ) {

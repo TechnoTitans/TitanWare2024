@@ -65,7 +65,7 @@ public class SwerveModuleIOTalonFXSim implements SwerveModuleIO {
             final TalonFX turnMotor,
             final CANcoder turnEncoder,
             final double magnetOffset,
-            final Swerve.OdometryThreadRunner odometryThreadRunner
+            final OdometryThreadRunner odometryThreadRunner
     ) {
         this.driveMotor = driveMotor;
         this.turnMotor = turnMotor;
