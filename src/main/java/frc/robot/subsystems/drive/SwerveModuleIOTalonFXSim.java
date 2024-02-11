@@ -7,7 +7,9 @@ import com.ctre.phoenix6.configs.CANcoderConfiguration;
 import com.ctre.phoenix6.configs.Slot0Configs;
 import com.ctre.phoenix6.configs.TalonFXConfiguration;
 import com.ctre.phoenix6.controls.PositionVoltage;
-import com.ctre.phoenix6.controls.VelocityVoltage;
+import com.ctre.phoenix6.controls.TorqueCurrentFOC;
+import com.ctre.phoenix6.controls.VelocityTorqueCurrentFOC;
+import com.ctre.phoenix6.controls.VoltageOut;
 import com.ctre.phoenix6.hardware.CANcoder;
 import com.ctre.phoenix6.hardware.TalonFX;
 import com.ctre.phoenix6.signals.AbsoluteSensorRangeValue;
@@ -38,8 +40,11 @@ public class SwerveModuleIOTalonFXSim implements SwerveModuleIO {
     private final TalonFXConfiguration driveTalonFXConfiguration = new TalonFXConfiguration();
     private final TalonFXConfiguration turnTalonFXConfiguration = new TalonFXConfiguration();
 
-    private final VelocityVoltage velocityVoltage;
+    private final VelocityTorqueCurrentFOC velocityTorqueCurrentFOC;
+
     private final PositionVoltage positionVoltage;
+
+    private final Swerve.OdometryThreadRunner odometryThreadRunner;
 
     private final DeltaTime deltaTime;
 
@@ -93,8 +98,14 @@ public class SwerveModuleIOTalonFXSim implements SwerveModuleIO {
         );
         this.turnSim.attachFeedbackSensor(new SimPhoenix6CANCoder(turnEncoder));
 
-        this.velocityVoltage = new VelocityVoltage(0);
+        this.velocityTorqueCurrentFOC = new VelocityTorqueCurrentFOC(0);
+        this.torqueCurrentFOC = new TorqueCurrentFOC(0);
         this.positionVoltage = new PositionVoltage(0);
+        this.voltageOut = new VoltageOut(0);
+
+        this.odometryThreadRunner = odometryThreadRunner;
+        this.odometryThreadRunner.registerControlRequest(driveMotor, velocityTorqueCurrentFOC, driveMotor::setControl);
+        this.odometryThreadRunner.registerControlRequest(turnMotor, positionVoltage, turnMotor::setControl);
 
         this.deltaTime = new DeltaTime();
 
@@ -127,28 +138,41 @@ public class SwerveModuleIOTalonFXSim implements SwerveModuleIO {
         //  which means that TorqueCurrent.PeakForwardTorqueCurrent and related won't affect it
         final InvertedValue driveInvertedValue = InvertedValue.CounterClockwise_Positive;
         driveTalonFXConfiguration.Slot0 = new Slot0Configs()
-                .withKV(0.973);
-        driveTalonFXConfiguration.TorqueCurrent.PeakForwardTorqueCurrent = 60;
-        driveTalonFXConfiguration.TorqueCurrent.PeakReverseTorqueCurrent = -60;
+                .withKP(50)
+                .withKS(4.796)
+                .withKA(2.549);
+        driveTalonFXConfiguration.TorqueCurrent.PeakForwardTorqueCurrent = Constants.Swerve.Modules.SLIP_CURRENT_A;
+        driveTalonFXConfiguration.TorqueCurrent.PeakReverseTorqueCurrent = -Constants.Swerve.Modules.SLIP_CURRENT_A;
+        driveTalonFXConfiguration.CurrentLimits.StatorCurrentLimit = Constants.Swerve.Modules.SLIP_CURRENT_A;
+        driveTalonFXConfiguration.CurrentLimits.StatorCurrentLimitEnable = true;
         driveTalonFXConfiguration.ClosedLoopRamps.TorqueClosedLoopRampPeriod = 0.2;
-        driveTalonFXConfiguration.Feedback.FeedbackSensorSource = FeedbackSensorSourceValue.RotorSensor;
         driveTalonFXConfiguration.Feedback.SensorToMechanismRatio = Constants.Swerve.Modules.DRIVER_GEAR_RATIO;
-        driveTalonFXConfiguration.MotorOutput.NeutralMode = NeutralModeValue.Coast;
+        driveTalonFXConfiguration.MotorOutput.NeutralMode = NeutralModeValue.Brake;
         driveTalonFXConfiguration.MotorOutput.Inverted = driveInvertedValue;
         driveMotor.getConfigurator().apply(driveTalonFXConfiguration);
 
         final InvertedValue turnInvertedValue = InvertedValue.Clockwise_Positive;
         turnTalonFXConfiguration.Slot0 = new Slot0Configs()
-                .withKP(40);
-        turnTalonFXConfiguration.Voltage.PeakForwardVoltage = 6;
-        turnTalonFXConfiguration.Voltage.PeakReverseVoltage = -6;
+                .withKP(30)
+                .withKS(0.5);
+        turnTalonFXConfiguration.TorqueCurrent.PeakForwardTorqueCurrent = 40;
+        turnTalonFXConfiguration.TorqueCurrent.PeakReverseTorqueCurrent = -40;
         turnTalonFXConfiguration.Feedback.FeedbackRemoteSensorID = turnEncoder.getDeviceID();
         turnTalonFXConfiguration.Feedback.FeedbackSensorSource = FeedbackSensorSourceValue.FusedCANcoder;
         turnTalonFXConfiguration.Feedback.RotorToSensorRatio = Constants.Swerve.Modules.TURNER_GEAR_RATIO;
-        turnTalonFXConfiguration.ClosedLoopGeneral.ContinuousWrap = true;
-        turnTalonFXConfiguration.MotorOutput.NeutralMode = NeutralModeValue.Coast;
+        turnTalonFXConfiguration.MotorOutput.NeutralMode = NeutralModeValue.Brake;
         turnTalonFXConfiguration.MotorOutput.Inverted = turnInvertedValue;
+
+        turnTalonFXConfiguration.MotionMagic.MotionMagicCruiseVelocity =
+                100.0 / Constants.Swerve.Modules.TURNER_GEAR_RATIO;
+        turnTalonFXConfiguration.MotionMagic.MotionMagicExpo_kV = 0.12 * Constants.Swerve.Modules.TURNER_GEAR_RATIO;
+        turnTalonFXConfiguration.MotionMagic.MotionMagicExpo_kA = 0.1;
+        turnTalonFXConfiguration.ClosedLoopGeneral.ContinuousWrap = true;
+
         turnMotor.getConfigurator().apply(turnTalonFXConfiguration);
+
+        velocityTorqueCurrentFOC.UpdateFreqHz = 0;
+        positionVoltage.UpdateFreqHz = 0;
 
         // TODO: this fix for CANCoder initialization in sim doesn't seem to work all the time...investigate!
 //      SimUtils.initializeCTRECANCoderSim(turnEncoder);
@@ -215,9 +239,10 @@ public class SwerveModuleIOTalonFXSim implements SwerveModuleIO {
 
     @Override
     public void setInputs(final double desiredDriverVelocity, final double desiredTurnerRotations) {
-        driveMotor.setControl(velocityVoltage
+        odometryThreadRunner.updateControlRequest(driveMotor, velocityTorqueCurrentFOC);
+        driveMotor.setControl(velocityTorqueCurrentFOC
                 .withVelocity(desiredDriverVelocity)
-                .withOverrideBrakeDurNeutral(true)
+                .withOverrideCoastDurNeutral(true)
         );
         turnMotor.setControl(positionVoltage.withPosition(desiredTurnerRotations));
     }
