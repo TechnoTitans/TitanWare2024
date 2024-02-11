@@ -99,10 +99,7 @@ public class SwerveModuleIOTalonFXSim implements SwerveModuleIO {
         this.turnSim.attachFeedbackSensor(new SimPhoenix6CANCoder(turnEncoder));
 
         this.velocityTorqueCurrentFOC = new VelocityTorqueCurrentFOC(0);
-        this.torqueCurrentFOC = new TorqueCurrentFOC(0);
         this.positionVoltage = new PositionVoltage(0);
-        this.voltageOut = new VoltageOut(0);
-
         this.odometryThreadRunner = odometryThreadRunner;
         this.odometryThreadRunner.registerControlRequest(driveMotor, velocityTorqueCurrentFOC, driveMotor::setControl);
         this.odometryThreadRunner.registerControlRequest(turnMotor, positionVoltage, turnMotor::setControl);
