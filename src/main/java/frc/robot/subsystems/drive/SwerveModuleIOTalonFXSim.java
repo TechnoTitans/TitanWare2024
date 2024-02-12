@@ -39,7 +39,6 @@ public class SwerveModuleIOTalonFXSim implements SwerveModuleIO {
     private final TalonFXConfiguration turnTalonFXConfiguration = new TalonFXConfiguration();
 
     private final VelocityTorqueCurrentFOC velocityTorqueCurrentFOC;
-
     private final PositionVoltage positionVoltage;
 
     private final Swerve.OdometryThreadRunner odometryThreadRunner;
@@ -157,13 +156,6 @@ public class SwerveModuleIOTalonFXSim implements SwerveModuleIO {
         turnTalonFXConfiguration.Feedback.RotorToSensorRatio = Constants.Swerve.Modules.TURNER_GEAR_RATIO;
         turnTalonFXConfiguration.MotorOutput.NeutralMode = NeutralModeValue.Brake;
         turnTalonFXConfiguration.MotorOutput.Inverted = turnInvertedValue;
-
-        turnTalonFXConfiguration.MotionMagic.MotionMagicCruiseVelocity =
-                100.0 / Constants.Swerve.Modules.TURNER_GEAR_RATIO;
-        turnTalonFXConfiguration.MotionMagic.MotionMagicExpo_kV = 0.12 * Constants.Swerve.Modules.TURNER_GEAR_RATIO;
-        turnTalonFXConfiguration.MotionMagic.MotionMagicExpo_kA = 0.1;
-        turnTalonFXConfiguration.ClosedLoopGeneral.ContinuousWrap = true;
-
         turnMotor.getConfigurator().apply(turnTalonFXConfiguration);
 
         velocityTorqueCurrentFOC.UpdateFreqHz = 0;
