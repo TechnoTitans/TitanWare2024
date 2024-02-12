@@ -55,9 +55,9 @@ public class IntakeIOTalonFXSim implements IntakeIO {
                 .withKA(1)
                 .withKV(1)
                 .withKS(1);
-        rollerMotorConfig.CurrentLimits.StatorCurrentLimit = 30;
-        rollerMotorConfig.CurrentLimits.StatorCurrentLimitEnable = true;
-        rollerMotorConfig.MotorOutput.NeutralMode = NeutralModeValue.Brake;
+        rollerMotorConfig.TorqueCurrent.PeakForwardTorqueCurrent = 40;
+        rollerMotorConfig.TorqueCurrent.PeakReverseTorqueCurrent = -40;
+        rollerMotorConfig.MotorOutput.NeutralMode = NeutralModeValue.Coast;
         rollerMotorConfig.Feedback.FeedbackSensorSource = FeedbackSensorSourceValue.RotorSensor;
         //TODO set ratio
         rollerMotorConfig.Feedback.SensorToMechanismRatio = 1.3;
