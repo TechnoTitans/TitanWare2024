@@ -41,7 +41,7 @@ public class SwerveModuleIOTalonFXSim implements SwerveModuleIO {
     private final VelocityTorqueCurrentFOC velocityTorqueCurrentFOC;
     private final PositionVoltage positionVoltage;
 
-    private final Swerve.OdometryThreadRunner odometryThreadRunner;
+    private final OdometryThreadRunner odometryThreadRunner;
 
     private final DeltaTime deltaTime;
 

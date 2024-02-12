@@ -122,7 +122,7 @@ public class OdometryThreadRunner {
 
             @Override
             public String getTypeString() {
-                return "struct:Swerve.OdometryThreadRunner.State";
+                return "struct:OdometryThreadRunner.State";
             }
 
             @Override
