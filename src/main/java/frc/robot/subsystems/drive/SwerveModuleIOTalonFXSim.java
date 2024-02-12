@@ -161,12 +161,12 @@ public class SwerveModuleIOTalonFXSim implements SwerveModuleIO {
                 .withKP(50)
                 .withKS(4.796)
                 .withKA(2.549);
-        driveTalonFXConfiguration.TorqueCurrent.PeakForwardTorqueCurrent = Constants.Swerve.Modules.SLIP_CURRENT_A;
-        driveTalonFXConfiguration.TorqueCurrent.PeakReverseTorqueCurrent = -Constants.Swerve.Modules.SLIP_CURRENT_A;
-        driveTalonFXConfiguration.CurrentLimits.StatorCurrentLimit = Constants.Swerve.Modules.SLIP_CURRENT_A;
+        driveTalonFXConfiguration.TorqueCurrent.PeakForwardTorqueCurrent = Modules.SLIP_CURRENT_A;
+        driveTalonFXConfiguration.TorqueCurrent.PeakReverseTorqueCurrent = -Modules.SLIP_CURRENT_A;
+        driveTalonFXConfiguration.CurrentLimits.StatorCurrentLimit = Modules.SLIP_CURRENT_A;
         driveTalonFXConfiguration.CurrentLimits.StatorCurrentLimitEnable = true;
         driveTalonFXConfiguration.ClosedLoopRamps.TorqueClosedLoopRampPeriod = 0.2;
-        driveTalonFXConfiguration.Feedback.SensorToMechanismRatio = Constants.Swerve.Modules.DRIVER_GEAR_RATIO;
+        driveTalonFXConfiguration.Feedback.SensorToMechanismRatio = Modules.DRIVER_GEAR_RATIO;
         driveTalonFXConfiguration.MotorOutput.NeutralMode = NeutralModeValue.Brake;
         driveTalonFXConfiguration.MotorOutput.Inverted = driveInvertedValue;
         driveMotor.getConfigurator().apply(driveTalonFXConfiguration);
@@ -179,7 +179,7 @@ public class SwerveModuleIOTalonFXSim implements SwerveModuleIO {
         turnTalonFXConfiguration.TorqueCurrent.PeakReverseTorqueCurrent = -40;
         turnTalonFXConfiguration.Feedback.FeedbackRemoteSensorID = turnEncoder.getDeviceID();
         turnTalonFXConfiguration.Feedback.FeedbackSensorSource = FeedbackSensorSourceValue.FusedCANcoder;
-        turnTalonFXConfiguration.Feedback.RotorToSensorRatio = Constants.Swerve.Modules.TURNER_GEAR_RATIO;
+        turnTalonFXConfiguration.Feedback.RotorToSensorRatio = Modules.TURNER_GEAR_RATIO;
         turnTalonFXConfiguration.MotorOutput.NeutralMode = NeutralModeValue.Brake;
         turnTalonFXConfiguration.MotorOutput.Inverted = turnInvertedValue;
         turnMotor.getConfigurator().apply(turnTalonFXConfiguration);
