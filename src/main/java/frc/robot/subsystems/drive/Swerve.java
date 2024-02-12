@@ -497,7 +497,7 @@ public class Swerve extends SubsystemBase {
             final Translation2d leftStickSpeeds = ControllerUtils.getStickXYSquaredInput(
                     xSpeedSupplier.getAsDouble(),
                     ySpeedSupplier.getAsDouble(),
-                    0.1,
+                    0.01,
                     Constants.Swerve.TELEOP_MAX_SPEED_MPS,
                     driverProfile.getThrottleSensitivity(),
                     throttleWeight
@@ -505,7 +505,7 @@ public class Swerve extends SubsystemBase {
 
             final double rot = ControllerUtils.getStickSquaredInput(
                     rotSupplier.getAsDouble(),
-                    0.1,
+                    0.01,
                     Constants.Swerve.TELEOP_MAX_ANGULAR_SPEED_RAD_PER_SEC,
                     driverProfile.getRotationalSensitivity(),
                     rotWeight
