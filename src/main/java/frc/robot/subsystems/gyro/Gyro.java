@@ -4,7 +4,7 @@ import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.kinematics.SwerveDriveKinematics;
 import frc.robot.constants.Constants;
 import frc.robot.constants.HardwareConstants;
-import frc.robot.subsystems.drive.Swerve;
+import frc.robot.subsystems.drive.OdometryThreadRunner;
 import frc.robot.subsystems.drive.SwerveModule;
 import frc.robot.utils.logging.LogUtils;
 import org.littletonrobotics.junction.Logger;
@@ -21,7 +21,7 @@ public class Gyro {
     public Gyro(
             final Constants.RobotMode mode,
             final HardwareConstants.GyroConstants gyroConstants,
-            final Swerve.OdometryThreadRunner odometryThreadRunner,
+            final OdometryThreadRunner odometryThreadRunner,
             final SwerveDriveKinematics kinematics,
             final SwerveModule[] swerveModules
     ) {
