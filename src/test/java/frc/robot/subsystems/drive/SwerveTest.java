@@ -67,8 +67,8 @@ public class SwerveTest {
             new Pose2d()
     );
 
-    private final Swerve.OdometryThreadRunner odometryThreadRunner =
-            new Swerve.OdometryThreadRunner(new ReentrantReadWriteLock());
+    private final OdometryThreadRunner odometryThreadRunner =
+            new OdometryThreadRunner(new ReentrantReadWriteLock());
 
     private Swerve swerve;
 
