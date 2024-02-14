@@ -1,6 +1,5 @@
 package frc.robot.utils.control;
 
-import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.Timer;
 import frc.robot.constants.Constants;
 import org.littletonrobotics.junction.Logger;
@@ -15,21 +14,14 @@ public class DeltaTime {
 
     /**
      * Creates a new DeltaTime instance, with an option to disableDeterministicTimestamps
-     * @param disableLoggedTimestamps should be true if {@link Logger#disableDeterministicTimestamps()} is called,
+     * @param disableDeterministicTimestamps should be true if {@link Logger#disableDeterministicTimestamps()} is called,
      *                                false if not
      * @see Logger#disableDeterministicTimestamps()
      */
-    public DeltaTime(final boolean disableLoggedTimestamps) {
+    public DeltaTime(final boolean disableDeterministicTimestamps) {
         this.timer = new Timer();
-        this.disableLoggedTimestamps = disableLoggedTimestamps;
+        this.disableLoggedTimestamps = disableDeterministicTimestamps;
         this.lastRealFPGASeconds = MICRO_TO_SEC * Logger.getRealTimestamp();
-
-        if (disableLoggedTimestamps) {
-            DriverStation.reportWarning(
-                    "LoggedTimestamps disabled! Replayed logic will no longer be deterministic!",
-                    true
-            );
-        }
     }
 
     /**
