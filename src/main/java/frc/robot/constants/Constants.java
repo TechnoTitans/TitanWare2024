@@ -38,6 +38,11 @@ public interface Constants {
             // see https://www.swervedrivespecialties.com/products/mk4i-swerve-module
 //            double MODULE_MAX_SPEED_M_PER_SEC = Units.feetToMeters(16.5);
             double MODULE_MAX_SPEED_M_PER_SEC = Units.feetToMeters(13.5);
+
+            /** Simulated drive voltage required to overcome friction. */
+            double DRIVE_KS_VOLTS = 0.25;
+            /** Simulated steer voltage required to overcome friction. */
+            double STEER_KS_VOLTS = 0.25;
         }
     }
 }

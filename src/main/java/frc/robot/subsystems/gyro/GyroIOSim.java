@@ -6,15 +6,14 @@ import com.ctre.phoenix6.configs.Pigeon2Configuration;
 import com.ctre.phoenix6.hardware.ParentDevice;
 import com.ctre.phoenix6.hardware.Pigeon2;
 import com.ctre.phoenix6.sim.Pigeon2SimState;
-import edu.wpi.first.math.geometry.Pose2d;
+import edu.wpi.first.math.filter.LinearFilter;
 import edu.wpi.first.math.geometry.Rotation2d;
-import edu.wpi.first.math.geometry.Twist2d;
 import edu.wpi.first.math.kinematics.SwerveDriveKinematics;
-import edu.wpi.first.math.kinematics.SwerveModulePosition;
+import edu.wpi.first.math.kinematics.SwerveModuleState;
 import frc.robot.constants.HardwareConstants;
 import frc.robot.subsystems.drive.OdometryThreadRunner;
 import frc.robot.subsystems.drive.SwerveModule;
-import org.littletonrobotics.junction.Logger;
+import frc.robot.utils.control.DeltaTime;
 
 import java.util.Queue;
 
@@ -28,7 +27,9 @@ public class GyroIOSim implements GyroIO {
     private final SwerveModule[] swerveModules;
     private final double[] lastSwerveModulePositionMeters = {0.0, 0.0, 0.0, 0.0};
 
-    private Pose2d gyroUseOdometryPose = new Pose2d(0, 0, Rotation2d.fromDegrees(0));
+    private final DeltaTime deltaTime;
+    private final LinearFilter filter = LinearFilter.movingAverage(50);
+    private Rotation2d rawGyroYaw = Rotation2d.fromDegrees(0);
 
     // Cached StatusSignals
     private final StatusSignal<Double> _yaw;
@@ -54,6 +55,8 @@ public class GyroIOSim implements GyroIO {
         this.kinematics = kinematics;
         this.swerveModules = swerveModules;
 
+        this.deltaTime = new DeltaTime(true);
+
         this._yaw = pigeon.getYaw();
         this._pitch = pigeon.getPitch();
         this._roll = pigeon.getRoll();
@@ -70,28 +73,16 @@ public class GyroIOSim implements GyroIO {
         pigeonSimState.setRoll(USE_SIMULATED_ROLL);
     }
 
-    private void updateGyro() {
-        final SwerveModulePosition[] wheelDeltas = new SwerveModulePosition[swerveModules.length];
-        for (int i = 0; i < swerveModules.length; i++) {
-            final SwerveModulePosition currentSwervePosition = swerveModules[i].getPosition();
-
-            wheelDeltas[i] = new SwerveModulePosition(
-                    (currentSwervePosition.distanceMeters - lastSwerveModulePositionMeters[i]),
-                    currentSwervePosition.angle
-            );
-            lastSwerveModulePositionMeters[i] = currentSwervePosition.distanceMeters;
+    private void updateGyro(final double dtSeconds) {
+        final SwerveModuleState[] moduleStates = new SwerveModuleState[swerveModules.length];
+        for (int i = 0; i < moduleStates.length; i++) {
+            moduleStates[i] = swerveModules[i].getState();
         }
 
-        final Twist2d wheelDeltasTwist = kinematics.toTwist2d(wheelDeltas);
-        gyroUseOdometryPose = gyroUseOdometryPose.exp(wheelDeltasTwist);
-
-        Logger.recordOutput(Gyro.logKey + "/GyroUseOdometryPose", gyroUseOdometryPose);
-        Logger.recordOutput(Gyro.logKey + "/WheelDeltasTwistDx", wheelDeltasTwist.dx);
-        Logger.recordOutput(Gyro.logKey + "/WheelDeltasTwistDy", wheelDeltasTwist.dy);
-        Logger.recordOutput(Gyro.logKey + "/WheelDeltasTwistDTheta", wheelDeltasTwist.dtheta);
-        Logger.recordOutput(Gyro.logKey + "/LastSwerveModulePositionMeters", lastSwerveModulePositionMeters);
-
-        setAngleInternal(gyroUseOdometryPose.getRotation().getDegrees());
+        rawGyroYaw = rawGyroYaw.plus(Rotation2d.fromRadians(
+                kinematics.toChassisSpeeds(moduleStates).omegaRadiansPerSecond * dtSeconds
+        ));
+        pigeonSimState.setRawYaw(rawGyroYaw.getDegrees());
     }
 
     @SuppressWarnings("DuplicatedCode")
@@ -118,7 +109,7 @@ public class GyroIOSim implements GyroIO {
 
     @Override
     public void periodic() {
-        updateGyro();
+        updateGyro(deltaTime.get());
     }
 
     @SuppressWarnings("DuplicatedCode")
@@ -176,10 +167,6 @@ public class GyroIOSim implements GyroIO {
 //                getRollVelocitySignal()
 //        );
         return _roll.getValue();
-    }
-
-    private void setAngleInternal(final double angle) {
-        pigeonSimState.setRawYaw(angle);
     }
 
     @Override

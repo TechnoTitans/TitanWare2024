@@ -62,11 +62,6 @@ public interface SwerveModuleIO {
     default void updateInputs(final SwerveModuleIOInputs inputs) {}
 
     /**
-     * Periodic call, does <b>NOT</b> call updateInputs
-     */
-    default void periodic() {}
-
-    /**
      * Config motors call, should only be invoked once on initialize
      */
     default void config() {}
