@@ -137,6 +137,11 @@ public class SwerveModuleIOTalonFXSim implements SwerveModuleIO {
             turnSim.update(dtSeconds);
         });
         ToClose.add(simUpdateNotifier);
+        simUpdateNotifier.setName(String.format(
+                "SimUpdate(%d,%d)",
+                driveMotor.getDeviceID(),
+                turnMotor.getDeviceID()
+        ));
         simUpdateNotifier.startPeriodic(SIM_UPDATE_PERIOD_SEC);
     }
 
