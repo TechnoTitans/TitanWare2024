@@ -7,7 +7,7 @@ import com.ctre.phoenix6.hardware.ParentDevice;
 import com.ctre.phoenix6.hardware.Pigeon2;
 import edu.wpi.first.math.geometry.Rotation2d;
 import frc.robot.constants.HardwareConstants;
-import frc.robot.subsystems.drive.Swerve;
+import frc.robot.subsystems.drive.OdometryThreadRunner;
 import frc.robot.utils.ctre.Phoenix6Utils;
 
 import java.util.Queue;
@@ -30,7 +30,7 @@ public class GyroIOPigeon2 implements GyroIO {
 
     public GyroIOPigeon2(
             final HardwareConstants.GyroConstants gyroConstants,
-            final Swerve.OdometryThreadRunner odometryThreadRunner
+            final OdometryThreadRunner odometryThreadRunner
     ) {
         this.pigeon = new Pigeon2(gyroConstants.gyroId(), gyroConstants.CANBus());
 
