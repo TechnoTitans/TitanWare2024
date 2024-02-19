@@ -1,6 +1,5 @@
 package frc.robot;
 
-import com.ctre.phoenix6.SignalLogger;
 import edu.wpi.first.wpilibj.PowerDistribution;
 import edu.wpi.first.wpilibj.RobotState;
 import edu.wpi.first.wpilibj2.command.Command;
@@ -11,11 +10,18 @@ import frc.robot.constants.Constants;
 import frc.robot.constants.HardwareConstants;
 import frc.robot.constants.RobotMap;
 import frc.robot.subsystems.drive.Swerve;
+import frc.robot.subsystems.superstructure.Superstructure;
+import frc.robot.subsystems.superstructure.arm.Arm;
+import frc.robot.subsystems.superstructure.shooter.Shooter;
 
 public class RobotContainer {
     public final PowerDistribution powerDistribution;
 
     public final Swerve swerve;
+    public final Arm arm;
+    public final Shooter shooter;
+
+    public final Superstructure superstructure;
 
     public final CommandXboxController driverController;
     public final CommandXboxController coDriverController;
@@ -36,18 +42,16 @@ public class RobotContainer {
                 HardwareConstants.BACK_RIGHT_MODULE
         );
 
+        this.arm = new Arm(Constants.CURRENT_MODE, HardwareConstants.ARM);
+        this.shooter = new Shooter(Constants.CURRENT_MODE, HardwareConstants.SHOOTER);
+
+        this.superstructure = new Superstructure(arm, shooter);
+
         this.driverController = new CommandXboxController(RobotMap.MainController);
         this.coDriverController = new CommandXboxController(RobotMap.CoController);
-
-        this.coDriverController.y().whileTrue(swerve.linearVoltageSysIdQuasistaticCommand(SysIdRoutine.Direction.kForward));
-        this.coDriverController.a().whileTrue(swerve.linearVoltageSysIdQuasistaticCommand(SysIdRoutine.Direction.kReverse));
-        this.coDriverController.b().whileTrue(swerve.linearVoltageSysIdDynamicCommand(SysIdRoutine.Direction.kForward));
-        this.coDriverController.x().whileTrue(swerve.linearVoltageSysIdDynamicCommand(SysIdRoutine.Direction.kReverse));
-
-        this.coDriverController.leftBumper().onTrue(Commands.run(SignalLogger::stop));
     }
 
     public Command getAutonomousCommand() {
-        return Commands.waitUntil(() -> !RobotState.isAutonomous());
+        return superstructure.cook();
     }
 }

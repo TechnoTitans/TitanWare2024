@@ -104,15 +104,35 @@ public class HardwareConstants {
             13
     );
 
+    public record ArmConstants(
+            String CANBus,
+            int leftPivotMotorId,
+            int rightPivotMotorId,
+            int pivotZeroingSwitchDIOChannel,
+            double pivotGearing
+    ) {}
+
+    public static final ArmConstants ARM = new ArmConstants(
+            RobotMap.CanivoreCANBus,
+            14,
+            15,
+            1,
+            112.5
+    );
+
     public record ShooterConstants(
-            String CANbus,
-            int topMotorId,
-            int bottomMotorId
+            String CANBus,
+            int leftFlywheelMotorId,
+            double leftFlywheelGearing,
+            int rightFlywheelMotorId,
+            double rightFlywheelGearing
     ) {}
 
     public static final ShooterConstants SHOOTER = new ShooterConstants(
             RobotMap.RioCANBus,
+            16,
             1,
-            3
+            17,
+            1
     );
 }
