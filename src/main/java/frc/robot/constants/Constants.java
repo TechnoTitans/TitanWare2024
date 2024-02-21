@@ -3,7 +3,7 @@ package frc.robot.constants;
 import edu.wpi.first.math.util.Units;
 
 public interface Constants {
-    RobotMode CURRENT_MODE = RobotMode.SIM;
+    RobotMode CURRENT_MODE = RobotMode.REAL;
     double LOOP_PERIOD_SECONDS = 0.02;
 
     enum RobotMode {

@@ -122,6 +122,8 @@ public class HardwareConstants {
 
     public record ShooterConstants(
             String CANBus,
+            int ampMotorId,
+            double ampMotorGearing,
             int leftFlywheelMotorId,
             double leftFlywheelGearing,
             int rightFlywheelMotorId,
@@ -131,8 +133,10 @@ public class HardwareConstants {
     public static final ShooterConstants SHOOTER = new ShooterConstants(
             RobotMap.RioCANBus,
             16,
-            1,
+            0.5,
             17,
-            1
+            0.5,
+            18,
+            0.5
     );
 }

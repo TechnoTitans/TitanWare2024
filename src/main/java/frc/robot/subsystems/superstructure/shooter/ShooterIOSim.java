@@ -199,13 +199,21 @@ public class ShooterIOSim implements ShooterIO {
     }
 
     @Override
-    public void toVelocity(final double leftFlywheelVelocity, final double rightFlywheelVelocity) {
+    public void toVelocity(
+            final double ampVelocity,
+            final double leftFlywheelVelocity,
+            final double rightFlywheelVelocity
+    ) {
         leftFlywheelMotor.setControl(velocityVoltage.withVelocity(leftFlywheelVelocity));
         rightFlywheelMotor.setControl(velocityVoltage.withVelocity(rightFlywheelVelocity));
     }
 
     @Override
-    public void setCharacterizationVolts(final double leftVolts, final double rightVolts) {
+    public void setCharacterizationVolts(
+            final double ampVolts,
+            final double leftVolts,
+            final double rightVolts
+    ) {
         leftFlywheelMotor.setControl(voltageOut.withOutput(leftVolts));
         rightFlywheelMotor.setControl(voltageOut.withOutput(rightVolts));
     }

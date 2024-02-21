@@ -15,12 +15,15 @@ public class Superstructure {
     }
 
     public Command cook() {
-        return Commands.sequence(
-                arm.toPivotPositionCommand(0.25),
-                shooter.toVelocityCommand(85, 85),
-                Commands.waitSeconds(0.5),
-                shooter.toVelocityCommand(0, 0),
-                arm.toPivotPositionCommand(0)
+//        return shooter.toVelocityCommand(
+//                10,
+//                10,
+//                10
+//        );
+        return shooter.toVoltageCommand(
+                0,
+                10,
+                10
         );
     }
 }

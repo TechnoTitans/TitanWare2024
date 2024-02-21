@@ -26,6 +26,7 @@ public class Shooter extends SubsystemBase {
 
     private final VelocitySetpoint setpoint;
     private static class VelocitySetpoint {
+        public double ampVelocityRotsPerSec = 0;
         public double leftFlywheelVelocityRotsPerSec = 0;
         public double rightFlywheelVelocityRotsPerSec = 0;
     }
@@ -74,17 +75,29 @@ public class Shooter extends SubsystemBase {
     }
 
     public Command toVelocityCommand(
+            final double ampVelocityRotsPerSec,
             final double leftFlywheelVelocityRotsPerSec,
             final double rightFlywheelVelocityRotsPerSec
     ) {
         return Commands.sequence(
                 runOnce(() -> {
+                    setpoint.ampVelocityRotsPerSec = ampVelocityRotsPerSec;
                     setpoint.leftFlywheelVelocityRotsPerSec = leftFlywheelVelocityRotsPerSec;
                     setpoint.rightFlywheelVelocityRotsPerSec = rightFlywheelVelocityRotsPerSec;
 
-                    shooterIO.toVelocity(leftFlywheelVelocityRotsPerSec, rightFlywheelVelocityRotsPerSec);
+                    shooterIO.toVelocity(ampVelocityRotsPerSec, leftFlywheelVelocityRotsPerSec, rightFlywheelVelocityRotsPerSec);
                 }),
                 Commands.waitUntil(atVelocity)
+        );
+    }
+
+    public Command toVoltageCommand(
+            final double ampVoltage,
+            final double leftFlywheelVoltage,
+            final double rightFlywheelVoltage
+    ) {
+        return runOnce(
+                () -> shooterIO.setCharacterizationVolts(ampVoltage, leftFlywheelVoltage, rightFlywheelVoltage)
         );
     }
 
@@ -102,6 +115,7 @@ public class Shooter extends SubsystemBase {
                 ),
                 new SysIdRoutine.Mechanism(
                         voltageMeasure -> shooterIO.setCharacterizationVolts(
+                                voltageMeasure.in(Volts),
                                 voltageMeasure.in(Volts),
                                 voltageMeasure.in(Volts)
                         ),
