@@ -9,21 +9,43 @@ public class Superstructure {
     private final Arm arm;
     private final Shooter shooter;
 
+    public record VelocitySetpoint(
+            double armPivotPositionRots,
+            double ampVelocityRotsPerSec,
+            double leftVelocityRotsPerSec,
+            double rightVelocityRotsPerSec
+    ) {}
+
+    public record VoltageSetpoint(
+            double armPivotVolts,
+            double ampVolts,
+            double leftVolts,
+            double rightVolts
+    ) {}
+
     public Superstructure(final Arm arm, final Shooter shooter) {
         this.arm = arm;
         this.shooter = shooter;
     }
 
-    public Command cook() {
-//        return shooter.toVelocityCommand(
-//                10,
-//                10,
-//                10
-//        );
-        return shooter.toVoltageCommand(
-                0,
-                10,
-                10
+    public Command toVelocitySetpoint(final VelocitySetpoint velocitySetpoint) {
+        return Commands.parallel(
+                arm.toPivotPositionCommand(velocitySetpoint.armPivotPositionRots),
+                shooter.toVelocityCommand(
+                        velocitySetpoint.ampVelocityRotsPerSec,
+                        velocitySetpoint.leftVelocityRotsPerSec,
+                        velocitySetpoint.rightVelocityRotsPerSec
+                )
+        );
+    }
+
+    public Command toVoltageSetpoint(final VoltageSetpoint voltageSetpoint) {
+        return Commands.parallel(
+                shooter.toVoltageCommand(
+                        voltageSetpoint.ampVolts,
+                        voltageSetpoint.leftVolts,
+                        voltageSetpoint.rightVolts
+                )
         );
     }
 }

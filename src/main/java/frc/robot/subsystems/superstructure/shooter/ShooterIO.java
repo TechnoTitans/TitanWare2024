@@ -42,7 +42,7 @@ public interface ShooterIO {
             final double rightFlywheelVelocity
     ) {}
 
-    default void setCharacterizationVolts(
+    default void toVoltage(
             final double ampVolts,
             final double leftVolts,
             final double rightVolts

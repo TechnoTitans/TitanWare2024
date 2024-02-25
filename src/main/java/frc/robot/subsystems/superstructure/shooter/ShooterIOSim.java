@@ -209,7 +209,7 @@ public class ShooterIOSim implements ShooterIO {
     }
 
     @Override
-    public void setCharacterizationVolts(
+    public void toVoltage(
             final double ampVolts,
             final double leftVolts,
             final double rightVolts

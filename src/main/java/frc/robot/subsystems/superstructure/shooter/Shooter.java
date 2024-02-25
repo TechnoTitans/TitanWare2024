@@ -97,7 +97,7 @@ public class Shooter extends SubsystemBase {
             final double rightFlywheelVoltage
     ) {
         return runOnce(
-                () -> shooterIO.setCharacterizationVolts(ampVoltage, leftFlywheelVoltage, rightFlywheelVoltage)
+                () -> shooterIO.toVoltage(ampVoltage, leftFlywheelVoltage, rightFlywheelVoltage)
         );
     }
 
@@ -114,7 +114,7 @@ public class Shooter extends SubsystemBase {
                         state -> SignalLogger.writeString("state", state.toString())
                 ),
                 new SysIdRoutine.Mechanism(
-                        voltageMeasure -> shooterIO.setCharacterizationVolts(
+                        voltageMeasure -> shooterIO.toVoltage(
                                 voltageMeasure.in(Volts),
                                 voltageMeasure.in(Volts),
                                 voltageMeasure.in(Volts)
