@@ -26,9 +26,14 @@ public interface ArmIO {
      */
     default void updateInputs(final ArmIOInputs inputs) {}
 
-    default void config() {}
+    default void config(
+            final Arm.PositionSetpoint pivotSoftLowerLimit,
+            final Arm.PositionSetpoint pivotSoftUpperLimit
+    ) {}
 
     default void toPivotPosition(final double pivotPositionRots) {}
 
-    default void setCharacterizationVolts(final double pivotVolts) {}
+    default void toPivotVoltage(final double pivotVolts) {}
+
+    default void toPivotTorqueCurrent(final double pivotTorqueCurrentAmps) {}
 }

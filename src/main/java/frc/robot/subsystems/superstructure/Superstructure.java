@@ -41,6 +41,7 @@ public class Superstructure {
 
     public Command toVoltageSetpoint(final VoltageSetpoint voltageSetpoint) {
         return Commands.parallel(
+                arm.toPivotVoltageCommand(voltageSetpoint.armPivotVolts),
                 shooter.toVoltageCommand(
                         voltageSetpoint.ampVolts,
                         voltageSetpoint.leftVolts,

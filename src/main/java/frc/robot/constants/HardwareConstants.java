@@ -3,6 +3,7 @@ package frc.robot.constants;
 import com.ctre.phoenix6.hardware.CANcoder;
 import com.ctre.phoenix6.hardware.TalonFX;
 import edu.wpi.first.math.geometry.Translation2d;
+import edu.wpi.first.math.util.Units;
 import frc.robot.subsystems.drive.OdometryThreadRunner;
 import frc.robot.subsystems.drive.SwerveModule;
 
@@ -58,7 +59,7 @@ public class HardwareConstants {
             1,
             2,
             3,
-            0.320556640625
+            -0.138
     );
 
     public static final SwerveModuleConstants FRONT_RIGHT_MODULE = new SwerveModuleConstants(
@@ -69,7 +70,7 @@ public class HardwareConstants {
             4,
             5,
             6,
-            0.33251953125
+            0.387
     );
 
     public static final SwerveModuleConstants BACK_LEFT_MODULE = new SwerveModuleConstants(
@@ -80,7 +81,7 @@ public class HardwareConstants {
             7,
             8,
             9,
-            0.0478515625
+            0
     );
 
     public static final SwerveModuleConstants BACK_RIGHT_MODULE = new SwerveModuleConstants(
@@ -91,7 +92,7 @@ public class HardwareConstants {
             10,
             11,
             12,
-            0.283203125
+            -0.425
     );
 
     public record GyroConstants(
@@ -109,7 +110,9 @@ public class HardwareConstants {
             int leftPivotMotorId,
             int rightPivotMotorId,
             int pivotZeroingSwitchDIOChannel,
-            double pivotGearing
+            double pivotGearing,
+            double pivotSoftLowerLimitRots,
+            double pivotSoftUpperLimitRots
     ) {}
 
     public static final ArmConstants ARM = new ArmConstants(
@@ -117,7 +120,9 @@ public class HardwareConstants {
             14,
             15,
             1,
-            112.5
+            112.5,
+            Units.degreesToRotations(0),
+            Units.degreesToRotations(100)
     );
 
     public record ShooterConstants(

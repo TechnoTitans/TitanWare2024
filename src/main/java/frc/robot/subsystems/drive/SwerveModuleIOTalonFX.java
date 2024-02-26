@@ -122,6 +122,12 @@ public class SwerveModuleIOTalonFX implements SwerveModuleIO {
                 .withKS(0.5);
         turnTalonFXConfiguration.TorqueCurrent.PeakForwardTorqueCurrent = 40;
         turnTalonFXConfiguration.TorqueCurrent.PeakReverseTorqueCurrent = -40;
+        turnTalonFXConfiguration.CurrentLimits.StatorCurrentLimit = 60;
+        turnTalonFXConfiguration.CurrentLimits.StatorCurrentLimitEnable = true;
+        turnTalonFXConfiguration.CurrentLimits.SupplyCurrentLimit = 40;
+        turnTalonFXConfiguration.CurrentLimits.SupplyCurrentThreshold = 60;
+        turnTalonFXConfiguration.CurrentLimits.SupplyTimeThreshold = 1.5;
+        turnTalonFXConfiguration.CurrentLimits.SupplyCurrentLimitEnable = true;
         turnTalonFXConfiguration.Feedback.FeedbackRemoteSensorID = turnEncoder.getDeviceID();
         turnTalonFXConfiguration.Feedback.FeedbackSensorSource = FeedbackSensorSourceValue.FusedCANcoder;
         turnTalonFXConfiguration.Feedback.RotorToSensorRatio = Modules.TURNER_GEAR_RATIO;

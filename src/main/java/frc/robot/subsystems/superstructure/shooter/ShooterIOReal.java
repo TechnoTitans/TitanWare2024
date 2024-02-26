@@ -72,6 +72,7 @@ public class ShooterIOReal implements ShooterIO {
     @Override
     public void config() {
         final TalonFXConfiguration ampTalonFXConfiguration = new TalonFXConfiguration();
+        // TODO: get feedforward gains
         ampTalonFXConfiguration.Slot0 = new Slot0Configs()
                 .withKS(0)
                 .withKV(0)
