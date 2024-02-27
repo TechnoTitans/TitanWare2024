@@ -6,6 +6,7 @@ import com.ctre.phoenix6.StatusSignal;
 import com.ctre.phoenix6.configs.CANcoderConfiguration;
 import com.ctre.phoenix6.configs.Slot0Configs;
 import com.ctre.phoenix6.configs.TalonFXConfiguration;
+import com.ctre.phoenix6.controls.MotionMagicExpoTorqueCurrentFOC;
 import com.ctre.phoenix6.controls.PositionVoltage;
 import com.ctre.phoenix6.controls.VelocityTorqueCurrentFOC;
 import com.ctre.phoenix6.hardware.CANcoder;
@@ -43,7 +44,7 @@ public class SwerveModuleIOTalonFXSim implements SwerveModuleIO {
     private final TalonFXConfiguration turnTalonFXConfiguration = new TalonFXConfiguration();
 
     private final VelocityTorqueCurrentFOC velocityTorqueCurrentFOC;
-    private final PositionVoltage positionVoltage;
+    private final MotionMagicExpoTorqueCurrentFOC motionMagicExpoTorqueCurrentFOC;
 
     private final OdometryThreadRunner odometryThreadRunner;
 
@@ -114,10 +115,10 @@ public class SwerveModuleIOTalonFXSim implements SwerveModuleIO {
         this.turnSim.attachFeedbackSensor(new SimPhoenix6CANCoder(turnEncoder));
 
         this.velocityTorqueCurrentFOC = new VelocityTorqueCurrentFOC(0);
-        this.positionVoltage = new PositionVoltage(0);
+        this.motionMagicExpoTorqueCurrentFOC = new MotionMagicExpoTorqueCurrentFOC(0);
         this.odometryThreadRunner = odometryThreadRunner;
         this.odometryThreadRunner.registerControlRequest(driveMotor, velocityTorqueCurrentFOC, driveMotor::setControl);
-        this.odometryThreadRunner.registerControlRequest(turnMotor, positionVoltage, turnMotor::setControl);
+        this.odometryThreadRunner.registerControlRequest(turnMotor, motionMagicExpoTorqueCurrentFOC, turnMotor::setControl);
 
         this.deltaTime = new DeltaTime(true);
 
@@ -187,10 +188,15 @@ public class SwerveModuleIOTalonFXSim implements SwerveModuleIO {
         turnTalonFXConfiguration.Feedback.RotorToSensorRatio = Modules.TURNER_GEAR_RATIO;
         turnTalonFXConfiguration.MotorOutput.NeutralMode = NeutralModeValue.Brake;
         turnTalonFXConfiguration.MotorOutput.Inverted = turnInvertedValue;
+        turnTalonFXConfiguration.MotionMagic.MotionMagicCruiseVelocity =
+                100.0 / Modules.TURNER_GEAR_RATIO;
+        turnTalonFXConfiguration.MotionMagic.MotionMagicExpo_kV = 0.12 * Modules.TURNER_GEAR_RATIO;
+        turnTalonFXConfiguration.MotionMagic.MotionMagicExpo_kA = 0.1;
+        turnTalonFXConfiguration.ClosedLoopGeneral.ContinuousWrap = true;
         turnMotor.getConfigurator().apply(turnTalonFXConfiguration);
 
         velocityTorqueCurrentFOC.UpdateFreqHz = 0;
-        positionVoltage.UpdateFreqHz = 0;
+        motionMagicExpoTorqueCurrentFOC.UpdateFreqHz = 0;
 
         // TODO: this fix for CANCoder initialization in sim doesn't seem to work all the time...investigate!
 //      SimUtils.initializeCTRECANCoderSim(turnEncoder);
@@ -255,7 +261,7 @@ public class SwerveModuleIOTalonFXSim implements SwerveModuleIO {
                 .withVelocity(desiredDriverVelocity)
                 .withOverrideCoastDurNeutral(true)
         );
-        turnMotor.setControl(positionVoltage.withPosition(desiredTurnerRotations));
+        turnMotor.setControl(motionMagicExpoTorqueCurrentFOC.withPosition(desiredTurnerRotations));
     }
 
     @Override

@@ -6,10 +6,7 @@ import com.ctre.phoenix6.StatusSignal;
 import com.ctre.phoenix6.configs.CANcoderConfiguration;
 import com.ctre.phoenix6.configs.Slot0Configs;
 import com.ctre.phoenix6.configs.TalonFXConfiguration;
-import com.ctre.phoenix6.controls.PositionVoltage;
-import com.ctre.phoenix6.controls.TorqueCurrentFOC;
-import com.ctre.phoenix6.controls.VelocityTorqueCurrentFOC;
-import com.ctre.phoenix6.controls.VoltageOut;
+import com.ctre.phoenix6.controls.*;
 import com.ctre.phoenix6.hardware.CANcoder;
 import com.ctre.phoenix6.hardware.ParentDevice;
 import com.ctre.phoenix6.hardware.TalonFX;
@@ -33,10 +30,10 @@ public class SwerveModuleIOTalonFX implements SwerveModuleIO {
     private final TalonFXConfiguration turnTalonFXConfiguration = new TalonFXConfiguration();
 
     private final VelocityTorqueCurrentFOC velocityTorqueCurrentFOC;
+    private final MotionMagicExpoTorqueCurrentFOC motionMagicExpoTorqueCurrentFOC;
+    //SysID
     private final VoltageOut voltageOut;
     private final TorqueCurrentFOC torqueCurrentFOC;
-
-    private final PositionVoltage positionVoltage;
 
     private final OdometryThreadRunner odometryThreadRunner;
     // Cached StatusSignals
@@ -71,12 +68,12 @@ public class SwerveModuleIOTalonFX implements SwerveModuleIO {
 
         this.velocityTorqueCurrentFOC = new VelocityTorqueCurrentFOC(0);
         this.torqueCurrentFOC = new TorqueCurrentFOC(0);
-        this.positionVoltage = new PositionVoltage(0);
+        this.motionMagicExpoTorqueCurrentFOC = new MotionMagicExpoTorqueCurrentFOC(0);
         this.voltageOut = new VoltageOut(0);
 
         this.odometryThreadRunner = odometryThreadRunner;
         this.odometryThreadRunner.registerControlRequest(driveMotor, velocityTorqueCurrentFOC, driveMotor::setControl);
-        this.odometryThreadRunner.registerControlRequest(turnMotor, positionVoltage, turnMotor::setControl);
+        this.odometryThreadRunner.registerControlRequest(turnMotor, motionMagicExpoTorqueCurrentFOC, turnMotor::setControl);
 
         this._drivePosition = driveMotor.getPosition();
         this._driveVelocity = driveMotor.getVelocity();
@@ -127,17 +124,15 @@ public class SwerveModuleIOTalonFX implements SwerveModuleIO {
         turnTalonFXConfiguration.Feedback.RotorToSensorRatio = Modules.TURNER_GEAR_RATIO;
         turnTalonFXConfiguration.MotorOutput.NeutralMode = NeutralModeValue.Brake;
         turnTalonFXConfiguration.MotorOutput.Inverted = InvertedValue.Clockwise_Positive;
-
         turnTalonFXConfiguration.MotionMagic.MotionMagicCruiseVelocity =
                 100.0 / Modules.TURNER_GEAR_RATIO;
         turnTalonFXConfiguration.MotionMagic.MotionMagicExpo_kV = 0.12 * Modules.TURNER_GEAR_RATIO;
         turnTalonFXConfiguration.MotionMagic.MotionMagicExpo_kA = 0.1;
         turnTalonFXConfiguration.ClosedLoopGeneral.ContinuousWrap = true;
-
         turnMotor.getConfigurator().apply(turnTalonFXConfiguration);
 
         velocityTorqueCurrentFOC.UpdateFreqHz = 0;
-        positionVoltage.UpdateFreqHz = 0;
+        motionMagicExpoTorqueCurrentFOC.UpdateFreqHz = 0;
 
         BaseStatusSignal.setUpdateFrequencyForAll(
                 100,
@@ -227,21 +222,21 @@ public class SwerveModuleIOTalonFX implements SwerveModuleIO {
                 .withVelocity(backedOutDriveVelocity)
                 .withOverrideCoastDurNeutral(true)
         );
-        turnMotor.setControl(positionVoltage.withPosition(desiredTurnerRotations));
+        turnMotor.setControl(motionMagicExpoTorqueCurrentFOC.withPosition(desiredTurnerRotations));
     }
 
     @Override
     public void setDriveCharacterizationVolts(double driveVolts, double desiredTurnerRotations) {
         odometryThreadRunner.updateControlRequest(driveMotor, voltageOut);
         driveMotor.setControl(voltageOut.withOutput(driveVolts));
-        turnMotor.setControl(positionVoltage.withPosition(desiredTurnerRotations));
+        turnMotor.setControl(motionMagicExpoTorqueCurrentFOC.withPosition(desiredTurnerRotations));
     }
 
     @Override
     public void setDriveCharacterizationAmps(double driveTorqueCurrentAmps, double desiredTurnerRotations) {
         odometryThreadRunner.updateControlRequest(driveMotor, torqueCurrentFOC);
         driveMotor.setControl(torqueCurrentFOC.withOutput(driveTorqueCurrentAmps));
-        turnMotor.setControl(positionVoltage.withPosition(desiredTurnerRotations));
+        turnMotor.setControl(motionMagicExpoTorqueCurrentFOC.withPosition(desiredTurnerRotations));
     }
 
     @Override
