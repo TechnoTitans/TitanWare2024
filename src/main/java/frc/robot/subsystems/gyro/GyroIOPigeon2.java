@@ -6,10 +6,10 @@ import com.ctre.phoenix6.configs.Pigeon2Configuration;
 import com.ctre.phoenix6.hardware.ParentDevice;
 import com.ctre.phoenix6.hardware.Pigeon2;
 import edu.wpi.first.math.geometry.Rotation2d;
-import frc.robot.subsystems.drive.Swerve;
+import edu.wpi.first.util.DoubleCircularBuffer;
+import frc.robot.constants.HardwareConstants;
+import frc.robot.subsystems.drive.OdometryThreadRunner;
 import frc.robot.utils.ctre.Phoenix6Utils;
-
-import java.util.Queue;
 
 public class GyroIOPigeon2 implements GyroIO {
     private final Pigeon2 pigeon;
@@ -23,12 +23,15 @@ public class GyroIOPigeon2 implements GyroIO {
     private final StatusSignal<Double> _rollVelocity;
     private final StatusSignal<Boolean> _faultHardware;
 
-    // StatusSignal queues for high-freq odometry
-    private final Queue<Double> timestampQueue;
-    private final Queue<Double> yawSignalQueue;
+    // StatusSignal buffers for high-freq odometry
+    private final DoubleCircularBuffer timestampBuffer;
+    private final DoubleCircularBuffer yawSignalBuffer;
 
-    public GyroIOPigeon2(final Pigeon2 pigeon, final Swerve.OdometryThreadRunner odometryThreadRunner) {
-        this.pigeon = pigeon;
+    public GyroIOPigeon2(
+            final HardwareConstants.GyroConstants gyroConstants,
+            final OdometryThreadRunner odometryThreadRunner
+    ) {
+        this.pigeon = new Pigeon2(gyroConstants.gyroId(), gyroConstants.CANBus());
 
         this._yaw = pigeon.getYaw();
         this._pitch = pigeon.getPitch();
@@ -38,8 +41,8 @@ public class GyroIOPigeon2 implements GyroIO {
         this._rollVelocity = pigeon.getAngularVelocityXWorld();
         this._faultHardware = pigeon.getFault_Hardware();
 
-        this.timestampQueue = odometryThreadRunner.makeTimestampQueue();
-        this.yawSignalQueue = odometryThreadRunner.registerSignal(pigeon, _yaw);
+        this.timestampBuffer = odometryThreadRunner.makeTimestampBuffer();
+        this.yawSignalBuffer = odometryThreadRunner.registerSignal(pigeon, _yaw);
     }
 
     @SuppressWarnings("DuplicatedCode")
@@ -63,11 +66,11 @@ public class GyroIOPigeon2 implements GyroIO {
         inputs.rollVelocityDegPerSec = _rollVelocity.getValue();
         inputs.hasHardwareFault = _faultHardware.getValue();
 
-        inputs.odometryTimestampsSec = timestampQueue.stream().mapToDouble(time -> time).toArray();
-        timestampQueue.clear();
+        inputs.odometryTimestampsSec = OdometryThreadRunner.writeBufferToArray(timestampBuffer);
+        timestampBuffer.clear();
 
-        inputs.odometryYawPositionsDeg = yawSignalQueue.stream().mapToDouble(yaw -> yaw).toArray();
-        yawSignalQueue.clear();
+        inputs.odometryYawPositionsDeg = OdometryThreadRunner.writeBufferToArray(yawSignalBuffer);
+        yawSignalBuffer.clear();
     }
 
     // TODO: duplicated code warnings here aren't exactly amazing, but I can't really think of a way to extract

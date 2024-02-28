@@ -7,7 +7,7 @@ import com.ctre.phoenix6.configs.CANcoderConfiguration;
 import com.ctre.phoenix6.configs.Slot0Configs;
 import com.ctre.phoenix6.configs.TalonFXConfiguration;
 import com.ctre.phoenix6.controls.PositionVoltage;
-import com.ctre.phoenix6.controls.VelocityVoltage;
+import com.ctre.phoenix6.controls.VelocityTorqueCurrentFOC;
 import com.ctre.phoenix6.hardware.CANcoder;
 import com.ctre.phoenix6.hardware.TalonFX;
 import com.ctre.phoenix6.signals.AbsoluteSensorRangeValue;
@@ -15,19 +15,22 @@ import com.ctre.phoenix6.signals.FeedbackSensorSourceValue;
 import com.ctre.phoenix6.signals.InvertedValue;
 import com.ctre.phoenix6.signals.NeutralModeValue;
 import edu.wpi.first.math.system.plant.DCMotor;
+import edu.wpi.first.util.DoubleCircularBuffer;
 import edu.wpi.first.wpilibj.DriverStation;
+import edu.wpi.first.wpilibj.Notifier;
 import edu.wpi.first.wpilibj.simulation.DCMotorSim;
-import frc.robot.constants.Constants;
+import frc.robot.constants.Constants.Swerve.Modules;
 import frc.robot.constants.SimConstants;
+import frc.robot.utils.closeables.ToClose;
 import frc.robot.utils.control.DeltaTime;
 import frc.robot.utils.ctre.Phoenix6Utils;
 import frc.robot.utils.sim.SimUtils;
 import frc.robot.utils.sim.feedback.SimPhoenix6CANCoder;
 import frc.robot.utils.sim.motors.CTREPhoenix6TalonFXSim;
 
-import java.util.Queue;
-
 public class SwerveModuleIOTalonFXSim implements SwerveModuleIO {
+    private static final double SIM_UPDATE_PERIOD_SEC = 0.005;
+
     private final TalonFX driveMotor;
     private final TalonFX turnMotor;
     private final CTREPhoenix6TalonFXSim driveSim;
@@ -38,8 +41,10 @@ public class SwerveModuleIOTalonFXSim implements SwerveModuleIO {
     private final TalonFXConfiguration driveTalonFXConfiguration = new TalonFXConfiguration();
     private final TalonFXConfiguration turnTalonFXConfiguration = new TalonFXConfiguration();
 
-    private final VelocityVoltage velocityVoltage;
+    private final VelocityTorqueCurrentFOC velocityTorqueCurrentFOC;
     private final PositionVoltage positionVoltage;
+
+    private final OdometryThreadRunner odometryThreadRunner;
 
     private final DeltaTime deltaTime;
 
@@ -55,48 +60,65 @@ public class SwerveModuleIOTalonFXSim implements SwerveModuleIO {
     private final StatusSignal<Double> _turnStatorCurrent;
     private final StatusSignal<Double> _turnDeviceTemp;
 
-    // Odometry StatusSignal update queues
-    private final Queue<Double> timestampQueue;
-    private final Queue<Double> drivePositionSignalQueue;
-    private final Queue<Double> turnPositionSignalQueue;
+    // Odometry StatusSignal update buffers
+    private final DoubleCircularBuffer timestampBuffer;
+    private final DoubleCircularBuffer drivePositionSignalBuffer;
+    private final DoubleCircularBuffer turnPositionSignalBuffer;
 
     public SwerveModuleIOTalonFXSim(
             final TalonFX driveMotor,
             final TalonFX turnMotor,
             final CANcoder turnEncoder,
             final double magnetOffset,
-            final Swerve.OdometryThreadRunner odometryThreadRunner
+            final OdometryThreadRunner odometryThreadRunner
     ) {
         this.driveMotor = driveMotor;
         this.turnMotor = turnMotor;
 
+        final DCMotorSim driveDCMotorSim = new DCMotorSim(
+                DCMotor.getKrakenX60Foc(1),
+                Modules.DRIVER_GEAR_RATIO,
+                Modules.DRIVE_WHEEL_MOMENT_OF_INERTIA_KG_M_SQUARED
+        );
+
         this.driveSim = new CTREPhoenix6TalonFXSim(
                 driveMotor,
-                Constants.Swerve.Modules.DRIVER_GEAR_RATIO,
-                new DCMotorSim(
-                        DCMotor.getKrakenX60Foc(1),
-                        Constants.Swerve.Modules.DRIVER_GEAR_RATIO,
-                        Constants.Swerve.Modules.DRIVE_WHEEL_MOMENT_OF_INERTIA_KG_M_SQUARED
-                )
+                Modules.DRIVER_GEAR_RATIO,
+                driveDCMotorSim::update,
+                (motorVoltage) -> driveDCMotorSim.setInputVoltage(
+                        SimUtils.addMotorFriction(motorVoltage, Modules.DRIVE_KS_VOLTS)
+                ),
+                driveDCMotorSim::getAngularPositionRad,
+                driveDCMotorSim::getAngularVelocityRadPerSec
+        );
+
+        final DCMotorSim turnDCMotorSim = new DCMotorSim(
+                DCMotor.getFalcon500Foc(1),
+                Modules.TURNER_GEAR_RATIO,
+                Modules.TURN_WHEEL_MOMENT_OF_INERTIA_KG_M_SQUARED
         );
 
         this.turnEncoder = turnEncoder;
         this.magnetOffset = magnetOffset;
         this.turnSim = new CTREPhoenix6TalonFXSim(
                 turnMotor,
-                Constants.Swerve.Modules.TURNER_GEAR_RATIO,
-                new DCMotorSim(
-                        DCMotor.getFalcon500Foc(1),
-                        Constants.Swerve.Modules.TURNER_GEAR_RATIO,
-                        Constants.Swerve.Modules.TURN_WHEEL_MOMENT_OF_INERTIA_KG_M_SQUARED
-                )
+                Modules.TURNER_GEAR_RATIO,
+                turnDCMotorSim::update,
+                (motorVoltage) -> turnDCMotorSim.setInputVoltage(
+                        SimUtils.addMotorFriction(motorVoltage, Modules.STEER_KS_VOLTS)
+                ),
+                turnDCMotorSim::getAngularPositionRad,
+                turnDCMotorSim::getAngularVelocityRadPerSec
         );
         this.turnSim.attachFeedbackSensor(new SimPhoenix6CANCoder(turnEncoder));
 
-        this.velocityVoltage = new VelocityVoltage(0);
+        this.velocityTorqueCurrentFOC = new VelocityTorqueCurrentFOC(0);
         this.positionVoltage = new PositionVoltage(0);
+        this.odometryThreadRunner = odometryThreadRunner;
+        this.odometryThreadRunner.registerControlRequest(driveMotor, velocityTorqueCurrentFOC, driveMotor::setControl);
+        this.odometryThreadRunner.registerControlRequest(turnMotor, positionVoltage, turnMotor::setControl);
 
-        this.deltaTime = new DeltaTime();
+        this.deltaTime = new DeltaTime(true);
 
         this._drivePosition = driveMotor.getPosition();
         this._driveVelocity = driveMotor.getVelocity();
@@ -109,9 +131,22 @@ public class SwerveModuleIOTalonFXSim implements SwerveModuleIO {
         this._turnStatorCurrent = turnMotor.getStatorCurrent();
         this._turnDeviceTemp = turnMotor.getDeviceTemp();
 
-        this.timestampQueue = odometryThreadRunner.makeTimestampQueue();
-        this.drivePositionSignalQueue = odometryThreadRunner.registerSignal(driveMotor, _drivePosition);
-        this.turnPositionSignalQueue = odometryThreadRunner.registerSignal(turnMotor, _turnPosition);
+        this.timestampBuffer = odometryThreadRunner.makeTimestampBuffer();
+        this.drivePositionSignalBuffer = odometryThreadRunner.registerSignal(driveMotor, _drivePosition);
+        this.turnPositionSignalBuffer = odometryThreadRunner.registerSignal(turnMotor, _turnPosition);
+
+        final Notifier simUpdateNotifier = new Notifier(() -> {
+            final double dtSeconds = deltaTime.get();
+            driveSim.update(dtSeconds);
+            turnSim.update(dtSeconds);
+        });
+        ToClose.add(simUpdateNotifier);
+        simUpdateNotifier.setName(String.format(
+                "SimUpdate(%d,%d)",
+                driveMotor.getDeviceID(),
+                turnMotor.getDeviceID()
+        ));
+        simUpdateNotifier.startPeriodic(SIM_UPDATE_PERIOD_SEC);
     }
 
     @SuppressWarnings("DuplicatedCode")
@@ -127,28 +162,34 @@ public class SwerveModuleIOTalonFXSim implements SwerveModuleIO {
         //  which means that TorqueCurrent.PeakForwardTorqueCurrent and related won't affect it
         final InvertedValue driveInvertedValue = InvertedValue.CounterClockwise_Positive;
         driveTalonFXConfiguration.Slot0 = new Slot0Configs()
-                .withKV(0.973);
-        driveTalonFXConfiguration.TorqueCurrent.PeakForwardTorqueCurrent = 60;
-        driveTalonFXConfiguration.TorqueCurrent.PeakReverseTorqueCurrent = -60;
+                .withKP(50)
+                .withKS(4.796)
+                .withKA(2.549);
+        driveTalonFXConfiguration.TorqueCurrent.PeakForwardTorqueCurrent = Modules.SLIP_CURRENT_A;
+        driveTalonFXConfiguration.TorqueCurrent.PeakReverseTorqueCurrent = -Modules.SLIP_CURRENT_A;
+        driveTalonFXConfiguration.CurrentLimits.StatorCurrentLimit = Modules.SLIP_CURRENT_A;
+        driveTalonFXConfiguration.CurrentLimits.StatorCurrentLimitEnable = true;
         driveTalonFXConfiguration.ClosedLoopRamps.TorqueClosedLoopRampPeriod = 0.2;
-        driveTalonFXConfiguration.Feedback.FeedbackSensorSource = FeedbackSensorSourceValue.RotorSensor;
-        driveTalonFXConfiguration.Feedback.SensorToMechanismRatio = Constants.Swerve.Modules.DRIVER_GEAR_RATIO;
-        driveTalonFXConfiguration.MotorOutput.NeutralMode = NeutralModeValue.Coast;
+        driveTalonFXConfiguration.Feedback.SensorToMechanismRatio = Modules.DRIVER_GEAR_RATIO;
+        driveTalonFXConfiguration.MotorOutput.NeutralMode = NeutralModeValue.Brake;
         driveTalonFXConfiguration.MotorOutput.Inverted = driveInvertedValue;
         driveMotor.getConfigurator().apply(driveTalonFXConfiguration);
 
         final InvertedValue turnInvertedValue = InvertedValue.Clockwise_Positive;
         turnTalonFXConfiguration.Slot0 = new Slot0Configs()
-                .withKP(40);
-        turnTalonFXConfiguration.Voltage.PeakForwardVoltage = 6;
-        turnTalonFXConfiguration.Voltage.PeakReverseVoltage = -6;
+                .withKP(30)
+                .withKS(0.5);
+        turnTalonFXConfiguration.TorqueCurrent.PeakForwardTorqueCurrent = 40;
+        turnTalonFXConfiguration.TorqueCurrent.PeakReverseTorqueCurrent = -40;
         turnTalonFXConfiguration.Feedback.FeedbackRemoteSensorID = turnEncoder.getDeviceID();
         turnTalonFXConfiguration.Feedback.FeedbackSensorSource = FeedbackSensorSourceValue.FusedCANcoder;
-        turnTalonFXConfiguration.Feedback.RotorToSensorRatio = Constants.Swerve.Modules.TURNER_GEAR_RATIO;
-        turnTalonFXConfiguration.ClosedLoopGeneral.ContinuousWrap = true;
-        turnTalonFXConfiguration.MotorOutput.NeutralMode = NeutralModeValue.Coast;
+        turnTalonFXConfiguration.Feedback.RotorToSensorRatio = Modules.TURNER_GEAR_RATIO;
+        turnTalonFXConfiguration.MotorOutput.NeutralMode = NeutralModeValue.Brake;
         turnTalonFXConfiguration.MotorOutput.Inverted = turnInvertedValue;
         turnMotor.getConfigurator().apply(turnTalonFXConfiguration);
+
+        velocityTorqueCurrentFOC.UpdateFreqHz = 0;
+        positionVoltage.UpdateFreqHz = 0;
 
         // TODO: this fix for CANCoder initialization in sim doesn't seem to work all the time...investigate!
 //      SimUtils.initializeCTRECANCoderSim(turnEncoder);
@@ -156,12 +197,9 @@ public class SwerveModuleIOTalonFXSim implements SwerveModuleIO {
         SimUtils.setCTRETalonFXSimStateMotorInverted(turnMotor, turnInvertedValue);
     }
 
+    @SuppressWarnings("DuplicatedCode")
     @Override
-    public void periodic() {
-        final double dtSeconds = deltaTime.get();
-        driveSim.update(dtSeconds);
-        turnSim.update(dtSeconds);
-
+    public void updateInputs(final SwerveModuleIOInputs inputs) {
         BaseStatusSignal.refreshAll(
                 _drivePosition,
                 _driveVelocity,
@@ -174,11 +212,7 @@ public class SwerveModuleIOTalonFXSim implements SwerveModuleIO {
                 _turnStatorCurrent,
                 _turnDeviceTemp
         );
-    }
 
-    @SuppressWarnings("DuplicatedCode")
-    @Override
-    public void updateInputs(final SwerveModuleIOInputs inputs) {
         inputs.drivePositionRots = getDrivePosition();
         inputs.driveVelocityRotsPerSec = _driveVelocity.getValue();
         inputs.driveTorqueCurrentAmps = _driveTorqueCurrent.getValue();
@@ -191,14 +225,14 @@ public class SwerveModuleIOTalonFXSim implements SwerveModuleIO {
         inputs.turnStatorCurrentAmps = _turnStatorCurrent.getValue();
         inputs.turnTempCelsius = _turnDeviceTemp.getValue();
 
-        inputs.odometryTimestampsSec = timestampQueue.stream().mapToDouble(time -> time).toArray();
-        timestampQueue.clear();
+        inputs.odometryTimestampsSec = OdometryThreadRunner.writeBufferToArray(timestampBuffer);
+        timestampBuffer.clear();
 
-        inputs.odometryDrivePositionsRots = drivePositionSignalQueue.stream().mapToDouble(pos -> pos).toArray();
-        drivePositionSignalQueue.clear();
+        inputs.odometryDrivePositionsRots = OdometryThreadRunner.writeBufferToArray(drivePositionSignalBuffer);
+        drivePositionSignalBuffer.clear();
 
-        inputs.odometryTurnPositionRots = turnPositionSignalQueue.stream().mapToDouble(pos -> pos).toArray();
-        turnPositionSignalQueue.clear();
+        inputs.odometryTurnPositionRots = OdometryThreadRunner.writeBufferToArray(turnPositionSignalBuffer);
+        turnPositionSignalBuffer.clear();
     }
 
     /**
@@ -215,9 +249,10 @@ public class SwerveModuleIOTalonFXSim implements SwerveModuleIO {
 
     @Override
     public void setInputs(final double desiredDriverVelocity, final double desiredTurnerRotations) {
-        driveMotor.setControl(velocityVoltage
+        odometryThreadRunner.updateControlRequest(driveMotor, velocityTorqueCurrentFOC);
+        driveMotor.setControl(velocityTorqueCurrentFOC
                 .withVelocity(desiredDriverVelocity)
-                .withOverrideBrakeDurNeutral(true)
+                .withOverrideCoastDurNeutral(true)
         );
         turnMotor.setControl(positionVoltage.withPosition(desiredTurnerRotations));
     }

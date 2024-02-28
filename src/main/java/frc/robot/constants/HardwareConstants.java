@@ -3,7 +3,7 @@ package frc.robot.constants;
 import com.ctre.phoenix6.hardware.CANcoder;
 import com.ctre.phoenix6.hardware.TalonFX;
 import edu.wpi.first.math.geometry.Translation2d;
-import frc.robot.subsystems.drive.Swerve;
+import frc.robot.subsystems.drive.OdometryThreadRunner;
 import frc.robot.subsystems.drive.SwerveModule;
 
 import static frc.robot.constants.Constants.Swerve.TRACK_WIDTH_M;
@@ -27,7 +27,7 @@ public class HardwareConstants {
         public static SwerveModule create(
                 final SwerveModuleConstants swerveModuleConstants,
                 final Constants.RobotMode currentMode,
-                final Swerve.OdometryThreadRunner odometryThreadRunner
+                final OdometryThreadRunner odometryThreadRunner
         ) {
             return switch(swerveModuleConstants.hardware) {
                 case SDSMk4i_TalonFX_CANCoder -> SwerveModule.Builder.SDSMK4iTalonFXCANCoder(
@@ -44,7 +44,7 @@ public class HardwareConstants {
 
         public SwerveModule create(
                 final Constants.RobotMode currentMode,
-                final Swerve.OdometryThreadRunner odometryThreadRunner
+                final OdometryThreadRunner odometryThreadRunner
         ) {
             return SwerveModuleConstants.create(this, currentMode, odometryThreadRunner);
         }
@@ -94,12 +94,12 @@ public class HardwareConstants {
             0.283203125
     );
 
-    public record IntakeConstants(
+    public record GyroConstants(
             String CANBus,
-            int rollerMotorId
+            int gyroId
     ) {}
 
-    public static final IntakeConstants Intake = new IntakeConstants(
+    public static final GyroConstants GYRO = new GyroConstants(
             RobotMap.CanivoreCANBus,
             13
     );
