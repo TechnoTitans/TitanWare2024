@@ -11,11 +11,13 @@ import frc.robot.constants.Constants;
 import frc.robot.constants.HardwareConstants;
 import frc.robot.constants.RobotMap;
 import frc.robot.subsystems.drive.Swerve;
+import frc.robot.subsystems.intake.Intake;
 
 public class RobotContainer {
     public final PowerDistribution powerDistribution;
 
     public final Swerve swerve;
+    public final Intake intake;
 
     public final CommandXboxController driverController;
     public final CommandXboxController coDriverController;
@@ -36,13 +38,18 @@ public class RobotContainer {
                 HardwareConstants.BACK_RIGHT_MODULE
         );
 
+        this.intake = new Intake(
+                Constants.CURRENT_MODE,
+                HardwareConstants.INTAKE
+        );
+
         this.driverController = new CommandXboxController(RobotMap.MainController);
         this.coDriverController = new CommandXboxController(RobotMap.CoController);
 
-        this.coDriverController.y().whileTrue(swerve.linearVoltageSysIdQuasistaticCommand(SysIdRoutine.Direction.kForward));
-        this.coDriverController.a().whileTrue(swerve.linearVoltageSysIdQuasistaticCommand(SysIdRoutine.Direction.kReverse));
-        this.coDriverController.b().whileTrue(swerve.linearVoltageSysIdDynamicCommand(SysIdRoutine.Direction.kForward));
-        this.coDriverController.x().whileTrue(swerve.linearVoltageSysIdDynamicCommand(SysIdRoutine.Direction.kReverse));
+        this.coDriverController.y().whileTrue(intake.torqueCurrentSysIdQuasistaticTestCommand(SysIdRoutine.Direction.kForward));
+        this.coDriverController.a().whileTrue(intake.torqueCurrentSysIdQuasistaticTestCommand(SysIdRoutine.Direction.kReverse));
+        this.coDriverController.b().whileTrue(intake.torqueCurrentSysIdDynamicTestCommand(SysIdRoutine.Direction.kForward));
+        this.coDriverController.x().whileTrue(intake.torqueCurrentSysIdDynamicTestCommand(SysIdRoutine.Direction.kReverse));
 
         this.coDriverController.leftBumper().onTrue(Commands.run(SignalLogger::stop));
     }

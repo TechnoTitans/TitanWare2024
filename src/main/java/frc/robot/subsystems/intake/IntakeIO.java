@@ -46,5 +46,15 @@ public interface IntakeIO {
      */
     default void initialize() {}
 
-//    default void setInputs() {}
+    default void toVelocity(
+            final double frontRollersVelocity,
+            final double backRollersVelocity,
+            final double shooterFeederRollerVelocity
+    ) {}
+
+    default void setCharacterizationTorqueCurrent(
+            final double frontRollersTorqueCurrentAmps,
+            final double backRollersTorqueCurrentAmps,
+            final double shooterFeederRollerTorqueCurrentAmps
+    ) {}
 }

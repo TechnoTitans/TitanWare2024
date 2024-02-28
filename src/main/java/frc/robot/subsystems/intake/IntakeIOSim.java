@@ -4,19 +4,22 @@ import com.ctre.phoenix6.BaseStatusSignal;
 import com.ctre.phoenix6.StatusSignal;
 import com.ctre.phoenix6.configs.Slot0Configs;
 import com.ctre.phoenix6.configs.TalonFXConfiguration;
+import com.ctre.phoenix6.controls.TorqueCurrentFOC;
 import com.ctre.phoenix6.controls.VelocityTorqueCurrentFOC;
+import com.ctre.phoenix6.hardware.ParentDevice;
 import com.ctre.phoenix6.hardware.TalonFX;
 import com.ctre.phoenix6.signals.*;
 import frc.robot.constants.HardwareConstants;
 
 public class IntakeIOSim implements IntakeIO {
+    private final HardwareConstants.IntakeConstants intakeConstants;
+
     private final TalonFX intakeFrontRollers;
     private final TalonFX intakeBackRollers;
     private final TalonFX shooterFeederRoller;
 
-    private final VelocityTorqueCurrentFOC intakeFrontVelocityTorqueFOC;
-    private final VelocityTorqueCurrentFOC intakeBackVelocityTorqueFOC;
-    private final VelocityTorqueCurrentFOC shooterFeederVelocityTorqueFOC;
+    private final VelocityTorqueCurrentFOC velocityTorqueCurrentFOC;
+    private final TorqueCurrentFOC torqueCurrentFOC;
 
     private final StatusSignal<Double> _intakeFrontPosition;
     private final StatusSignal<Double> _intakeFrontVelocity;
@@ -34,13 +37,14 @@ public class IntakeIOSim implements IntakeIO {
     private final StatusSignal<Double> _shooterFeederDeviceTemp;
 
     public IntakeIOSim(final HardwareConstants.IntakeConstants intakeConstants) {
-        this.intakeFrontRollers = new TalonFX(intakeConstants.intakeMotorMaster(), intakeConstants.CANBus());
-        this.intakeBackRollers = new TalonFX(intakeConstants.intakeMotorMaster(), intakeConstants.CANBus());
+        this.intakeConstants = intakeConstants;
+
+        this.intakeFrontRollers = new TalonFX(intakeConstants.intakeFrontMotor(), intakeConstants.CANBus());
+        this.intakeBackRollers = new TalonFX(intakeConstants.intakeBackMotor(), intakeConstants.CANBus());
         this.shooterFeederRoller = new TalonFX(intakeConstants.shooterFeederMotor(), intakeConstants.CANBus());
 
-        this.intakeFrontVelocityTorqueFOC = new VelocityTorqueCurrentFOC(0);
-        this.intakeBackVelocityTorqueFOC = new VelocityTorqueCurrentFOC(0);
-        this.shooterFeederVelocityTorqueFOC = new VelocityTorqueCurrentFOC(0);
+        this.velocityTorqueCurrentFOC = new VelocityTorqueCurrentFOC(0);
+        this.torqueCurrentFOC = new TorqueCurrentFOC(0);
 
         this._intakeFrontPosition = intakeFrontRollers.getPosition();
         this._intakeFrontVelocity = intakeFrontRollers.getVelocity();
@@ -99,12 +103,18 @@ public class IntakeIOSim implements IntakeIO {
                 .withKA(1)
                 .withKV(1)
                 .withKS(1);
-        intakeFrontConfig.TorqueCurrent.PeakForwardTorqueCurrent = 40;
-        intakeFrontConfig.TorqueCurrent.PeakReverseTorqueCurrent = -40;
+        intakeFrontConfig.TorqueCurrent.PeakForwardTorqueCurrent = 80;
+        intakeFrontConfig.TorqueCurrent.PeakReverseTorqueCurrent = -80;
+        intakeFrontConfig.CurrentLimits.StatorCurrentLimit = 60;
+        intakeFrontConfig.CurrentLimits.StatorCurrentLimitEnable = true;
+        intakeFrontConfig.CurrentLimits.SupplyCurrentLimit = 50;
+        intakeFrontConfig.CurrentLimits.SupplyCurrentThreshold = 2;
+        intakeFrontConfig.CurrentLimits.SupplyTimeThreshold = 0.5;
+        intakeFrontConfig.CurrentLimits.SupplyCurrentLimitEnable = true;
         intakeFrontConfig.MotorOutput.NeutralMode = NeutralModeValue.Coast;
         intakeFrontConfig.MotorOutput.Inverted = InvertedValue.CounterClockwise_Positive;
         intakeFrontConfig.Feedback.FeedbackSensorSource = FeedbackSensorSourceValue.RotorSensor;
-        intakeFrontConfig.Feedback.SensorToMechanismRatio = 2;
+        intakeFrontConfig.Feedback.SensorToMechanismRatio = intakeConstants.intakeFrontRollersGearRatio();
         intakeFrontRollers.getConfigurator().apply(intakeFrontConfig);
 
         final TalonFXConfiguration intakeBackConfig = new TalonFXConfiguration();
@@ -113,12 +123,18 @@ public class IntakeIOSim implements IntakeIO {
                 .withKA(1)
                 .withKV(1)
                 .withKS(1);
-        intakeBackConfig.TorqueCurrent.PeakForwardTorqueCurrent = 40;
-        intakeBackConfig.TorqueCurrent.PeakReverseTorqueCurrent = -40;
+        intakeFrontConfig.TorqueCurrent.PeakForwardTorqueCurrent = 80;
+        intakeFrontConfig.TorqueCurrent.PeakReverseTorqueCurrent = -80;
+        intakeFrontConfig.CurrentLimits.StatorCurrentLimit = 60;
+        intakeFrontConfig.CurrentLimits.StatorCurrentLimitEnable = true;
+        intakeFrontConfig.CurrentLimits.SupplyCurrentLimit = 50;
+        intakeFrontConfig.CurrentLimits.SupplyCurrentThreshold = 2;
+        intakeFrontConfig.CurrentLimits.SupplyTimeThreshold = 0.5;
+        intakeFrontConfig.CurrentLimits.SupplyCurrentLimitEnable = true;
         intakeBackConfig.MotorOutput.NeutralMode = NeutralModeValue.Coast;
         intakeBackConfig.MotorOutput.Inverted = InvertedValue.Clockwise_Positive;
         intakeBackConfig.Feedback.FeedbackSensorSource = FeedbackSensorSourceValue.RotorSensor;
-        intakeBackConfig.Feedback.SensorToMechanismRatio = 2;
+        intakeBackConfig.Feedback.SensorToMechanismRatio = intakeConstants.intakeBackRollersGearRatio();
         intakeBackRollers.getConfigurator().apply(intakeBackConfig);
 
         final TalonFXConfiguration shooterFollowerConfig = new TalonFXConfiguration();
@@ -127,12 +143,65 @@ public class IntakeIOSim implements IntakeIO {
                 .withKA(1)
                 .withKV(1)
                 .withKS(1);
-        shooterFollowerConfig.TorqueCurrent.PeakForwardTorqueCurrent = 40;
-        shooterFollowerConfig.TorqueCurrent.PeakReverseTorqueCurrent = -40;
+        intakeFrontConfig.TorqueCurrent.PeakForwardTorqueCurrent = 80;
+        intakeFrontConfig.TorqueCurrent.PeakReverseTorqueCurrent = -80;
+        intakeFrontConfig.CurrentLimits.StatorCurrentLimit = 60;
+        intakeFrontConfig.CurrentLimits.StatorCurrentLimitEnable = true;
+        intakeFrontConfig.CurrentLimits.SupplyCurrentLimit = 50;
+        intakeFrontConfig.CurrentLimits.SupplyCurrentThreshold = 2;
+        intakeFrontConfig.CurrentLimits.SupplyTimeThreshold = 0.5;
+        intakeFrontConfig.CurrentLimits.SupplyCurrentLimitEnable = true;
         shooterFollowerConfig.MotorOutput.NeutralMode = NeutralModeValue.Coast;
         shooterFollowerConfig.MotorOutput.Inverted = InvertedValue.CounterClockwise_Positive;
         shooterFollowerConfig.Feedback.FeedbackSensorSource = FeedbackSensorSourceValue.RotorSensor;
-        shooterFollowerConfig.Feedback.SensorToMechanismRatio = 1;
+        shooterFollowerConfig.Feedback.SensorToMechanismRatio = intakeConstants.shooterFeederRollerGearRatio();
         shooterFeederRoller.getConfigurator().apply(shooterFollowerConfig);
+
+        BaseStatusSignal.setUpdateFrequencyForAll(
+                100,
+                _intakeFrontPosition,
+                _intakeFrontVelocity,
+                _intakeFrontTorqueCurrent,
+                _intakeBackPosition,
+                _intakeBackVelocity,
+                _intakeBackTorqueCurrent,
+                _shooterFeederPosition,
+                _shooterFeederVelocity,
+                _shooterFeederTorqueCurrent
+
+        );
+        BaseStatusSignal.setUpdateFrequencyForAll(
+                4,
+                _intakeFrontDeviceTemp,
+                _intakeBackDeviceTemp,
+                _shooterFeederDeviceTemp
+        );
+        ParentDevice.optimizeBusUtilizationForAll(
+                intakeFrontRollers,
+                intakeBackRollers,
+                shooterFeederRoller
+        );
+    }
+
+    @Override
+    public void toVelocity(
+            final double frontRollersVelocity,
+            final double backRollersVelocity,
+            final double shooterFeederRollerVelocity
+    ) {
+        intakeFrontRollers.setControl(velocityTorqueCurrentFOC.withVelocity(frontRollersVelocity));
+        intakeBackRollers.setControl(velocityTorqueCurrentFOC.withVelocity(backRollersVelocity));
+        shooterFeederRoller.setControl(velocityTorqueCurrentFOC.withVelocity(shooterFeederRollerVelocity));
+    }
+
+    @Override
+    public void setCharacterizationTorqueCurrent(
+            final double frontRollersTorqueCurrentAmps,
+            final double backRollersTorqueCurrentAmps,
+            final double shooterFeederRollerTorqueCurrentAmps
+    ) {
+        intakeFrontRollers.setControl(torqueCurrentFOC.withOutput(frontRollersTorqueCurrentAmps));
+        intakeBackRollers.setControl(torqueCurrentFOC.withOutput(backRollersTorqueCurrentAmps));
+        shooterFeederRoller.setControl(torqueCurrentFOC.withOutput(shooterFeederRollerTorqueCurrentAmps));
     }
 }

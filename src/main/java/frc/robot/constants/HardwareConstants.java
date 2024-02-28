@@ -106,15 +106,21 @@ public class HardwareConstants {
 
     public record IntakeConstants(
             String CANBus,
-            int intakeMotorMaster,
-            int intakeReverseMotor,
-            int shooterFeederMotor
+            int intakeFrontMotor,
+            int intakeBackMotor,
+            int shooterFeederMotor,
+            int intakeFrontRollersGearRatio,
+            int intakeBackRollersGearRatio,
+            int shooterFeederRollerGearRatio
     ) {}
 
     public static final IntakeConstants INTAKE = new IntakeConstants(
             RobotMap.RioCANBus,
             19,
             20,
-            21
+            21,
+            2,
+            2,
+            1
     );
 }
