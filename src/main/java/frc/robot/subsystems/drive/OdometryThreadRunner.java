@@ -5,6 +5,7 @@ import com.ctre.phoenix6.controls.ControlRequest;
 import com.ctre.phoenix6.hardware.ParentDevice;
 import edu.wpi.first.math.filter.LinearFilter;
 import edu.wpi.first.math.filter.MedianFilter;
+import edu.wpi.first.util.DoubleCircularBuffer;
 import edu.wpi.first.util.struct.Struct;
 import edu.wpi.first.util.struct.StructSerializable;
 import edu.wpi.first.wpilibj.DriverStation;
@@ -34,8 +35,8 @@ public class OdometryThreadRunner {
     protected final Map<Long, ControlRequest> outerAppliedControlRequests = new HashMap<>();
     protected final Map<Long, ControlRequest> innerAppliedControlRequests = new HashMap<>();
     protected final Map<Long, Consumer<ControlRequest>> controlReqAppliers = new HashMap<>();
-    protected final List<Queue<Double>> queues = new ArrayList<>();
-    protected final List<Queue<Double>> timestampQueues = new ArrayList<>();
+    protected final List<DoubleCircularBuffer> buffers = new ArrayList<>();
+    protected final List<DoubleCircularBuffer> timestampBuffers = new ArrayList<>();
 
     protected final Thread thread;
     protected final State state = new State();
@@ -51,6 +52,16 @@ public class OdometryThreadRunner {
 
     protected int lastThreadPriority = STARTING_THREAD_PRIORITY;
     protected volatile int threadPriorityToSet = lastThreadPriority;
+
+    public static double[] writeBufferToArray(final DoubleCircularBuffer buffer) {
+        final int size = buffer.size();
+        final double[] array = new double[size];
+        for (int i = 0; i < size; i++) {
+            array[i] = buffer.get(i);
+        }
+
+        return array;
+    }
 
     public OdometryThreadRunner(final ReentrantReadWriteLock signalQueueReadWriteLock) {
         this.thread = new Thread(this::run);
@@ -180,23 +191,23 @@ public class OdometryThreadRunner {
         }
     }
 
-    public Queue<Double> makeTimestampQueue() {
-        final Queue<Double> queue = new ArrayDeque<>(100);
+    public DoubleCircularBuffer makeTimestampBuffer() {
+        final DoubleCircularBuffer buffer = new DoubleCircularBuffer(20);
         try {
             signalReadWriteLock.writeLock().lock();
-            timestampQueues.add(queue);
+            timestampBuffers.add(buffer);
         } finally {
             signalReadWriteLock.writeLock().unlock();
         }
 
-        return queue;
+        return buffer;
     }
 
-    public Queue<Double> registerSignal(
+    public DoubleCircularBuffer registerSignal(
             final ParentDevice device,
             final StatusSignal<Double> signal
     ) {
-        final Queue<Double> queue = new ArrayDeque<>(100);
+        final DoubleCircularBuffer buffer = new DoubleCircularBuffer(20);
         try {
             signalReadWriteLock.writeLock().lock();
             final String deviceNetwork = device.getNetwork();
@@ -221,12 +232,12 @@ public class OdometryThreadRunner {
             }
 
             allSignals.add(signal);
-            queues.add(queue);
+            buffers.add(buffer);
         } finally {
             signalReadWriteLock.writeLock().unlock();
         }
 
-        return queue;
+        return buffer;
     }
 
     public void registerControlRequest(
@@ -331,11 +342,11 @@ public class OdometryThreadRunner {
                 double totalLatencySeconds = 0;
                 int maxQueueSize = 0;
                 for (int i = 0; i < signalCount; i++) {
-                    final Queue<Double> queue = queues.get(i);
+                    final DoubleCircularBuffer buffer = buffers.get(i);
                     final StatusSignal<Double> signal = allSignals.get(i);
-                    queue.offer(signal.getValue());
+                    buffer.addFirst(signal.getValue());
 
-                    final int queueSize = queue.size();
+                    final int queueSize = buffer.size();
                     if (queueSize > maxQueueSize) {
                         maxQueueSize = queueSize;
                     }
@@ -345,8 +356,8 @@ public class OdometryThreadRunner {
 
                 final double realTimestampSeconds = Logger.getRealTimestamp() / 1e6;
                 final double signalTimestampSeconds = realTimestampSeconds - (totalLatencySeconds / signalCount);
-                for (final Queue<Double> timestampQueue : timestampQueues) {
-                    timestampQueue.offer(signalTimestampSeconds);
+                for (final DoubleCircularBuffer timestampBuffer : timestampBuffers) {
+                    timestampBuffer.addFirst(signalTimestampSeconds);
                 }
 
                 state.timestampSeconds = signalTimestampSeconds;

@@ -17,11 +17,10 @@ import com.ctre.phoenix6.signals.AbsoluteSensorRangeValue;
 import com.ctre.phoenix6.signals.FeedbackSensorSourceValue;
 import com.ctre.phoenix6.signals.InvertedValue;
 import com.ctre.phoenix6.signals.NeutralModeValue;
+import edu.wpi.first.util.DoubleCircularBuffer;
 import edu.wpi.first.wpilibj.DriverStation;
 import frc.robot.constants.Constants.Swerve.Modules;
 import frc.robot.utils.ctre.Phoenix6Utils;
-
-import java.util.Queue;
 
 public class SwerveModuleIOTalonFX implements SwerveModuleIO {
     private final TalonFX driveMotor;
@@ -51,10 +50,10 @@ public class SwerveModuleIOTalonFX implements SwerveModuleIO {
     private final StatusSignal<Double> _turnStatorCurrent;
     private final StatusSignal<Double> _turnDeviceTemp;
 
-    // Odometry StatusSignal update queues
-    private final Queue<Double> timestampQueue;
-    private final Queue<Double> drivePositionSignalQueue;
-    private final Queue<Double> turnPositionSignalQueue;
+    // Odometry StatusSignal update buffers
+    private final DoubleCircularBuffer timestampBuffer;
+    private final DoubleCircularBuffer drivePositionSignalBuffer;
+    private final DoubleCircularBuffer turnPositionSignalBuffer;
 
     public SwerveModuleIOTalonFX(
             final TalonFX driveMotor,
@@ -89,9 +88,9 @@ public class SwerveModuleIOTalonFX implements SwerveModuleIO {
         this._turnStatorCurrent = turnMotor.getStatorCurrent();
         this._turnDeviceTemp = turnMotor.getDeviceTemp();
 
-        this.timestampQueue = odometryThreadRunner.makeTimestampQueue();
-        this.drivePositionSignalQueue = odometryThreadRunner.registerSignal(driveMotor, _drivePosition);
-        this.turnPositionSignalQueue = odometryThreadRunner.registerSignal(turnMotor, _turnPosition);
+        this.timestampBuffer = odometryThreadRunner.makeTimestampBuffer();
+        this.drivePositionSignalBuffer = odometryThreadRunner.registerSignal(driveMotor, _drivePosition);
+        this.turnPositionSignalBuffer = odometryThreadRunner.registerSignal(turnMotor, _turnPosition);
     }
 
     @SuppressWarnings("DuplicatedCode")
@@ -187,14 +186,14 @@ public class SwerveModuleIOTalonFX implements SwerveModuleIO {
         inputs.turnStatorCurrentAmps = _turnStatorCurrent.getValue();
         inputs.turnTempCelsius = _turnDeviceTemp.getValue();
 
-        inputs.odometryTimestampsSec = timestampQueue.stream().mapToDouble(time -> time).toArray();
-        timestampQueue.clear();
+        inputs.odometryTimestampsSec = OdometryThreadRunner.writeBufferToArray(timestampBuffer);
+        timestampBuffer.clear();
 
-        inputs.odometryDrivePositionsRots = drivePositionSignalQueue.stream().mapToDouble(pos -> pos).toArray();
-        drivePositionSignalQueue.clear();
+        inputs.odometryDrivePositionsRots = OdometryThreadRunner.writeBufferToArray(drivePositionSignalBuffer);
+        drivePositionSignalBuffer.clear();
 
-        inputs.odometryTurnPositionRots = turnPositionSignalQueue.stream().mapToDouble(pos -> pos).toArray();
-        turnPositionSignalQueue.clear();
+        inputs.odometryTurnPositionRots = OdometryThreadRunner.writeBufferToArray(turnPositionSignalBuffer);
+        turnPositionSignalBuffer.clear();
     }
 
     /**

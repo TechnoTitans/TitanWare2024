@@ -10,12 +10,11 @@ import edu.wpi.first.math.filter.LinearFilter;
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.kinematics.SwerveDriveKinematics;
 import edu.wpi.first.math.kinematics.SwerveModuleState;
+import edu.wpi.first.util.DoubleCircularBuffer;
 import frc.robot.constants.HardwareConstants;
 import frc.robot.subsystems.drive.OdometryThreadRunner;
 import frc.robot.subsystems.drive.SwerveModule;
 import frc.robot.utils.control.DeltaTime;
-
-import java.util.Queue;
 
 public class GyroIOSim implements GyroIO {
     public static final double USE_SIMULATED_PITCH = 0;
@@ -40,9 +39,9 @@ public class GyroIOSim implements GyroIO {
     private final StatusSignal<Double> _rollVelocity;
     private final StatusSignal<Boolean> _faultHardware;
 
-    // StatusSignal queues for high-freq odometry
-    private final Queue<Double> timestampQueue;
-    private final Queue<Double> yawSignalQueue;
+    // StatusSignal buffers for high-freq odometry
+    private final DoubleCircularBuffer timestampBuffer;
+    private final DoubleCircularBuffer yawSignalBuffer;
 
     public GyroIOSim(
             final HardwareConstants.GyroConstants gyroConstants,
@@ -65,8 +64,8 @@ public class GyroIOSim implements GyroIO {
         this._rollVelocity = pigeon.getAngularVelocityYWorld();
         this._faultHardware = pigeon.getFault_Hardware();
 
-        this.timestampQueue = odometryThreadRunner.makeTimestampQueue();
-        this.yawSignalQueue = odometryThreadRunner.registerSignal(pigeon, _yaw);
+        this.timestampBuffer = odometryThreadRunner.makeTimestampBuffer();
+        this.yawSignalBuffer = odometryThreadRunner.registerSignal(pigeon, _yaw);
 
         pigeonSimState.setSupplyVoltage(12);
         pigeonSimState.setPitch(USE_SIMULATED_PITCH);
@@ -133,11 +132,11 @@ public class GyroIOSim implements GyroIO {
         inputs.rollVelocityDegPerSec = _rollVelocity.getValue();
         inputs.hasHardwareFault = _faultHardware.getValue();
 
-        inputs.odometryTimestampsSec = timestampQueue.stream().mapToDouble(time -> time).toArray();
-        timestampQueue.clear();
+        inputs.odometryTimestampsSec = OdometryThreadRunner.writeBufferToArray(timestampBuffer);
+        timestampBuffer.clear();
 
-        inputs.odometryYawPositionsDeg = yawSignalQueue.stream().mapToDouble(yaw -> yaw).toArray();
-        yawSignalQueue.clear();
+        inputs.odometryYawPositionsDeg = OdometryThreadRunner.writeBufferToArray(yawSignalBuffer);
+        yawSignalBuffer.clear();
     }
 
     public double getYaw() {
