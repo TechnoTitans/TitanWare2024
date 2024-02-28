@@ -3,7 +3,6 @@ package frc.robot.subsystems.intake;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import frc.robot.constants.Constants;
 import frc.robot.constants.HardwareConstants;
-import frc.robot.constants.SimConstants;
 import frc.robot.utils.logging.LogUtils;
 import org.littletonrobotics.junction.Logger;
 
@@ -18,8 +17,8 @@ public class Intake extends SubsystemBase {
             final HardwareConstants.IntakeConstants intakeConstants
     ) {
         this.intakeIO = switch (robotMode) {
-            case REAL -> new IntakeIOTalonFX(intakeConstants);
-            case SIM -> new IntakeIOTalonFXSim(intakeConstants);
+            case REAL -> new IntakeIOReal(intakeConstants);
+            case SIM -> new IntakeIOSim(intakeConstants);
             case REPLAY -> new IntakeIO() {};
         };
 

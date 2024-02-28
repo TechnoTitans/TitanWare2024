@@ -103,4 +103,18 @@ public class HardwareConstants {
             RobotMap.CanivoreCANBus,
             13
     );
+
+    public record IntakeConstants(
+            String CANBus,
+            int intakeMotorMaster,
+            int intakeReverseMotor,
+            int shooterFeederMotor
+    ) {}
+
+    public static final IntakeConstants INTAKE = new IntakeConstants(
+            RobotMap.RioCANBus,
+            19,
+            20,
+            21
+    );
 }
