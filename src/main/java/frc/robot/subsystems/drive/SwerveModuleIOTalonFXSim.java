@@ -26,15 +26,15 @@ import frc.robot.utils.control.DeltaTime;
 import frc.robot.utils.ctre.Phoenix6Utils;
 import frc.robot.utils.sim.SimUtils;
 import frc.robot.utils.sim.feedback.SimPhoenix6CANCoder;
-import frc.robot.utils.sim.motors.CTREPhoenix6TalonFXSim;
+import frc.robot.utils.sim.motors.TalonFXSim;
 
 public class SwerveModuleIOTalonFXSim implements SwerveModuleIO {
     private static final double SIM_UPDATE_PERIOD_SEC = 0.005;
 
     private final TalonFX driveMotor;
     private final TalonFX turnMotor;
-    private final CTREPhoenix6TalonFXSim driveSim;
-    private final CTREPhoenix6TalonFXSim turnSim;
+    private final TalonFXSim driveSim;
+    private final TalonFXSim turnSim;
     private final CANcoder turnEncoder;
     private final double magnetOffset;
 
@@ -81,7 +81,7 @@ public class SwerveModuleIOTalonFXSim implements SwerveModuleIO {
                 Modules.DRIVE_WHEEL_MOMENT_OF_INERTIA_KG_M_SQUARED
         );
 
-        this.driveSim = new CTREPhoenix6TalonFXSim(
+        this.driveSim = new TalonFXSim(
                 driveMotor,
                 Modules.DRIVER_GEAR_RATIO,
                 driveDCMotorSim::update,
@@ -100,7 +100,7 @@ public class SwerveModuleIOTalonFXSim implements SwerveModuleIO {
 
         this.turnEncoder = turnEncoder;
         this.magnetOffset = magnetOffset;
-        this.turnSim = new CTREPhoenix6TalonFXSim(
+        this.turnSim = new TalonFXSim(
                 turnMotor,
                 Modules.TURNER_GEAR_RATIO,
                 turnDCMotorSim::update,

@@ -11,7 +11,7 @@ import java.util.List;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 
-public class CTREPhoenix6TalonFXSim implements SimMotorController {
+public class TalonFXSim implements SimMotorController {
     private final List<TalonFXSimState> simStates;
     private final Consumer<Double> update;
     private final Consumer<Double> inputVoltage;
@@ -25,7 +25,7 @@ public class CTREPhoenix6TalonFXSim implements SimMotorController {
     private boolean hasRemoteSensor = false;
     private SimFeedbackSensor feedbackSensor;
 
-    private CTREPhoenix6TalonFXSim(
+    private TalonFXSim(
             final List<TalonFX> talonFXControllers,
             final List<TalonFXSimState> simStates,
             final double gearRatio,
@@ -49,7 +49,7 @@ public class CTREPhoenix6TalonFXSim implements SimMotorController {
         this.useSimStateTorqueCurrent = simStates.get(0);
     }
 
-    public CTREPhoenix6TalonFXSim(
+    public TalonFXSim(
             final List<TalonFX> talonFXControllers,
             final double gearRatio,
             final Consumer<Double> update,
@@ -68,7 +68,7 @@ public class CTREPhoenix6TalonFXSim implements SimMotorController {
         );
     }
 
-    public CTREPhoenix6TalonFXSim(
+    public TalonFXSim(
             final TalonFX talonFX,
             final double gearRatio,
             final Consumer<Double> update,
