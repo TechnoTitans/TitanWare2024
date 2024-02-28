@@ -18,7 +18,7 @@ import frc.robot.constants.HardwareConstants;
 import frc.robot.utils.closeables.ToClose;
 import frc.robot.utils.control.DeltaTime;
 import frc.robot.utils.sim.SimUtils;
-import frc.robot.utils.sim.motors.CTREPhoenix6TalonFXSim;
+import frc.robot.utils.sim.motors.TalonFXSim;
 
 public class ShooterIOSim implements ShooterIO {
     private static final double SIM_UPDATE_PERIOD_SEC = 0.005;
@@ -29,8 +29,8 @@ public class ShooterIOSim implements ShooterIO {
     private final TalonFX leftFlywheelMotor;
     private final TalonFX rightFlywheelMotor;
 
-    private final CTREPhoenix6TalonFXSim leftMotorSim;
-    private final CTREPhoenix6TalonFXSim rightMotorSim;
+    private final TalonFXSim leftMotorSim;
+    private final TalonFXSim rightMotorSim;
 
     private final VelocityVoltage velocityVoltage;
     private final VoltageOut voltageOut;
@@ -63,7 +63,7 @@ public class ShooterIOSim implements ShooterIO {
                 shooterConstants.leftFlywheelGearing()
         );
 
-        this.leftMotorSim = new CTREPhoenix6TalonFXSim(
+        this.leftMotorSim = new TalonFXSim(
                 leftFlywheelMotor,
                 shooterConstants.leftFlywheelGearing(),
                 leftFlywheelSim::update,
@@ -81,7 +81,7 @@ public class ShooterIOSim implements ShooterIO {
                 shooterConstants.rightFlywheelGearing()
         );
 
-        this.rightMotorSim = new CTREPhoenix6TalonFXSim(
+        this.rightMotorSim = new TalonFXSim(
                 rightFlywheelMotor,
                 shooterConstants.rightFlywheelGearing(),
                 rightFlywheelSim::update,

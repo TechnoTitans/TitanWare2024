@@ -22,7 +22,7 @@ import frc.robot.constants.HardwareConstants;
 import frc.robot.utils.closeables.ToClose;
 import frc.robot.utils.control.DeltaTime;
 import frc.robot.utils.sim.SimUtils;
-import frc.robot.utils.sim.motors.CTREPhoenix6TalonFXSim;
+import frc.robot.utils.sim.motors.TalonFXSim;
 
 import java.util.List;
 
@@ -36,7 +36,7 @@ public class ArmIOSim implements ArmIO {
     private final TalonFX rightPivotMotor;
 
     private final SingleJointedArmSim armPivotSim;
-    private final CTREPhoenix6TalonFXSim pivotMotorsSim;
+    private final TalonFXSim pivotMotorsSim;
 
     private final MotionMagicExpoVoltage motionMagicExpoVoltage;
     private final VoltageOut voltageOut;
@@ -76,7 +76,7 @@ public class ArmIOSim implements ArmIO {
                 0
         );
 
-        this.pivotMotorsSim = new CTREPhoenix6TalonFXSim(
+        this.pivotMotorsSim = new TalonFXSim(
                 List.of(leftPivotMotor, rightPivotMotor),
                 armConstants.pivotGearing(),
                 armPivotSim::update,
