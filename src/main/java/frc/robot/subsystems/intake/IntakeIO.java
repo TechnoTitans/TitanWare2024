@@ -7,16 +7,19 @@ public interface IntakeIO {
     class IntakeIOInputs {
         public double intakeFrontMotorPositionRots = 0.0;
         public double intakeFrontMotorVelocityRotsPerSec = 0.0;
+        public double intakeFrontMotorVoltage = 0.0;
         public double intakeFrontMotorTorqueCurrentAmps = 0.0;
         public double intakeFrontMotorTempCelsius = 0.0;
 
         public double intakeBackMotorPositionRots = 0.0;
         public double intakeBackVelocityRotsPerSec = 0.0;
+        public double intakeBackMotorVoltage = 0.0;
         public double intakeBackTorqueCurrentAmps = 0.0;
         public double intakeBackTempCelsius = 0.0;
 
         public double shooterFeederMotorPositionRots = 0.0;
         public double shooterFeederMotorVelocityRotsPerSec = 0.0;
+        public double shooterFeederMotorVoltage = 0.0;
         public double shooterFeederMotorTorqueCurrentAmps = 0.0;
         public double shooterFeederMotorTempCelsius = 0.0;
     }

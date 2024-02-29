@@ -23,16 +23,19 @@ public class IntakeIOReal implements IntakeIO {
 
     private final StatusSignal<Double> _intakeFrontPosition;
     private final StatusSignal<Double> _intakeFrontVelocity;
+    private final StatusSignal<Double> _intakeFrontVoltage;
     private final StatusSignal<Double> _intakeFrontTorqueCurrent;
     private final StatusSignal<Double> _intakeFrontDeviceTemp;
 
     private final StatusSignal<Double> _intakeBackPosition;
     private final StatusSignal<Double> _intakeBackVelocity;
+    private final StatusSignal<Double> _intakeBackVoltage;
     private final StatusSignal<Double> _intakeBackTorqueCurrent;
     private final StatusSignal<Double> _intakeBackDeviceTemp;
 
     private final StatusSignal<Double> _shooterFeederPosition;
     private final StatusSignal<Double> _shooterFeederVelocity;
+    private final StatusSignal<Double> _shooterFeederVoltage;
     private final StatusSignal<Double> _shooterFeederTorqueCurrent;
     private final StatusSignal<Double> _shooterFeederDeviceTemp;
 
@@ -48,16 +51,19 @@ public class IntakeIOReal implements IntakeIO {
 
         this._intakeFrontPosition = intakeFrontRollers.getPosition();
         this._intakeFrontVelocity = intakeFrontRollers.getVelocity();
+        this._intakeFrontVoltage = intakeFrontRollers.getMotorVoltage();
         this._intakeFrontTorqueCurrent = intakeFrontRollers.getTorqueCurrent();
         this._intakeFrontDeviceTemp = intakeFrontRollers.getDeviceTemp();
 
         this._intakeBackPosition = intakeBackRollers.getPosition();
         this._intakeBackVelocity = intakeBackRollers.getVelocity();
+        this._intakeBackVoltage = intakeBackRollers.getMotorVoltage();
         this._intakeBackTorqueCurrent = intakeBackRollers.getTorqueCurrent();
         this._intakeBackDeviceTemp = intakeBackRollers.getDeviceTemp();
 
         this._shooterFeederPosition = shooterFeederRoller.getPosition();
         this._shooterFeederVelocity = shooterFeederRoller.getVelocity();
+        this._shooterFeederVoltage = shooterFeederRoller.getMotorVoltage();
         this._shooterFeederTorqueCurrent = shooterFeederRoller.getTorqueCurrent();
         this._shooterFeederDeviceTemp = shooterFeederRoller.getDeviceTemp();
     }
@@ -67,30 +73,36 @@ public class IntakeIOReal implements IntakeIO {
         BaseStatusSignal.refreshAll(
                 _intakeFrontPosition,
                 _intakeFrontVelocity,
+                _intakeFrontVoltage,
                 _intakeFrontTorqueCurrent,
                 _intakeFrontDeviceTemp,
                 _intakeBackPosition,
                 _intakeBackVelocity,
+                _intakeBackVoltage,
                 _intakeBackTorqueCurrent,
                 _intakeBackDeviceTemp,
                 _shooterFeederPosition,
                 _shooterFeederVelocity,
+                _shooterFeederVoltage,
                 _shooterFeederTorqueCurrent,
                 _shooterFeederDeviceTemp
         );
 
         inputs.intakeFrontMotorPositionRots = _intakeFrontPosition.getValue();
         inputs.intakeFrontMotorVelocityRotsPerSec = _intakeFrontVelocity.getValue();
+        inputs.intakeFrontMotorVoltage = _intakeFrontVoltage.getValue();
         inputs.intakeFrontMotorTorqueCurrentAmps = _intakeFrontTorqueCurrent.getValue();
         inputs.intakeFrontMotorTempCelsius = _intakeFrontDeviceTemp.getValue();
 
         inputs.intakeBackMotorPositionRots = _intakeBackPosition.getValue();
         inputs.intakeBackVelocityRotsPerSec = _intakeBackVelocity.getValue();
+        inputs.intakeBackMotorVoltage = _intakeBackVoltage.getValue();
         inputs.intakeBackTorqueCurrentAmps = _intakeBackTorqueCurrent.getValue();
         inputs.intakeBackTempCelsius = _intakeBackDeviceTemp.getValue();
 
         inputs.shooterFeederMotorPositionRots = _shooterFeederPosition.getValue();
         inputs.shooterFeederMotorVelocityRotsPerSec = _shooterFeederVelocity.getValue();
+        inputs.shooterFeederMotorVoltage = _shooterFeederVoltage.getValue();
         inputs.shooterFeederMotorTorqueCurrentAmps = _shooterFeederTorqueCurrent.getValue();
         inputs.shooterFeederMotorTempCelsius = _shooterFeederDeviceTemp.getValue();
     }
@@ -161,12 +173,15 @@ public class IntakeIOReal implements IntakeIO {
                 100,
                 _intakeFrontPosition,
                 _intakeFrontVelocity,
+                _intakeFrontVoltage,
                 _intakeFrontTorqueCurrent,
                 _intakeBackPosition,
                 _intakeBackVelocity,
+                _intakeBackVoltage,
                 _intakeBackTorqueCurrent,
                 _shooterFeederPosition,
                 _shooterFeederVelocity,
+                _shooterFeederVoltage,
                 _shooterFeederTorqueCurrent
 
         );

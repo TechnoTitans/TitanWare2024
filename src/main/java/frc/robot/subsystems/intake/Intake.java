@@ -1,7 +1,6 @@
 package frc.robot.subsystems.intake;
 
 import com.ctre.phoenix6.SignalLogger;
-import edu.wpi.first.math.MathUtil;
 import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.math.kinematics.ChassisSpeeds;
 import edu.wpi.first.units.Current;
@@ -9,7 +8,6 @@ import edu.wpi.first.units.Measure;
 import edu.wpi.first.units.Time;
 import edu.wpi.first.units.Velocity;
 import edu.wpi.first.wpilibj2.command.Command;
-import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import edu.wpi.first.wpilibj2.command.sysid.SysIdRoutine;
 import frc.robot.constants.Constants;
@@ -25,7 +23,8 @@ import static frc.robot.constants.Constants.Intake.*;
 public class Intake extends SubsystemBase {
     protected static final String logKey = "Intake";
 
-    private static final double MaxRollerSurfaceSpeedMetersPerSec = Constants.Swerve.ROBOT_MAX_SPEED_MPS;
+    private static final double MaxRollerSurfaceSpeedMetersPerSec =
+            RollerCircumferenceMeters * Constants.Swerve.ROBOT_MAX_SPEED_MPS;
 
     private final IntakeIO intakeIO;
     private final IntakeIOInputsAutoLogged inputs;
@@ -93,11 +92,14 @@ public class Intake extends SubsystemBase {
                     final Translation2d chassisSpeedTranslation = new Translation2d(
                             chassisSpeeds.vxMetersPerSecond, chassisSpeeds.vyMetersPerSecond);
 
-                    final double rollerSpeedRotsPerSec = MathUtil.clamp(
-                            2 * chassisSpeedTranslation.getNorm(),
-                            0.25 * MaxRollerSurfaceSpeedMetersPerSec,
-                            MaxRollerSurfaceSpeedMetersPerSec
-                    ) / RollerCircumferenceMeters;
+//                    final double rollerSpeedRotsPerSec = MathUtil.clamp(
+//                            2 * chassisSpeedTranslation.getNorm(),
+//                            0.25 * MaxRollerSurfaceSpeedMetersPerSec,
+//                            MaxRollerSurfaceSpeedMetersPerSec
+//                    ) / RollerCircumferenceMeters;
+
+                    final double rollerSpeedRotsPerSec =
+                            0.5 * MaxRollerSurfaceSpeedMetersPerSec / RollerCircumferenceMeters;
 
                     setpoint.frontRollersVelocityRotsPerSecond = rollerSpeedRotsPerSec;
                     setpoint.backRollersVelocityRotsPerSecond = rollerSpeedRotsPerSec;

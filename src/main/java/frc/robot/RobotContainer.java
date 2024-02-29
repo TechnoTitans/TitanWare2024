@@ -52,6 +52,7 @@ public class RobotContainer {
         this.coDriverController.x().whileTrue(intake.torqueCurrentSysIdDynamicTestCommand(SysIdRoutine.Direction.kReverse));
 
         this.coDriverController.leftBumper().onTrue(Commands.run(SignalLogger::stop));
+
     }
 
     public Command getAutonomousCommand() {
