@@ -99,10 +99,10 @@ public class IntakeIOReal implements IntakeIO {
     public void config() {
         final TalonFXConfiguration intakeFrontConfig = new TalonFXConfiguration();
         intakeFrontConfig.Slot0 = new Slot0Configs()
-                .withKP(3)
-                .withKA(1)
-                .withKV(1)
-                .withKS(1);
+                .withKP(0)
+                .withKA(0)
+                .withKV(0)
+                .withKS(0);
         intakeFrontConfig.TorqueCurrent.PeakForwardTorqueCurrent = 80;
         intakeFrontConfig.TorqueCurrent.PeakReverseTorqueCurrent = -80;
         intakeFrontConfig.CurrentLimits.StatorCurrentLimit = 60;
@@ -119,10 +119,10 @@ public class IntakeIOReal implements IntakeIO {
 
         final TalonFXConfiguration intakeBackConfig = new TalonFXConfiguration();
         intakeBackConfig.Slot0 = new Slot0Configs()
-                .withKP(3)
-                .withKA(1)
-                .withKV(1)
-                .withKS(1);
+                .withKP(0)
+                .withKA(0)
+                .withKV(0)
+                .withKS(0);
         intakeBackConfig.TorqueCurrent.PeakForwardTorqueCurrent = 80;
         intakeBackConfig.TorqueCurrent.PeakReverseTorqueCurrent = -80;
         intakeBackConfig.CurrentLimits.StatorCurrentLimit = 60;
@@ -139,10 +139,10 @@ public class IntakeIOReal implements IntakeIO {
 
         final TalonFXConfiguration shooterFollowerConfig = new TalonFXConfiguration();
         shooterFollowerConfig.Slot0 = new Slot0Configs()
-                .withKP(3)
-                .withKA(1)
-                .withKV(1)
-                .withKS(1);
+                .withKP(0)
+                .withKA(0)
+                .withKV(0)
+                .withKS(0);
         shooterFollowerConfig.TorqueCurrent.PeakForwardTorqueCurrent = 80;
         shooterFollowerConfig.TorqueCurrent.PeakReverseTorqueCurrent = -80;
         shooterFollowerConfig.CurrentLimits.StatorCurrentLimit = 60;

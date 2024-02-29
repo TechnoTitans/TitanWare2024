@@ -85,7 +85,7 @@ public class Intake extends SubsystemBase {
 
     //TODO: this will eventually take an enum probably
     public Command setStateCommand(final State intakeState) {
-        return runOnce(() -> {
+        return run(() -> {
             final Setpoint setpoint = new Setpoint();
             switch (intakeState) {
                 case INTAKE -> {
@@ -125,10 +125,6 @@ public class Intake extends SubsystemBase {
                     setpoint.shooterFeederRollerVelocityRotsPerSecond
             );
         });
-    }
-
-    public Command toVelocity(final double s1, final double s2, final double s3) {
-        return Commands.runOnce(() -> intakeIO.toVelocity(s1, s2, s3));
     }
 
     private SysIdRoutine makeTorqueCurrentSysIdRoutine(

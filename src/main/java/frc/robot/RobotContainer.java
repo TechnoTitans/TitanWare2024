@@ -56,6 +56,6 @@ public class RobotContainer {
 
     public Command getAutonomousCommand() {
 //        return Commands.waitUntil(() -> !RobotState.isAutonomous());
-        return intake.toVelocity(2, 2, 2);
+        return intake.setStateCommand(Intake.State.INTAKE);
     }
 }
