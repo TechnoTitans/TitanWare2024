@@ -6,6 +6,7 @@ import com.ctre.phoenix6.configs.Slot0Configs;
 import com.ctre.phoenix6.configs.TalonFXConfiguration;
 import com.ctre.phoenix6.controls.TorqueCurrentFOC;
 import com.ctre.phoenix6.controls.VelocityTorqueCurrentFOC;
+import com.ctre.phoenix6.controls.VoltageOut;
 import com.ctre.phoenix6.hardware.ParentDevice;
 import com.ctre.phoenix6.hardware.TalonFX;
 import com.ctre.phoenix6.signals.*;
@@ -199,6 +200,13 @@ public class IntakeIOReal implements IntakeIO {
     }
 
     @Override
+    public boolean wheelsStopped() {
+        return _intakeFrontVelocity.getValue() == 0
+                || _intakeBackVelocity.getValue() == 0
+                || _shooterFeederVelocity.getValue() == 0;
+    }
+
+    @Override
     public void toVelocity(
             final double frontRollersVelocity,
             final double backRollersVelocity,
@@ -210,13 +218,13 @@ public class IntakeIOReal implements IntakeIO {
     }
 
     @Override
-    public void setCharacterizationTorqueCurrent(
-            final double frontRollersTorqueCurrentAmps,
-            final double backRollersTorqueCurrentAmps,
-            final double shooterFeederRollerTorqueCurrentAmps
+    public void toTorqueCurrent(
+            final double frontRollersTorqueCurrentAmp,
+            final double backRollersTorqueCurrentAmp,
+            final double shooterFeederRollerTorqueCurrentAmp
     ) {
-        intakeFrontRollers.setControl(torqueCurrentFOC.withOutput(frontRollersTorqueCurrentAmps));
-        intakeBackRollers.setControl(torqueCurrentFOC.withOutput(backRollersTorqueCurrentAmps));
-        shooterFeederRoller.setControl(torqueCurrentFOC.withOutput(shooterFeederRollerTorqueCurrentAmps));
+        intakeFrontRollers.setControl(torqueCurrentFOC.withOutput(frontRollersTorqueCurrentAmp));
+        intakeBackRollers.setControl(torqueCurrentFOC.withOutput(backRollersTorqueCurrentAmp));
+        shooterFeederRoller.setControl(torqueCurrentFOC.withOutput(shooterFeederRollerTorqueCurrentAmp));
     }
 }

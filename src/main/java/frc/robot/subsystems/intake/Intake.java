@@ -1,13 +1,12 @@
 package frc.robot.subsystems.intake;
 
 import com.ctre.phoenix6.SignalLogger;
+import edu.wpi.first.math.MathUtil;
 import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.math.kinematics.ChassisSpeeds;
-import edu.wpi.first.units.Current;
-import edu.wpi.first.units.Measure;
-import edu.wpi.first.units.Time;
-import edu.wpi.first.units.Velocity;
+import edu.wpi.first.units.*;
 import edu.wpi.first.wpilibj2.command.Command;
+import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import edu.wpi.first.wpilibj2.command.sysid.SysIdRoutine;
 import frc.robot.constants.Constants;
@@ -48,7 +47,7 @@ public class Intake extends SubsystemBase {
             final Constants.RobotMode robotMode,
             final HardwareConstants.IntakeConstants intakeConstants,
             final Supplier<ChassisSpeeds> chassisSpeedsSupplier
-            ) {
+    ) {
         this.intakeIO = switch (robotMode) {
             case REAL -> new IntakeIOReal(intakeConstants);
             case SIM -> new IntakeIOSim(intakeConstants);
@@ -92,14 +91,11 @@ public class Intake extends SubsystemBase {
                     final Translation2d chassisSpeedTranslation = new Translation2d(
                             chassisSpeeds.vxMetersPerSecond, chassisSpeeds.vyMetersPerSecond);
 
-//                    final double rollerSpeedRotsPerSec = MathUtil.clamp(
-//                            2 * chassisSpeedTranslation.getNorm(),
-//                            0.25 * MaxRollerSurfaceSpeedMetersPerSec,
-//                            MaxRollerSurfaceSpeedMetersPerSec
-//                    ) / RollerCircumferenceMeters;
-
-                    final double rollerSpeedRotsPerSec =
-                            0.5 * MaxRollerSurfaceSpeedMetersPerSec / RollerCircumferenceMeters;
+                    final double rollerSpeedRotsPerSec = MathUtil.clamp(
+                            2 * chassisSpeedTranslation.getNorm(),
+                            0.25 * MaxRollerSurfaceSpeedMetersPerSec,
+                            MaxRollerSurfaceSpeedMetersPerSec
+                    ) / RollerCircumferenceMeters;
 
                     setpoint.frontRollersVelocityRotsPerSecond = rollerSpeedRotsPerSec;
                     setpoint.backRollersVelocityRotsPerSecond = rollerSpeedRotsPerSec;
@@ -128,7 +124,6 @@ public class Intake extends SubsystemBase {
             );
         });
     }
-
     private SysIdRoutine makeTorqueCurrentSysIdRoutine(
             final Measure<Velocity<Current>> currentRampRate,
             final Measure<Current> stepCurrent,
@@ -143,7 +138,7 @@ public class Intake extends SubsystemBase {
                         state -> SignalLogger.writeString("state", state.toString())
                 ),
                 new SysIdRoutine.Mechanism(
-                        voltageMeasure -> intakeIO.setCharacterizationTorqueCurrent(
+                        voltageMeasure -> intakeIO.toTorqueCurrent(
                                 // this is really in amps, not volts
                                 voltageMeasure.in(Volts),
                                 voltageMeasure.in(Volts),
@@ -155,13 +150,17 @@ public class Intake extends SubsystemBase {
         );
     }
 
-    @SuppressWarnings("unused")
-    public Command torqueCurrentSysIdQuasistaticTestCommand(final SysIdRoutine.Direction direction) {
-        return torqueCurrentSysIdRoutine.quasistatic(direction);
-    }
-
-    @SuppressWarnings("unused")
-    public Command torqueCurrentSysIdDynamicTestCommand(final SysIdRoutine.Direction direction) {
-        return torqueCurrentSysIdRoutine.dynamic(direction);
+    public Command runSysIDRoutineTorqueCurrent() {
+        return Commands.sequence(
+                torqueCurrentSysIdRoutine.quasistatic(SysIdRoutine.Direction.kForward),
+                Commands.waitSeconds(4),
+                torqueCurrentSysIdRoutine.quasistatic(SysIdRoutine.Direction.kReverse),
+                Commands.waitSeconds(4),
+                torqueCurrentSysIdRoutine.dynamic(SysIdRoutine.Direction.kForward),
+                Commands.waitSeconds(4),
+                torqueCurrentSysIdRoutine.dynamic(SysIdRoutine.Direction.kReverse),
+                Commands.waitSeconds(4),
+                Commands.runOnce(SignalLogger::stop)
+        );
     }
 }

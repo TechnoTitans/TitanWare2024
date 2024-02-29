@@ -45,18 +45,11 @@ public class RobotContainer {
 
         this.driverController = new CommandXboxController(RobotMap.MainController);
         this.coDriverController = new CommandXboxController(RobotMap.CoController);
-
-        this.coDriverController.y().whileTrue(intake.torqueCurrentSysIdQuasistaticTestCommand(SysIdRoutine.Direction.kForward));
-        this.coDriverController.a().whileTrue(intake.torqueCurrentSysIdQuasistaticTestCommand(SysIdRoutine.Direction.kReverse));
-        this.coDriverController.b().whileTrue(intake.torqueCurrentSysIdDynamicTestCommand(SysIdRoutine.Direction.kForward));
-        this.coDriverController.x().whileTrue(intake.torqueCurrentSysIdDynamicTestCommand(SysIdRoutine.Direction.kReverse));
-
-        this.coDriverController.leftBumper().onTrue(Commands.run(SignalLogger::stop));
-
     }
 
     public Command getAutonomousCommand() {
 //        return Commands.waitUntil(() -> !RobotState.isAutonomous());
-        return intake.setStateCommand(Intake.State.INTAKE);
+//        return intake.setStateCommand(Intake.State.INTAKE);
+        return intake.runSysIDRoutineTorqueCurrent();
     }
 }

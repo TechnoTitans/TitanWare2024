@@ -43,15 +43,25 @@ public interface IntakeIO {
      */
     default void initialize() {}
 
+    default boolean wheelsStopped() {
+        return false;
+    }
+
     default void toVelocity(
             final double frontRollersVelocity,
             final double backRollersVelocity,
             final double shooterFeederRollerVelocity
     ) {}
 
-    default void setCharacterizationTorqueCurrent(
+    default void toTorqueCurrent(
             final double frontRollersTorqueCurrentAmps,
             final double backRollersTorqueCurrentAmps,
             final double shooterFeederRollerTorqueCurrentAmps
+    ) {}
+
+    default void toVoltage(
+            final double frontRollersVolts,
+            final double backRollersVolts,
+            final double shooterFeederRollerVolts
     ) {}
 }
