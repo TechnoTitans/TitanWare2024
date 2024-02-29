@@ -19,11 +19,11 @@ public class Gyro {
     private final boolean isReal;
 
     public Gyro(
-            final Constants.RobotMode mode,
             final HardwareConstants.GyroConstants gyroConstants,
             final OdometryThreadRunner odometryThreadRunner,
             final SwerveDriveKinematics kinematics,
-            final SwerveModule[] swerveModules
+            final SwerveModule[] swerveModules,
+            final Constants.RobotMode mode
     ) {
         this.gyroConstants = gyroConstants;
         this.gyroIO = switch (mode) {

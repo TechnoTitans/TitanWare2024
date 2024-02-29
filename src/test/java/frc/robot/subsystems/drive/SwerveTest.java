@@ -9,6 +9,7 @@ import edu.wpi.first.math.kinematics.ChassisSpeeds;
 import edu.wpi.first.math.kinematics.SwerveDriveKinematics;
 import edu.wpi.first.math.kinematics.SwerveModulePosition;
 import edu.wpi.first.math.kinematics.SwerveModuleState;
+import frc.robot.constants.Constants;
 import frc.robot.constants.HardwareConstants;
 import frc.robot.subsystems.gyro.Gyro;
 import org.junit.jupiter.api.BeforeAll;
@@ -39,14 +40,36 @@ public class SwerveTest {
 //    @Mock
 //    private PhotonVision photonVision;
 
+    private final OdometryThreadRunner odometryThreadRunner =
+            new OdometryThreadRunner(new ReentrantReadWriteLock());
+
     @Spy
-    private final SwerveModule frontLeft = new SwerveModule(new SwerveModuleIO() {}, "FrontLeft");
+    private final SwerveModule frontLeft = new SwerveModule(
+            HardwareConstants.FRONT_LEFT_MODULE,
+            odometryThreadRunner,
+            Constants.RobotMode.REPLAY
+    );
+
     @Spy
-    private final SwerveModule frontRight = new SwerveModule(new SwerveModuleIO() {}, "FrontRight");
+    private final SwerveModule frontRight = new SwerveModule(
+            HardwareConstants.FRONT_RIGHT_MODULE,
+            odometryThreadRunner,
+            Constants.RobotMode.REPLAY
+    );
+
     @Spy
-    private final SwerveModule backLeft = new SwerveModule(new SwerveModuleIO() {}, "BackLeft");
+    private final SwerveModule backLeft = new SwerveModule(
+            HardwareConstants.BACK_LEFT_MODULE,
+            odometryThreadRunner,
+            Constants.RobotMode.REPLAY
+    );
+
     @Spy
-    private final SwerveModule backRight = new SwerveModule(new SwerveModuleIO() {}, "BackRight");
+    private final SwerveModule backRight = new SwerveModule(
+            HardwareConstants.BACK_RIGHT_MODULE,
+            odometryThreadRunner,
+            Constants.RobotMode.REPLAY
+    );
 
     private final SwerveDriveKinematics kinematics = new SwerveDriveKinematics(
             HardwareConstants.FRONT_LEFT_MODULE.translationOffset(),
@@ -66,9 +89,6 @@ public class SwerveTest {
             },
             new Pose2d()
     );
-
-    private final OdometryThreadRunner odometryThreadRunner =
-            new OdometryThreadRunner(new ReentrantReadWriteLock());
 
     private Swerve swerve;
 
