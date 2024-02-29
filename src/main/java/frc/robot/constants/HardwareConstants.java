@@ -109,9 +109,9 @@ public class HardwareConstants {
             int intakeFrontMotor,
             int intakeBackMotor,
             int shooterFeederMotor,
-            int intakeFrontRollersGearRatio,
-            int intakeBackRollersGearRatio,
-            int shooterFeederRollerGearRatio
+            int intakeFrontRollersGearing,
+            int intakeBackRollersGearing,
+            int shooterFeederRollerGearing
     ) {}
 
     public static final IntakeConstants INTAKE = new IntakeConstants(

@@ -114,7 +114,7 @@ public class IntakeIOReal implements IntakeIO {
         intakeFrontConfig.MotorOutput.NeutralMode = NeutralModeValue.Coast;
         intakeFrontConfig.MotorOutput.Inverted = InvertedValue.CounterClockwise_Positive;
         intakeFrontConfig.Feedback.FeedbackSensorSource = FeedbackSensorSourceValue.RotorSensor;
-        intakeFrontConfig.Feedback.SensorToMechanismRatio = intakeConstants.intakeFrontRollersGearRatio();
+        intakeFrontConfig.Feedback.SensorToMechanismRatio = intakeConstants.intakeFrontRollersGearing();
         intakeFrontRollers.getConfigurator().apply(intakeFrontConfig);
 
         final TalonFXConfiguration intakeBackConfig = new TalonFXConfiguration();
@@ -123,18 +123,18 @@ public class IntakeIOReal implements IntakeIO {
                 .withKA(1)
                 .withKV(1)
                 .withKS(1);
-        intakeFrontConfig.TorqueCurrent.PeakForwardTorqueCurrent = 80;
-        intakeFrontConfig.TorqueCurrent.PeakReverseTorqueCurrent = -80;
-        intakeFrontConfig.CurrentLimits.StatorCurrentLimit = 60;
-        intakeFrontConfig.CurrentLimits.StatorCurrentLimitEnable = true;
-        intakeFrontConfig.CurrentLimits.SupplyCurrentLimit = 50;
-        intakeFrontConfig.CurrentLimits.SupplyCurrentThreshold = 2;
-        intakeFrontConfig.CurrentLimits.SupplyTimeThreshold = 0.5;
-        intakeFrontConfig.CurrentLimits.SupplyCurrentLimitEnable = true;
+        intakeBackConfig.TorqueCurrent.PeakForwardTorqueCurrent = 80;
+        intakeBackConfig.TorqueCurrent.PeakReverseTorqueCurrent = -80;
+        intakeBackConfig.CurrentLimits.StatorCurrentLimit = 60;
+        intakeBackConfig.CurrentLimits.StatorCurrentLimitEnable = true;
+        intakeBackConfig.CurrentLimits.SupplyCurrentLimit = 50;
+        intakeBackConfig.CurrentLimits.SupplyCurrentThreshold = 2;
+        intakeBackConfig.CurrentLimits.SupplyTimeThreshold = 0.5;
+        intakeBackConfig.CurrentLimits.SupplyCurrentLimitEnable = true;
         intakeBackConfig.MotorOutput.NeutralMode = NeutralModeValue.Coast;
         intakeBackConfig.MotorOutput.Inverted = InvertedValue.Clockwise_Positive;
         intakeBackConfig.Feedback.FeedbackSensorSource = FeedbackSensorSourceValue.RotorSensor;
-        intakeBackConfig.Feedback.SensorToMechanismRatio = intakeConstants.intakeBackRollersGearRatio();
+        intakeBackConfig.Feedback.SensorToMechanismRatio = intakeConstants.intakeBackRollersGearing();
         intakeBackRollers.getConfigurator().apply(intakeBackConfig);
 
         final TalonFXConfiguration shooterFollowerConfig = new TalonFXConfiguration();
@@ -143,18 +143,18 @@ public class IntakeIOReal implements IntakeIO {
                 .withKA(1)
                 .withKV(1)
                 .withKS(1);
-        intakeFrontConfig.TorqueCurrent.PeakForwardTorqueCurrent = 80;
-        intakeFrontConfig.TorqueCurrent.PeakReverseTorqueCurrent = -80;
-        intakeFrontConfig.CurrentLimits.StatorCurrentLimit = 60;
-        intakeFrontConfig.CurrentLimits.StatorCurrentLimitEnable = true;
-        intakeFrontConfig.CurrentLimits.SupplyCurrentLimit = 50;
-        intakeFrontConfig.CurrentLimits.SupplyCurrentThreshold = 2;
-        intakeFrontConfig.CurrentLimits.SupplyTimeThreshold = 0.5;
-        intakeFrontConfig.CurrentLimits.SupplyCurrentLimitEnable = true;
+        shooterFollowerConfig.TorqueCurrent.PeakForwardTorqueCurrent = 80;
+        shooterFollowerConfig.TorqueCurrent.PeakReverseTorqueCurrent = -80;
+        shooterFollowerConfig.CurrentLimits.StatorCurrentLimit = 60;
+        shooterFollowerConfig.CurrentLimits.StatorCurrentLimitEnable = true;
+        shooterFollowerConfig.CurrentLimits.SupplyCurrentLimit = 50;
+        shooterFollowerConfig.CurrentLimits.SupplyCurrentThreshold = 2;
+        shooterFollowerConfig.CurrentLimits.SupplyTimeThreshold = 0.5;
+        shooterFollowerConfig.CurrentLimits.SupplyCurrentLimitEnable = true;
         shooterFollowerConfig.MotorOutput.NeutralMode = NeutralModeValue.Coast;
         shooterFollowerConfig.MotorOutput.Inverted = InvertedValue.CounterClockwise_Positive;
         shooterFollowerConfig.Feedback.FeedbackSensorSource = FeedbackSensorSourceValue.RotorSensor;
-        shooterFollowerConfig.Feedback.SensorToMechanismRatio = intakeConstants.shooterFeederRollerGearRatio();
+        shooterFollowerConfig.Feedback.SensorToMechanismRatio = intakeConstants.shooterFeederRollerGearing();
         shooterFeederRoller.getConfigurator().apply(shooterFollowerConfig);
 
         BaseStatusSignal.setUpdateFrequencyForAll(

@@ -30,12 +30,6 @@ public interface IntakeIO {
     default void updateInputs(final IntakeIOInputs inputs) {}
 
     /**
-     * Periodic call to update the elevator,
-     * this could include but isn't limited to updating states and motor setpoints
-     */
-    default void periodic() {}
-
-    /**
      * Config call, should only be called once
      */
     default void config() {}

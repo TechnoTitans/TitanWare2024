@@ -15,8 +15,7 @@ public interface Constants {
     interface Swerve {
         double WHEEL_BASE_M = 0.7366;
         double TRACK_WIDTH_M = 0.7366;
-//        double ROBOT_MAX_SPEED_MPS = Units.feetToMeters(16.5);
-        double ROBOT_MAX_SPEED_MPS = Units.feetToMeters(13.5);
+        double ROBOT_MAX_SPEED_MPS = Units.feetToMeters(16.5);
         double ROBOT_MAX_ANGULAR_SPEED_RAD_PER_SEC = 2 * Math.PI;
         double TELEOP_MAX_SPEED_MPS = ROBOT_MAX_SPEED_MPS;
         double TELEOP_MAX_ANGULAR_SPEED_RAD_PER_SEC = ROBOT_MAX_ANGULAR_SPEED_RAD_PER_SEC;
@@ -44,5 +43,10 @@ public interface Constants {
             /** Simulated steer voltage required to overcome friction. */
             double STEER_KS_VOLTS = 0.25;
         }
+    }
+
+    interface Intake {
+        double RollerRadiusMeters = Units.inchesToMeters(1);
+        double RollerCircumferenceMeters = Math.PI * RollerRadiusMeters * 2;
     }
 }
