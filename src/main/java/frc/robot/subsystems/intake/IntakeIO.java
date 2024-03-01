@@ -5,6 +5,7 @@ import org.littletonrobotics.junction.AutoLog;
 public interface IntakeIO {
     @AutoLog
     class IntakeIOInputs {
+        // TODO @max: fix the names here, "Motor" is often redundant or completely incorrect
         public double intakeFrontMotorPositionRots = 0.0;
         public double intakeFrontMotorVelocityRotsPerSec = 0.0;
         public double intakeFrontMotorVoltage = 0.0;
@@ -42,10 +43,6 @@ public interface IntakeIO {
      * and cannot happen pre-config (i.e. in the constructor)
      */
     default void initialize() {}
-
-    default boolean wheelsStopped() {
-        return false;
-    }
 
     default void toVelocity(
             final double frontRollersVelocity,

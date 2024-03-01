@@ -6,10 +6,11 @@ import com.ctre.phoenix6.configs.Slot0Configs;
 import com.ctre.phoenix6.configs.TalonFXConfiguration;
 import com.ctre.phoenix6.controls.TorqueCurrentFOC;
 import com.ctre.phoenix6.controls.VelocityTorqueCurrentFOC;
-import com.ctre.phoenix6.controls.VoltageOut;
 import com.ctre.phoenix6.hardware.ParentDevice;
 import com.ctre.phoenix6.hardware.TalonFX;
-import com.ctre.phoenix6.signals.*;
+import com.ctre.phoenix6.signals.FeedbackSensorSourceValue;
+import com.ctre.phoenix6.signals.InvertedValue;
+import com.ctre.phoenix6.signals.NeutralModeValue;
 import frc.robot.constants.HardwareConstants;
 
 public class IntakeIOReal implements IntakeIO {
@@ -69,6 +70,7 @@ public class IntakeIOReal implements IntakeIO {
         this._shooterFeederDeviceTemp = shooterFeederRoller.getDeviceTemp();
     }
 
+    @SuppressWarnings("DuplicatedCode")
     @Override
     public void updateInputs(final IntakeIOInputs inputs) {
         BaseStatusSignal.refreshAll(
@@ -108,6 +110,7 @@ public class IntakeIOReal implements IntakeIO {
         inputs.shooterFeederMotorTempCelsius = _shooterFeederDeviceTemp.getValue();
     }
 
+    @SuppressWarnings("DuplicatedCode")
     @Override
     public void config() {
         final TalonFXConfiguration intakeFrontConfig = new TalonFXConfiguration();
@@ -197,13 +200,6 @@ public class IntakeIOReal implements IntakeIO {
                 intakeBackRollers,
                 shooterFeederRoller
         );
-    }
-
-    @Override
-    public boolean wheelsStopped() {
-        return _intakeFrontVelocity.getValue() == 0
-                || _intakeBackVelocity.getValue() == 0
-                || _shooterFeederVelocity.getValue() == 0;
     }
 
     @Override

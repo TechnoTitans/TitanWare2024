@@ -4,7 +4,10 @@ import com.ctre.phoenix6.SignalLogger;
 import edu.wpi.first.math.MathUtil;
 import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.math.kinematics.ChassisSpeeds;
-import edu.wpi.first.units.*;
+import edu.wpi.first.units.Current;
+import edu.wpi.first.units.Measure;
+import edu.wpi.first.units.Time;
+import edu.wpi.first.units.Velocity;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
@@ -17,7 +20,7 @@ import org.littletonrobotics.junction.Logger;
 import java.util.function.Supplier;
 
 import static edu.wpi.first.units.Units.*;
-import static frc.robot.constants.Constants.Intake.*;
+import static frc.robot.constants.Constants.Intake.RollerCircumferenceMeters;
 
 public class Intake extends SubsystemBase {
     protected static final String logKey = "Intake";
