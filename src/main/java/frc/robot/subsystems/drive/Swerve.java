@@ -1,8 +1,11 @@
 package frc.robot.subsystems.drive;
 
+import com.choreo.lib.Choreo;
+import com.choreo.lib.ChoreoTrajectory;
 import com.ctre.phoenix6.SignalLogger;
 import com.ctre.phoenix6.signals.NeutralModeValue;
 import edu.wpi.first.math.MathUtil;
+import edu.wpi.first.math.controller.PIDController;
 import edu.wpi.first.math.estimator.SwerveDrivePoseEstimator;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
@@ -14,6 +17,7 @@ import edu.wpi.first.math.kinematics.SwerveModulePosition;
 import edu.wpi.first.math.kinematics.SwerveModuleState;
 import edu.wpi.first.units.Current;
 import edu.wpi.first.units.Measure;
+import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import edu.wpi.first.wpilibj2.command.sysid.SysIdRoutine;
@@ -26,6 +30,7 @@ import frc.robot.utils.teleop.ControllerUtils;
 import frc.robot.utils.teleop.Profiler;
 import org.littletonrobotics.junction.Logger;
 
+import java.util.Optional;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.function.DoubleSupplier;
 
@@ -384,12 +389,11 @@ public class Swerve extends SubsystemBase {
 
     //TODO add vision
     public void zeroRotation() {
-//    public void zeroRotation(final PhotonVision photonVision) {
         gyro.zeroRotation();
-//        photonVision.resetPosition(
-//                photonVision.getEstimatedPosition(),
-//                Rotation2d.fromDegrees(0)
-//        );
+    }
+
+    public void resetPosition(final Pose2d robotPose) {
+        poseEstimator.resetPosition(gyro.getYawRotation2d(), getModulePositions(), robotPose);
     }
 
     public Command zeroRotationCommand() {
@@ -586,5 +590,21 @@ public class Swerve extends SubsystemBase {
         frontRight.setNeutralMode(neutralMode);
         backLeft.setNeutralMode(neutralMode);
         backRight.setNeutralMode(neutralMode);
+    }
+
+    public Command followChoreoPathCommand(final ChoreoTrajectory choreoTrajectory) {
+        return Choreo.choreoSwerveCommand(
+                choreoTrajectory,
+                this::getEstimatedPosition,
+                new PIDController(5, 0, 0),
+                new PIDController(5, 0, 0),
+                new PIDController(5, 0, 0),
+                this::drive,
+                () -> {
+                    final Optional<DriverStation.Alliance> alliance = DriverStation.getAlliance();
+                    return alliance.isPresent() && alliance.get() == DriverStation.Alliance.Red;
+                },
+                this
+        );
     }
 }
