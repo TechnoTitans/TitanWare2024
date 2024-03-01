@@ -105,7 +105,7 @@ public class Swerve extends SubsystemBase {
                 backRightConstants.translationOffset()
         );
 
-        this.gyro = new Gyro(mode, gyroConstants, odometryThreadRunner, kinematics, swerveModules);
+        this.gyro = new Gyro(gyroConstants, odometryThreadRunner, kinematics, swerveModules, mode);
 
         //TODO add vision
         this.poseEstimator = new SwerveDrivePoseEstimator(
@@ -321,7 +321,7 @@ public class Swerve extends SubsystemBase {
 
         // only update gyro from wheel odometry if we're not simulating and the gyro has failed
         if (Constants.CURRENT_MODE == Constants.RobotMode.REAL && gyro.hasHardwareFault() && gyro.isReal()) {
-            gyro = new Gyro(Constants.RobotMode.SIM, gyroConstants, odometryThreadRunner, kinematics, swerveModules);
+            gyro = new Gyro(gyroConstants, odometryThreadRunner, kinematics, swerveModules, Constants.RobotMode.SIM);
         }
 
         Logger.recordOutput(

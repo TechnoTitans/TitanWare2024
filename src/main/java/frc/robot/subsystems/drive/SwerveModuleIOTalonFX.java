@@ -20,6 +20,7 @@ import com.ctre.phoenix6.signals.NeutralModeValue;
 import edu.wpi.first.util.DoubleCircularBuffer;
 import edu.wpi.first.wpilibj.DriverStation;
 import frc.robot.constants.Constants.Swerve.Modules;
+import frc.robot.constants.HardwareConstants;
 import frc.robot.utils.ctre.Phoenix6Utils;
 
 public class SwerveModuleIOTalonFX implements SwerveModuleIO {
@@ -56,17 +57,14 @@ public class SwerveModuleIOTalonFX implements SwerveModuleIO {
     private final DoubleCircularBuffer turnPositionSignalBuffer;
 
     public SwerveModuleIOTalonFX(
-            final TalonFX driveMotor,
-            final TalonFX turnMotor,
-            final CANcoder turnEncoder,
-            final double magnetOffset,
+            final HardwareConstants.SwerveModuleConstants constants,
             final OdometryThreadRunner odometryThreadRunner
     ) {
-        this.driveMotor = driveMotor;
-        this.turnMotor = turnMotor;
+        this.driveMotor = new TalonFX(constants.driveMotorId(), constants.moduleCANBus());
+        this.turnMotor = new TalonFX(constants.turnMotorId(), constants.moduleCANBus());
 
-        this.turnEncoder = turnEncoder;
-        this.magnetOffset = magnetOffset;
+        this.turnEncoder = new CANcoder(constants.turnEncoderId(), constants.moduleCANBus());
+        this.magnetOffset = constants.turnEncoderOffset();
 
         this.velocityTorqueCurrentFOC = new VelocityTorqueCurrentFOC(0);
         this.torqueCurrentFOC = new TorqueCurrentFOC(0);
