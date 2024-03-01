@@ -3,49 +3,87 @@ package frc.robot.utils.sim.motors;
 import com.ctre.phoenix6.hardware.TalonFX;
 import com.ctre.phoenix6.sim.TalonFXSimState;
 import edu.wpi.first.math.util.Units;
-import edu.wpi.first.wpilibj.simulation.DCMotorSim;
+import edu.wpi.first.wpilibj.RobotController;
 import frc.robot.constants.SimConstants;
 import frc.robot.utils.sim.feedback.SimFeedbackSensor;
 
 import java.util.List;
+import java.util.function.Consumer;
+import java.util.function.Supplier;
 
-public class CTREPhoenix6TalonFXSim implements SimMotorController {
+public class TalonFXSim implements SimMotorController {
     private final List<TalonFXSimState> simStates;
-    private final DCMotorSim dcMotorSim;
+    private final Consumer<Double> update;
+    private final Consumer<Double> inputVoltage;
+    private final Supplier<Double> angularPositionRads;
+    private final Supplier<Double> angularVelocityRadsPerSec;
     private final double gearRatio;
 
-    private final boolean isSingularTalonFX;
+    private final TalonFXSimState useSimStateVoltage;
+    private final TalonFXSimState useSimStateTorqueCurrent;
 
     private boolean hasRemoteSensor = false;
     private SimFeedbackSensor feedbackSensor;
 
-    private CTREPhoenix6TalonFXSim(
+    private TalonFXSim(
             final List<TalonFX> talonFXControllers,
             final List<TalonFXSimState> simStates,
-            final DCMotorSim dcMotorSim,
-            final double gearRatio
+            final double gearRatio,
+            final Consumer<Double> update,
+            final Consumer<Double> inputVoltage,
+            final Supplier<Double> angularPositionRads,
+            final Supplier<Double> angularVelocityRadsPerSec
     ) {
         if (talonFXControllers.isEmpty() || simStates.isEmpty()) {
             throw new IllegalArgumentException("TalonFX must not be empty! TalonFXSimStates must not be empty!");
         }
 
         this.simStates = simStates;
-        this.dcMotorSim = dcMotorSim;
+        this.update = update;
+        this.inputVoltage = inputVoltage;
+        this.angularPositionRads = angularPositionRads;
+        this.angularVelocityRadsPerSec = angularVelocityRadsPerSec;
         this.gearRatio = gearRatio;
 
-        this.isSingularTalonFX = talonFXControllers.size() == 1 && simStates.size() == 1;
+        this.useSimStateVoltage = simStates.get(0);
+        this.useSimStateTorqueCurrent = simStates.get(0);
     }
 
-    public CTREPhoenix6TalonFXSim(
+    public TalonFXSim(
             final List<TalonFX> talonFXControllers,
             final double gearRatio,
-            final DCMotorSim motorSim
+            final Consumer<Double> update,
+            final Consumer<Double> inputVoltage,
+            final Supplier<Double> angularPositionRads,
+            final Supplier<Double> angularVelocityRadsPerSec
     ) {
-        this(talonFXControllers, talonFXControllers.stream().map(TalonFX::getSimState).toList(), motorSim, gearRatio);
+        this(
+                talonFXControllers,
+                talonFXControllers.stream().map(TalonFX::getSimState).toList(),
+                gearRatio,
+                update,
+                inputVoltage,
+                angularPositionRads,
+                angularVelocityRadsPerSec
+        );
     }
 
-    public CTREPhoenix6TalonFXSim(final TalonFX talonSRX, final double gearRatio, final DCMotorSim motorSim) {
-        this(List.of(talonSRX), gearRatio, motorSim);
+    public TalonFXSim(
+            final TalonFX talonFX,
+            final double gearRatio,
+            final Consumer<Double> update,
+            final Consumer<Double> inputVoltage,
+            final Supplier<Double> angularPositionRads,
+            final Supplier<Double> angularVelocityRadsPerSec
+    ) {
+        this(
+                List.of(talonFX),
+                gearRatio,
+                update,
+                inputVoltage,
+                angularPositionRads,
+                angularVelocityRadsPerSec
+        );
     }
 
     @Override
@@ -61,8 +99,8 @@ public class CTREPhoenix6TalonFXSim implements SimMotorController {
     @Override
     public void update(final double dt) {
         final double motorVoltage = getMotorVoltage();
-        dcMotorSim.setInputVoltage(motorVoltage);
-        dcMotorSim.update(dt);
+        inputVoltage.accept(motorVoltage);
+        update.accept(dt);
 
         final double mechanismAngularPositionRots = getAngularPositionRots();
         final double mechanismAngularVelocityRotsPerSec = getAngularVelocityRotsPerSec();
@@ -71,7 +109,8 @@ public class CTREPhoenix6TalonFXSim implements SimMotorController {
             simState.setRawRotorPosition(gearRatio * mechanismAngularPositionRots);
             simState.setRotorVelocity(gearRatio * mechanismAngularVelocityRotsPerSec);
             simState.setSupplyVoltage(
-                    12 - (simState.getSupplyCurrent() * SimConstants.FALCON_MOTOR_RESISTANCE)
+                    RobotController.getBatteryVoltage() -
+                            (simState.getSupplyCurrent() * SimConstants.FALCON_MOTOR_RESISTANCE)
             );
         }
 
@@ -96,25 +135,21 @@ public class CTREPhoenix6TalonFXSim implements SimMotorController {
 
     @Override
     public double getAngularPositionRots() {
-        return dcMotorSim.getAngularPositionRotations();
+        return Units.radiansToRotations(angularPositionRads.get());
     }
 
     @Override
     public double getAngularVelocityRotsPerSec() {
-        return Units.radiansToRotations(dcMotorSim.getAngularVelocityRadPerSec());
+        return Units.radiansToRotations(angularVelocityRadsPerSec.get());
     }
 
     @Override
     public double getMotorVoltage() {
-        return isSingularTalonFX
-                ? simStates.get(0).getMotorVoltage()
-                : simStates.stream().mapToDouble(TalonFXSimState::getMotorVoltage).average().orElseThrow();
+        return useSimStateVoltage.getMotorVoltage();
     }
 
     @Override
     public double getMotorCurrent() {
-        return isSingularTalonFX
-                ? simStates.get(0).getTorqueCurrent()
-                : simStates.stream().mapToDouble(TalonFXSimState::getTorqueCurrent).average().orElseThrow();
+        return useSimStateTorqueCurrent.getTorqueCurrent();
     }
 }

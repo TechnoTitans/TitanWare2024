@@ -64,4 +64,17 @@ public class SimUtils {
         // TODO: this doesn't seem to work for all CANCoders
         return canCoder.setPosition(0);
     }
+
+    /**
+     * Applies the effects of friction to dampen the motor voltage.
+     *
+     * @param motorVoltage Voltage output by the motor
+     * @param frictionVoltage Voltage required to overcome friction
+     * @return Friction-dampened motor voltage
+     */
+    public static double addMotorFriction(final double motorVoltage, final double frictionVoltage) {
+        return Math.abs(motorVoltage) < frictionVoltage
+                ? 0
+                : motorVoltage - Math.copySign(frictionVoltage, motorVoltage);
+    }
 }

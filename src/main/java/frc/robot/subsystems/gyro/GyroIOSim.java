@@ -6,16 +6,15 @@ import com.ctre.phoenix6.configs.Pigeon2Configuration;
 import com.ctre.phoenix6.hardware.ParentDevice;
 import com.ctre.phoenix6.hardware.Pigeon2;
 import com.ctre.phoenix6.sim.Pigeon2SimState;
-import edu.wpi.first.math.geometry.Pose2d;
+import edu.wpi.first.math.filter.LinearFilter;
 import edu.wpi.first.math.geometry.Rotation2d;
-import edu.wpi.first.math.geometry.Twist2d;
 import edu.wpi.first.math.kinematics.SwerveDriveKinematics;
-import edu.wpi.first.math.kinematics.SwerveModulePosition;
-import frc.robot.subsystems.drive.Swerve;
+import edu.wpi.first.math.kinematics.SwerveModuleState;
+import edu.wpi.first.util.DoubleCircularBuffer;
+import frc.robot.constants.HardwareConstants;
+import frc.robot.subsystems.drive.OdometryThreadRunner;
 import frc.robot.subsystems.drive.SwerveModule;
-import org.littletonrobotics.junction.Logger;
-
-import java.util.Queue;
+import frc.robot.utils.control.DeltaTime;
 
 public class GyroIOSim implements GyroIO {
     public static final double USE_SIMULATED_PITCH = 0;
@@ -27,7 +26,9 @@ public class GyroIOSim implements GyroIO {
     private final SwerveModule[] swerveModules;
     private final double[] lastSwerveModulePositionMeters = {0.0, 0.0, 0.0, 0.0};
 
-    private Pose2d gyroUseOdometryPose = new Pose2d(0, 0, Rotation2d.fromDegrees(0));
+    private final DeltaTime deltaTime;
+    private final LinearFilter filter = LinearFilter.movingAverage(50);
+    private Rotation2d rawGyroYaw = Rotation2d.fromDegrees(0);
 
     // Cached StatusSignals
     private final StatusSignal<Double> _yaw;
@@ -38,20 +39,22 @@ public class GyroIOSim implements GyroIO {
     private final StatusSignal<Double> _rollVelocity;
     private final StatusSignal<Boolean> _faultHardware;
 
-    // StatusSignal queues for high-freq odometry
-    private final Queue<Double> timestampQueue;
-    private final Queue<Double> yawSignalQueue;
+    // StatusSignal buffers for high-freq odometry
+    private final DoubleCircularBuffer timestampBuffer;
+    private final DoubleCircularBuffer yawSignalBuffer;
 
     public GyroIOSim(
-            final Pigeon2 pigeon,
+            final HardwareConstants.GyroConstants gyroConstants,
+            final OdometryThreadRunner odometryThreadRunner,
             final SwerveDriveKinematics kinematics,
-            final Swerve.OdometryThreadRunner odometryThreadRunner,
             final SwerveModule[] swerveModules
     ) {
-        this.pigeon = pigeon;
+        this.pigeon = new Pigeon2(gyroConstants.gyroId(), gyroConstants.CANBus());
         this.pigeonSimState = pigeon.getSimState();
         this.kinematics = kinematics;
         this.swerveModules = swerveModules;
+
+        this.deltaTime = new DeltaTime(true);
 
         this._yaw = pigeon.getYaw();
         this._pitch = pigeon.getPitch();
@@ -61,36 +64,24 @@ public class GyroIOSim implements GyroIO {
         this._rollVelocity = pigeon.getAngularVelocityYWorld();
         this._faultHardware = pigeon.getFault_Hardware();
 
-        this.timestampQueue = odometryThreadRunner.makeTimestampQueue();
-        this.yawSignalQueue = odometryThreadRunner.registerSignal(pigeon, _yaw);
+        this.timestampBuffer = odometryThreadRunner.makeTimestampBuffer();
+        this.yawSignalBuffer = odometryThreadRunner.registerSignal(pigeon, _yaw);
 
         pigeonSimState.setSupplyVoltage(12);
         pigeonSimState.setPitch(USE_SIMULATED_PITCH);
         pigeonSimState.setRoll(USE_SIMULATED_ROLL);
     }
 
-    private void updateGyro() {
-        final SwerveModulePosition[] wheelDeltas = new SwerveModulePosition[swerveModules.length];
-        for (int i = 0; i < swerveModules.length; i++) {
-            final SwerveModulePosition currentSwervePosition = swerveModules[i].getPosition();
-
-            wheelDeltas[i] = new SwerveModulePosition(
-                    (currentSwervePosition.distanceMeters - lastSwerveModulePositionMeters[i]),
-                    currentSwervePosition.angle
-            );
-            lastSwerveModulePositionMeters[i] = currentSwervePosition.distanceMeters;
+    private void updateGyro(final double dtSeconds) {
+        final SwerveModuleState[] moduleStates = new SwerveModuleState[swerveModules.length];
+        for (int i = 0; i < moduleStates.length; i++) {
+            moduleStates[i] = swerveModules[i].getState();
         }
 
-        final Twist2d wheelDeltasTwist = kinematics.toTwist2d(wheelDeltas);
-        gyroUseOdometryPose = gyroUseOdometryPose.exp(wheelDeltasTwist);
-
-        Logger.recordOutput(Gyro.logKey + "/GyroUseOdometryPose", gyroUseOdometryPose);
-        Logger.recordOutput(Gyro.logKey + "/WheelDeltasTwistDx", wheelDeltasTwist.dx);
-        Logger.recordOutput(Gyro.logKey + "/WheelDeltasTwistDy", wheelDeltasTwist.dy);
-        Logger.recordOutput(Gyro.logKey + "/WheelDeltasTwistDTheta", wheelDeltasTwist.dtheta);
-        Logger.recordOutput(Gyro.logKey + "/LastSwerveModulePositionMeters", lastSwerveModulePositionMeters);
-
-        setAngleInternal(gyroUseOdometryPose.getRotation().getDegrees());
+        rawGyroYaw = rawGyroYaw.plus(Rotation2d.fromRadians(
+                kinematics.toChassisSpeeds(moduleStates).omegaRadiansPerSecond * dtSeconds
+        ));
+        pigeonSimState.setRawYaw(rawGyroYaw.getDegrees());
     }
 
     @SuppressWarnings("DuplicatedCode")
@@ -117,7 +108,7 @@ public class GyroIOSim implements GyroIO {
 
     @Override
     public void periodic() {
-        updateGyro();
+        updateGyro(deltaTime.get());
     }
 
     @SuppressWarnings("DuplicatedCode")
@@ -141,11 +132,11 @@ public class GyroIOSim implements GyroIO {
         inputs.rollVelocityDegPerSec = _rollVelocity.getValue();
         inputs.hasHardwareFault = _faultHardware.getValue();
 
-        inputs.odometryTimestampsSec = timestampQueue.stream().mapToDouble(time -> time).toArray();
-        timestampQueue.clear();
+        inputs.odometryTimestampsSec = OdometryThreadRunner.writeBufferToArray(timestampBuffer);
+        timestampBuffer.clear();
 
-        inputs.odometryYawPositionsDeg = yawSignalQueue.stream().mapToDouble(yaw -> yaw).toArray();
-        yawSignalQueue.clear();
+        inputs.odometryYawPositionsDeg = OdometryThreadRunner.writeBufferToArray(yawSignalBuffer);
+        yawSignalBuffer.clear();
     }
 
     public double getYaw() {
@@ -175,10 +166,6 @@ public class GyroIOSim implements GyroIO {
 //                getRollVelocitySignal()
 //        );
         return _roll.getValue();
-    }
-
-    private void setAngleInternal(final double angle) {
-        pigeonSimState.setRawYaw(angle);
     }
 
     @Override

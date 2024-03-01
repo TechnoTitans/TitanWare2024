@@ -30,6 +30,7 @@ public class RobotContainer {
 
         this.swerve = new Swerve(
                 Constants.CURRENT_MODE,
+                HardwareConstants.GYRO,
                 HardwareConstants.FRONT_LEFT_MODULE,
                 HardwareConstants.FRONT_RIGHT_MODULE,
                 HardwareConstants.BACK_LEFT_MODULE,
