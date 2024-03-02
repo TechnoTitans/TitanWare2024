@@ -106,12 +106,12 @@ public class HardwareConstants {
 
     public record IntakeConstants(
             String CANBus,
-            int intakeFrontMotor,
-            int intakeBackMotor,
-            int shooterFeederMotor,
-            double intakeFrontRollersGearing,
-            double intakeBackRollersGearing,
-            double shooterFeederRollerGearing
+            int rightRollerMotor,
+            int leftRollerMotor,
+            int shooterFeederRollerMotor,
+            double rightMotorGearing,
+            double leftMotorGearing,
+            double shooterFeederMotorGearing
     ) {}
 
     public static final IntakeConstants INTAKE = new IntakeConstants(

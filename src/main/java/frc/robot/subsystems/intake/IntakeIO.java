@@ -6,17 +6,17 @@ public interface IntakeIO {
     @AutoLog
     class IntakeIOInputs {
         // TODO @max: fix the names here, "Motor" is often redundant or completely incorrect
-        public double intakeFrontMotorPositionRots = 0.0;
-        public double intakeFrontMotorVelocityRotsPerSec = 0.0;
-        public double intakeFrontMotorVoltage = 0.0;
-        public double intakeFrontMotorTorqueCurrentAmps = 0.0;
-        public double intakeFrontMotorTempCelsius = 0.0;
+        public double rightMotorPositionRots = 0.0;
+        public double rightMotorVelocityRotsPerSec = 0.0;
+        public double rightMotorVoltage = 0.0;
+        public double rightMotorTorqueCurrentAmps = 0.0;
+        public double rightMotorTempCelsius = 0.0;
 
-        public double intakeBackMotorPositionRots = 0.0;
-        public double intakeBackVelocityRotsPerSec = 0.0;
-        public double intakeBackMotorVoltage = 0.0;
-        public double intakeBackTorqueCurrentAmps = 0.0;
-        public double intakeBackTempCelsius = 0.0;
+        public double leftMotorPositionRots = 0.0;
+        public double leftVelocityRotsPerSec = 0.0;
+        public double leftMotorVoltage = 0.0;
+        public double leftTorqueCurrentAmps = 0.0;
+        public double leftTempCelsius = 0.0;
 
         public double shooterFeederMotorPositionRots = 0.0;
         public double shooterFeederMotorVelocityRotsPerSec = 0.0;
@@ -45,20 +45,20 @@ public interface IntakeIO {
     default void initialize() {}
 
     default void toVelocity(
-            final double frontRollersVelocity,
-            final double backRollersVelocity,
+            final double rightRollerVelocity,
+            final double leftRollerVelocity,
             final double shooterFeederRollerVelocity
     ) {}
 
     default void toTorqueCurrent(
-            final double frontRollersTorqueCurrentAmps,
-            final double backRollersTorqueCurrentAmps,
+            final double rightRollerTorqueCurrentAmps,
+            final double leftRollerTorqueCurrentAmps,
             final double shooterFeederRollerTorqueCurrentAmps
     ) {}
 
     default void toVoltage(
-            final double frontRollersVolts,
-            final double backRollersVolts,
+            final double rightRollersVolts,
+            final double leftRollersVolts,
             final double shooterFeederRollerVolts
     ) {}
 }
