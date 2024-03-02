@@ -11,11 +11,14 @@ import frc.robot.constants.Constants;
 import frc.robot.constants.HardwareConstants;
 import frc.robot.constants.RobotMap;
 import frc.robot.subsystems.drive.Swerve;
+import frc.robot.subsystems.vision.PhotonVision;
 
 public class RobotContainer {
     public final PowerDistribution powerDistribution;
 
     public final Swerve swerve;
+
+    public final PhotonVision photonVision;
 
     public final CommandXboxController driverController;
     public final CommandXboxController coDriverController;
@@ -35,6 +38,8 @@ public class RobotContainer {
                 HardwareConstants.BACK_LEFT_MODULE,
                 HardwareConstants.BACK_RIGHT_MODULE
         );
+
+        this.photonVision = new PhotonVision(Constants.CURRENT_MODE, swerve, swerve.getPoseEstimator());
 
         this.driverController = new CommandXboxController(RobotMap.MainController);
         this.coDriverController = new CommandXboxController(RobotMap.CoController);

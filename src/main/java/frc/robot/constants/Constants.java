@@ -1,6 +1,13 @@
 package frc.robot.constants;
 
+import edu.wpi.first.math.VecBuilder;
+import edu.wpi.first.math.Vector;
+import edu.wpi.first.math.geometry.Rotation3d;
+import edu.wpi.first.math.geometry.Transform3d;
+import edu.wpi.first.math.geometry.Translation3d;
+import edu.wpi.first.math.numbers.N3;
 import edu.wpi.first.math.util.Units;
+import org.photonvision.PhotonPoseEstimator;
 
 public interface Constants {
     RobotMode CURRENT_MODE = RobotMode.SIM;
@@ -44,5 +51,33 @@ public interface Constants {
             /** Simulated steer voltage required to overcome friction. */
             double STEER_KS_VOLTS = 0.25;
         }
+    }
+
+    interface NetworkTables {
+        boolean USE_STRUCT_AND_PROTOBUF = true;
+    }
+
+    interface Vision {
+        PhotonPoseEstimator.PoseStrategy MULTI_TAG_POSE_STRATEGY =
+                PhotonPoseEstimator.PoseStrategy.MULTI_TAG_PNP_ON_COPROCESSOR;
+
+        //L = Left, R = Right, F = Forward, B = Backward (Facing)
+        Transform3d ROBOT_TO_FR_APRILTAG_CAM = new Transform3d(
+                new Translation3d(Units.inchesToMeters(13.449), Units.inchesToMeters(-13.762), Units.inchesToMeters(7.922)),
+                new Rotation3d(0, Units.degreesToRadians(-15), Units.degreesToRadians(-70))
+        );
+
+        Transform3d ROBOT_TO_FL_APRILTAG_CAM = new Transform3d(
+                new Translation3d(Units.inchesToMeters(14.465), Units.inchesToMeters(-11.907), Units.inchesToMeters(9.67)),
+                new Rotation3d(0, Units.degreesToRadians(-15), Units.degreesToRadians(25))
+        );
+
+        /**
+         * Standard deviations of the supplied pose estimate (before vision, likely to be solely wheel odometry)
+         */
+        Vector<N3> STATE_STD_DEVS = VecBuilder.fill(0.2, 0.2, Units.degreesToRadians(2.5));
+        Vector<N3> VISION_MEASUREMENT_STD_DEVS = VecBuilder.fill(0.85, 0.85, Units.degreesToRadians(5));
+        double MULTI_TAG_MAX_AMBIGUITY = 0.3;
+        double SINGLE_TAG_MAX_AMBIGUITY = 0.2;
     }
 }

@@ -209,10 +209,12 @@ public class Swerve extends SubsystemBase {
         );
     }
 
+    @SuppressWarnings("unused")
     public Command linearTorqueCurrentSysIdQuasistaticCommand(final SysIdRoutine.Direction direction) {
         return linearTorqueCurrentSysIdRoutine.quasistatic(direction);
     }
 
+    @SuppressWarnings("unused")
     public Command linearTorqueCurrentSysIdDynamicCommand(final SysIdRoutine.Direction direction) {
         return linearTorqueCurrentSysIdRoutine.dynamic(direction);
     }
@@ -241,10 +243,12 @@ public class Swerve extends SubsystemBase {
         );
     }
 
+    @SuppressWarnings("unused")
     public Command angularVoltageSysIdQuasistaticCommand(final SysIdRoutine.Direction direction) {
         return angularVoltageSysIdRoutine.quasistatic(direction);
     }
 
+    @SuppressWarnings("unused")
     public Command angularVoltageSysIdDynamicCommand(final SysIdRoutine.Direction direction) {
         return angularVoltageSysIdRoutine.dynamic(direction);
     }
@@ -382,14 +386,13 @@ public class Swerve extends SubsystemBase {
         gyro.setAngle(angle);
     }
 
-    //TODO add vision
     public void zeroRotation() {
-//    public void zeroRotation(final PhotonVision photonVision) {
         gyro.zeroRotation();
-//        photonVision.resetPosition(
-//                photonVision.getEstimatedPosition(),
-//                Rotation2d.fromDegrees(0)
-//        );
+        poseEstimator.resetPosition(
+                Rotation2d.fromRadians(0),
+                getModulePositions(),
+                getEstimatedPosition()
+        );
     }
 
     public Command zeroRotationCommand() {
