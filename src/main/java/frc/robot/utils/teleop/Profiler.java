@@ -50,7 +50,7 @@ public class Profiler {
     }
 
     public enum SwerveSpeed {
-        FAST(Units.feetToMeters(16.5), 2 * Math.PI),
+        FAST(Units.feetToMeters(16.5), Math.PI),
         NORMAL(Units.feetToMeters(12), 0.4 * Math.PI),
         SLOW(Units.feetToMeters(3), 0.1 * Math.PI);
 
