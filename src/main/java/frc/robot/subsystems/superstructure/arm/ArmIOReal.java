@@ -79,6 +79,8 @@ public class ArmIOReal implements ArmIO {
         leftTalonFXConfiguration.MotionMagic.MotionMagicCruiseVelocity = 0;
         leftTalonFXConfiguration.MotionMagic.MotionMagicExpo_kV = 13.97;
         leftTalonFXConfiguration.MotionMagic.MotionMagicExpo_kA = 0.015;
+        leftTalonFXConfiguration.TorqueCurrent.PeakForwardTorqueCurrent = 80;
+        leftTalonFXConfiguration.TorqueCurrent.PeakReverseTorqueCurrent = -80;
         leftTalonFXConfiguration.CurrentLimits.StatorCurrentLimit = 60;
         leftTalonFXConfiguration.CurrentLimits.StatorCurrentLimitEnable = true;
         leftTalonFXConfiguration.Feedback.SensorToMechanismRatio = armConstants.pivotGearing();
@@ -100,8 +102,10 @@ public class ArmIOReal implements ArmIO {
                 .withKA(0.015)
                 .withKP(50); // TODO: tune Kp
         rightTalonFXConfiguration.MotionMagic.MotionMagicCruiseVelocity = 0;
-        rightTalonFXConfiguration.MotionMagic.MotionMagicExpo_kV = 0.01;
+        rightTalonFXConfiguration.MotionMagic.MotionMagicExpo_kV = 13.97;
         rightTalonFXConfiguration.MotionMagic.MotionMagicExpo_kA = 0.015;
+        rightTalonFXConfiguration.TorqueCurrent.PeakForwardTorqueCurrent = 80;
+        rightTalonFXConfiguration.TorqueCurrent.PeakReverseTorqueCurrent = -80;
         rightTalonFXConfiguration.CurrentLimits.StatorCurrentLimit = 60;
         rightTalonFXConfiguration.CurrentLimits.StatorCurrentLimitEnable = true;
         rightTalonFXConfiguration.Feedback.SensorToMechanismRatio = armConstants.pivotGearing();

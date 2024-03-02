@@ -65,7 +65,7 @@ public class ArmIOSim implements ArmIO {
         this.deltaTime = new DeltaTime(true);
         this.armConstants = armConstants;
 
-        final double pivotLowerLimitsRads = Units.rotationsToRadians(armConstants.pivotSoftLowerLimitRots());
+        final double pivotLowerLimitsRots = armConstants.pivotSoftLowerLimitRots();
         this.armPivotSim = new SingleJointedArmSim(
                 LinearSystemId.identifyPositionSystem(
                         13.97 / (2d * Math.PI),
@@ -77,7 +77,7 @@ public class ArmIOSim implements ArmIO {
                 0,
                 Math.PI,
                 true,
-                pivotLowerLimitsRads
+                Units.rotationsToRadians(pivotLowerLimitsRots)
         );
 
         this.leftPivotMotor = new TalonFX(armConstants.leftPivotMotorId(), armConstants.CANBus());
@@ -116,6 +116,10 @@ public class ArmIOSim implements ArmIO {
         final Notifier simUpdateNotifier = new Notifier(() -> {
             final double dt = deltaTime.get();
             pivotMotorsSim.update(dt);
+            pivotLowerLimitSwitchSim.setValue(
+                    _leftPosition.refresh().getValue() <= pivotLowerLimitsRots
+                            || _rightPosition.refresh().getValue() <= pivotLowerLimitsRots
+            );
         });
         ToClose.add(simUpdateNotifier);
         simUpdateNotifier.setName(String.format(
@@ -165,7 +169,7 @@ public class ArmIOSim implements ArmIO {
                 .withKA(0.015)
                 .withKP(50); // TODO: tune Kp
         rightTalonFXConfiguration.MotionMagic.MotionMagicCruiseVelocity = 0;
-        rightTalonFXConfiguration.MotionMagic.MotionMagicExpo_kV = 0.01;
+        rightTalonFXConfiguration.MotionMagic.MotionMagicExpo_kV = 13.97;
         rightTalonFXConfiguration.MotionMagic.MotionMagicExpo_kA = 0.015;
         rightTalonFXConfiguration.CurrentLimits.StatorCurrentLimit = 60;
         rightTalonFXConfiguration.CurrentLimits.StatorCurrentLimitEnable = true;

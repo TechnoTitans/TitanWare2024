@@ -1,6 +1,8 @@
 package frc.robot.subsystems.superstructure.arm;
 
 import com.ctre.phoenix6.SignalLogger;
+import edu.wpi.first.math.MathUtil;
+import edu.wpi.first.math.util.Units;
 import edu.wpi.first.units.*;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
@@ -11,6 +13,11 @@ import frc.robot.constants.Constants;
 import frc.robot.constants.HardwareConstants;
 import frc.robot.utils.logging.LogUtils;
 import org.littletonrobotics.junction.Logger;
+
+import java.util.Objects;
+import java.util.function.Consumer;
+import java.util.function.DoubleSupplier;
+import java.util.function.Supplier;
 
 import static edu.wpi.first.units.Units.*;
 
@@ -24,6 +31,7 @@ public class Arm extends SubsystemBase {
     private final SysIdRoutine voltageSysIdRoutine;
     private final SysIdRoutine torqueCurrentSysIdRoutine;
 
+    private Goal goal = Goal.STOW;
     private final PositionSetpoint setpoint;
     private final PositionSetpoint pivotSoftLowerLimit;
     private final PositionSetpoint pivotSoftUpperLimit;
@@ -39,6 +47,27 @@ public class Arm extends SubsystemBase {
         public PositionSetpoint withPivotPositionRots(final double pivotPositionRots) {
             this.pivotPositionRots = pivotPositionRots;
             return this;
+        }
+
+        public boolean atSetpoint(final double pivotPositionRots) {
+            return MathUtil.isNear(this.pivotPositionRots, pivotPositionRots, PositionToleranceRots);
+        }
+    }
+
+    public enum Goal {
+        ZERO(() -> 0),
+        STOW(() -> 0),
+        AMP(() -> Units.degreesToRotations(90)),
+        SUBWOOFER(() -> Units.degreesToRotations(55)),
+        AIM_SPEAKER(() -> 0);
+
+        private final DoubleSupplier pivotPositionGoalSupplier;
+        Goal(final DoubleSupplier pivotPositionGoalSupplier) {
+            this.pivotPositionGoalSupplier = pivotPositionGoalSupplier;
+        }
+
+        public double getPivotPositionGoal() {
+            return pivotPositionGoalSupplier.getAsDouble();
         }
     }
 
@@ -75,12 +104,17 @@ public class Arm extends SubsystemBase {
         final double armPeriodicUpdateStart = Logger.getRealTimestamp();
 
         armIO.updateInputs(inputs);
-
         Logger.processInputs(LogKey, inputs);
         Logger.recordOutput(
                 LogKey + "/PeriodicIOPeriodMs",
                 LogUtils.microsecondsToMilliseconds(Logger.getRealTimestamp() - armPeriodicUpdateStart)
         );
+
+        final double previousPivotPosition = setpoint.pivotPositionRots;
+        setpoint.pivotPositionRots = goal.getPivotPositionGoal();
+        if (setpoint.pivotPositionRots != previousPivotPosition) {
+            armIO.toPivotPosition(setpoint.pivotPositionRots);
+        }
 
         Logger.recordOutput(LogKey + "/PositionSetpoint/PivotPositionRots", setpoint.pivotPositionRots);
         Logger.recordOutput(LogKey + "/AtPositionSetpoint", atPositionSetpoint());
@@ -89,8 +123,8 @@ public class Arm extends SubsystemBase {
     }
 
     private boolean atPositionSetpoint() {
-        return Math.abs(setpoint.pivotPositionRots - inputs.leftPivotPositionRots) <= PositionToleranceRots
-                && Math.abs(setpoint.pivotPositionRots - inputs.rightPivotPositionRots) <= PositionToleranceRots;
+        return setpoint.atSetpoint(inputs.leftPivotPositionRots)
+                && setpoint.atSetpoint(inputs.rightPivotPositionRots);
     }
 
     private boolean atPivotLowerLimit() {
@@ -102,6 +136,13 @@ public class Arm extends SubsystemBase {
     private boolean atPivotUpperLimit() {
         return inputs.leftPivotPositionRots >= pivotSoftUpperLimit.pivotPositionRots
                 || inputs.rightPivotPositionRots >= pivotSoftUpperLimit.pivotPositionRots;
+    }
+
+    public Command toGoal(final Goal goal) {
+        return Commands.sequence(
+                runOnce(() -> this.goal = goal),
+                Commands.waitUntil(atPivotPositionTrigger)
+        );
     }
 
     public Command toPivotPositionCommand(final double pivotPositionRots) {
