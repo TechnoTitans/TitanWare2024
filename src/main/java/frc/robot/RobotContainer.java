@@ -39,10 +39,12 @@ public class RobotContainer {
         this.driverController = new CommandXboxController(RobotMap.MainController);
         this.coDriverController = new CommandXboxController(RobotMap.CoController);
 
-        this.coDriverController.y().whileTrue(swerve.linearVoltageSysIdQuasistaticCommand(SysIdRoutine.Direction.kForward));
-        this.coDriverController.a().whileTrue(swerve.linearVoltageSysIdQuasistaticCommand(SysIdRoutine.Direction.kReverse));
-        this.coDriverController.b().whileTrue(swerve.linearVoltageSysIdDynamicCommand(SysIdRoutine.Direction.kForward));
-        this.coDriverController.x().whileTrue(swerve.linearVoltageSysIdDynamicCommand(SysIdRoutine.Direction.kReverse));
+        this.driverController.y().onTrue(swerve.zeroRotationCommand());
+
+        this.coDriverController.y().whileTrue(swerve.linearTorqueCurrentSysIdQuasistaticCommand(SysIdRoutine.Direction.kForward));
+        this.coDriverController.a().whileTrue(swerve.linearTorqueCurrentSysIdQuasistaticCommand(SysIdRoutine.Direction.kReverse));
+        this.coDriverController.b().whileTrue(swerve.linearTorqueCurrentSysIdDynamicCommand(SysIdRoutine.Direction.kForward));
+        this.coDriverController.x().whileTrue(swerve.linearTorqueCurrentSysIdDynamicCommand(SysIdRoutine.Direction.kReverse));
 
         this.coDriverController.leftBumper().onTrue(Commands.run(SignalLogger::stop));
     }
