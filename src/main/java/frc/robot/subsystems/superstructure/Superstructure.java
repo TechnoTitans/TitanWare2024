@@ -9,7 +9,7 @@ public class Superstructure {
     private final Arm arm;
     private final Shooter shooter;
 
-    public record VelocitySetpoint(
+    public record SuperstructureSetpoint(
             double armPivotPositionRots,
             double ampVelocityRotsPerSec,
             double leftVelocityRotsPerSec,
@@ -28,13 +28,13 @@ public class Superstructure {
         this.shooter = shooter;
     }
 
-    public Command toVelocitySetpoint(final VelocitySetpoint velocitySetpoint) {
+    public Command toSetpoint(final SuperstructureSetpoint superstructureSetpoint) {
         return Commands.parallel(
-                arm.toPivotPositionCommand(velocitySetpoint.armPivotPositionRots),
+                arm.toPivotPositionCommand(superstructureSetpoint.armPivotPositionRots),
                 shooter.toVelocityCommand(
-                        velocitySetpoint.ampVelocityRotsPerSec,
-                        velocitySetpoint.leftVelocityRotsPerSec,
-                        velocitySetpoint.rightVelocityRotsPerSec
+                        superstructureSetpoint.ampVelocityRotsPerSec,
+                        superstructureSetpoint.leftVelocityRotsPerSec,
+                        superstructureSetpoint.rightVelocityRotsPerSec
                 )
         );
     }
@@ -47,6 +47,22 @@ public class Superstructure {
                         voltageSetpoint.leftVolts,
                         voltageSetpoint.rightVolts
                 )
+        );
+    }
+
+    @SuppressWarnings("unused")
+    public Command runVoltageCharacterization() {
+        return Commands.parallel(
+                arm.torqueCurrentSysIdCommand(),
+                shooter.torqueCurrentSysIdCommand()
+        );
+    }
+
+    @SuppressWarnings("unused")
+    public Command runTorqueCurrentCharacterization() {
+        return Commands.parallel(
+                arm.torqueCurrentSysIdCommand(),
+                shooter.torqueCurrentSysIdCommand()
         );
     }
 }

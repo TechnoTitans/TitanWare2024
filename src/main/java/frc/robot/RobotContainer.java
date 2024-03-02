@@ -5,7 +5,6 @@ import edu.wpi.first.wpilibj.PowerDistribution;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
-import edu.wpi.first.wpilibj2.command.sysid.SysIdRoutine;
 import frc.robot.constants.Constants;
 import frc.robot.constants.HardwareConstants;
 import frc.robot.constants.RobotMap;
@@ -29,7 +28,7 @@ public class RobotContainer {
     public RobotContainer() {
         this.powerDistribution = new PowerDistribution(
                 RobotMap.PowerDistributionHub,
-                PowerDistribution.ModuleType.kCTRE
+                PowerDistribution.ModuleType.kRev
         );
         this.powerDistribution.clearStickyFaults();
 
@@ -43,28 +42,38 @@ public class RobotContainer {
         );
 
         this.arm = new Arm(Constants.CURRENT_MODE, HardwareConstants.ARM);
-        this.shooter = new Shooter(Constants.RobotMode.REPLAY, HardwareConstants.SHOOTER);
+        this.shooter = new Shooter(Constants.CURRENT_MODE, HardwareConstants.SHOOTER);
 
         this.superstructure = new Superstructure(arm, shooter);
 
         this.driverController = new CommandXboxController(RobotMap.MainController);
         this.coDriverController = new CommandXboxController(RobotMap.CoController);
 
-        this.coDriverController.y().whileTrue(shooter.voltageSysIdQuasistaticTestCommand(SysIdRoutine.Direction.kForward));
-        this.coDriverController.a().whileTrue(shooter.voltageSysIdQuasistaticTestCommand(SysIdRoutine.Direction.kReverse));
-        this.coDriverController.b().whileTrue(shooter.voltageSysIdDynamicTestCommand(SysIdRoutine.Direction.kForward));
-        this.coDriverController.x().whileTrue(shooter.voltageSysIdDynamicTestCommand(SysIdRoutine.Direction.kReverse));
+        this.coDriverController.y().whileTrue(shooter.voltageSysIdCommand());
         this.coDriverController.leftBumper().onTrue(Commands.runOnce(SignalLogger::stop));
     }
 
     public Command getAutonomousCommand() {
-        return superstructure.toVoltageSetpoint(
-                new Superstructure.VoltageSetpoint(
-                        0,
-                        12,
-                        12,
-                        10
-                )
+//        return superstructure.runVoltageCharacterization();
+        return Commands.repeatingSequence(
+                superstructure.toSetpoint(
+                        new Superstructure.SuperstructureSetpoint(
+                                0.15,
+                                60,
+                                60,
+                                60
+                        )
+                ),
+                Commands.waitSeconds(2),
+                superstructure.toSetpoint(
+                        new Superstructure.SuperstructureSetpoint(
+                                0,
+                                15,
+                                15,
+                                15
+                        )
+                ),
+                Commands.waitSeconds(2)
         );
     }
 }

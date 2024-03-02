@@ -4,7 +4,10 @@ import com.ctre.phoenix6.BaseStatusSignal;
 import com.ctre.phoenix6.StatusSignal;
 import com.ctre.phoenix6.configs.Slot0Configs;
 import com.ctre.phoenix6.configs.TalonFXConfiguration;
-import com.ctre.phoenix6.controls.*;
+import com.ctre.phoenix6.controls.Follower;
+import com.ctre.phoenix6.controls.MotionMagicExpoTorqueCurrentFOC;
+import com.ctre.phoenix6.controls.TorqueCurrentFOC;
+import com.ctre.phoenix6.controls.VoltageOut;
 import com.ctre.phoenix6.hardware.ParentDevice;
 import com.ctre.phoenix6.hardware.TalonFX;
 import com.ctre.phoenix6.signals.GravityTypeValue;
@@ -132,6 +135,7 @@ public class ArmIOReal implements ArmIO {
         );
     }
 
+    @SuppressWarnings("DuplicatedCode")
     @Override
     public void updateInputs(final ArmIO.ArmIOInputs inputs) {
         BaseStatusSignal.refreshAll(
@@ -147,8 +151,6 @@ public class ArmIOReal implements ArmIO {
                 _rightDeviceTemp
         );
 
-        // TODO: this has separate position and velocity data for the left and right pivot motors,
-        //  which probably isn't ideal, which means this can probably be improved
         inputs.leftPivotPositionRots = _leftPosition.getValue();
         inputs.leftPivotVelocityRotsPerSec = _leftVelocity.getValue();
         inputs.leftPivotVoltageVolts = _leftVoltage.getValue();

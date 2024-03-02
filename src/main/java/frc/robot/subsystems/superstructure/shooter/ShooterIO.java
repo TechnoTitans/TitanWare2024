@@ -32,8 +32,6 @@ public interface ShooterIO {
      */
     default void updateInputs(final ShooterIOInputs inputs) {}
 
-    default void periodic() {}
-
     default void config() {}
 
     default void toVelocity(
@@ -48,5 +46,9 @@ public interface ShooterIO {
             final double rightVolts
     ) {}
 
-    default void setCharacterizationTorqueCurrent(final double leftTorqueCurrentAmps, final double rightTorqueCurrentAmps) {}
+    default void toTorqueCurrent(
+            final double ampTorqueCurrentAmps,
+            final double leftTorqueCurrentAmps,
+            final double rightTorqueCurrentAmps
+    ) {}
 }

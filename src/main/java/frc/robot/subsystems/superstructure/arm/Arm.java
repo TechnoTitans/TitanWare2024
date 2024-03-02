@@ -16,7 +16,7 @@ import static edu.wpi.first.units.Units.*;
 
 public class Arm extends SubsystemBase {
     protected static final String LogKey = "Arm";
-    private static final double PositionToleranceRots = 0.1;
+    private static final double PositionToleranceRots = 0.01;
 
     private final ArmIO armIO;
     private final ArmIOInputsAutoLogged inputs;
@@ -27,6 +27,12 @@ public class Arm extends SubsystemBase {
     private final PositionSetpoint setpoint;
     private final PositionSetpoint pivotSoftLowerLimit;
     private final PositionSetpoint pivotSoftUpperLimit;
+
+    public Trigger atPivotPositionTrigger = new Trigger(this::atPositionSetpoint);
+    public Trigger atPivotLowerLimitTrigger = new Trigger(this::atPivotLowerLimit);
+    public Trigger atPivotUpperLimitTrigger = new Trigger(this::atPivotUpperLimit);
+    public Trigger atPivotLimit = atPivotLowerLimitTrigger.or(atPivotUpperLimitTrigger);
+
     public static class PositionSetpoint {
         public double pivotPositionRots = 0;
 
@@ -47,12 +53,12 @@ public class Arm extends SubsystemBase {
         this.voltageSysIdRoutine = makeVoltageSysIdRoutine(
                 Volts.of(2).per(Second),
                 Volts.of(10),
-                Seconds.of(4)
+                Seconds.of(6)
         );
         this.torqueCurrentSysIdRoutine = makeTorqueCurrentSysIdRoutine(
                 Amps.of(2).per(Second),
                 Amps.of(8),
-                Seconds.of(4)
+                Seconds.of(6)
         );
 
         this.setpoint = new PositionSetpoint();
@@ -75,18 +81,27 @@ public class Arm extends SubsystemBase {
                 LogKey + "/PeriodicIOPeriodMs",
                 LogUtils.microsecondsToMilliseconds(Logger.getRealTimestamp() - armPeriodicUpdateStart)
         );
+
+        Logger.recordOutput(LogKey + "/PositionSetpoint/PivotPositionRots", setpoint.pivotPositionRots);
+        Logger.recordOutput(LogKey + "/AtPositionSetpoint", atPositionSetpoint());
+        Logger.recordOutput(LogKey + "/AtPivotLowerLimit", atPivotLowerLimit());
+        Logger.recordOutput(LogKey + "/AtPivotUpperLimit", atPivotUpperLimit());
     }
 
-    public Trigger atPositionSetpointTrigger = new Trigger(this::atPositionSetpoint);
     private boolean atPositionSetpoint() {
         return Math.abs(setpoint.pivotPositionRots - inputs.leftPivotPositionRots) <= PositionToleranceRots
                 && Math.abs(setpoint.pivotPositionRots - inputs.rightPivotPositionRots) <= PositionToleranceRots;
     }
 
-    public Trigger atSoftLimitTrigger = new Trigger(this::atSoftLimit);
-    private boolean atSoftLimit() {
+    private boolean atPivotLowerLimit() {
+        return inputs.pivotLowerLimitSwitch
+                || inputs.leftPivotPositionRots <= pivotSoftLowerLimit.pivotPositionRots
+                || inputs.rightPivotPositionRots <= pivotSoftLowerLimit.pivotPositionRots;
+    }
+
+    private boolean atPivotUpperLimit() {
         return inputs.leftPivotPositionRots >= pivotSoftUpperLimit.pivotPositionRots
-                || inputs.leftPivotPositionRots <= pivotSoftLowerLimit.pivotPositionRots;
+                || inputs.rightPivotPositionRots >= pivotSoftUpperLimit.pivotPositionRots;
     }
 
     public Command toPivotPositionCommand(final double pivotPositionRots) {
@@ -95,7 +110,7 @@ public class Arm extends SubsystemBase {
                     setpoint.pivotPositionRots = pivotPositionRots;
                     armIO.toPivotPosition(pivotPositionRots);
                 }),
-                Commands.waitUntil(atPositionSetpointTrigger)
+                Commands.waitUntil(atPivotPositionTrigger)
         );
     }
 
@@ -103,7 +118,18 @@ public class Arm extends SubsystemBase {
         return runOnce(() -> armIO.toPivotVoltage(pivotVoltageVolts));
     }
 
-    // TODO: this needs to respect software limits during the test, should probably make it a routine
+    public Command homePivotCommand() {
+        // TODO: this could probably be improved to be more robust,
+        //  and potentially do a 2nd, slower, pass to be more accurate
+        return Commands.sequence(
+                startEnd(
+                        () -> armIO.toPivotVoltage(-3),
+                        () -> armIO.toPivotVoltage(0)
+                ).until(() -> inputs.pivotLowerLimitSwitch),
+                runOnce(() -> armIO.setPivotPosition(0))
+        );
+    }
+
     private SysIdRoutine makeVoltageSysIdRoutine(
             final Measure<Velocity<Voltage>> voltageRampRate,
             final Measure<Voltage> stepVoltage,
@@ -114,7 +140,7 @@ public class Arm extends SubsystemBase {
                         voltageRampRate,
                         stepVoltage,
                         timeout,
-                        state -> SignalLogger.writeString("state", state.toString())
+                        state -> SignalLogger.writeString(String.format("%s-state", LogKey), state.toString())
                 ),
                 new SysIdRoutine.Mechanism(
                         voltageMeasure -> armIO.toPivotVoltage(voltageMeasure.in(Volts)),
@@ -124,7 +150,6 @@ public class Arm extends SubsystemBase {
         );
     }
 
-    // TODO: this needs to respect software limits during the test, should probably make it a routine
     private SysIdRoutine makeTorqueCurrentSysIdRoutine(
             final Measure<Velocity<Current>> currentRampRate,
             final Measure<Current> stepCurrent,
@@ -135,7 +160,7 @@ public class Arm extends SubsystemBase {
                         Volts.per(Second).of(currentRampRate.baseUnitMagnitude()),
                         Volts.of(stepCurrent.baseUnitMagnitude()),
                         timeout,
-                        state -> SignalLogger.writeString("state", state.toString())
+                        state -> SignalLogger.writeString(String.format("%s-state", LogKey), state.toString())
                 ),
                 new SysIdRoutine.Mechanism(
                         voltageMeasure -> armIO.toPivotTorqueCurrent(voltageMeasure.in(Volts)),
@@ -148,16 +173,16 @@ public class Arm extends SubsystemBase {
     private Command makeSysIdCommand(final SysIdRoutine sysIdRoutine) {
         return Commands.sequence(
                 sysIdRoutine.quasistatic(SysIdRoutine.Direction.kForward)
-                        .until(atSoftLimitTrigger),
+                        .until(atPivotUpperLimitTrigger),
                 Commands.waitSeconds(4),
                 sysIdRoutine.quasistatic(SysIdRoutine.Direction.kReverse)
-                        .until(atSoftLimitTrigger),
+                        .until(atPivotLowerLimitTrigger),
                 Commands.waitSeconds(6),
                 sysIdRoutine.dynamic(SysIdRoutine.Direction.kForward)
-                        .until(atSoftLimitTrigger),
+                        .until(atPivotUpperLimitTrigger),
                 Commands.waitSeconds(4),
                 sysIdRoutine.dynamic(SysIdRoutine.Direction.kReverse)
-                        .until(atSoftLimitTrigger)
+                        .until(atPivotLowerLimitTrigger)
         );
     }
 
@@ -169,15 +194,5 @@ public class Arm extends SubsystemBase {
     @SuppressWarnings("unused")
     public Command torqueCurrentSysIdCommand() {
         return makeSysIdCommand(torqueCurrentSysIdRoutine);
-    }
-
-    @SuppressWarnings("unused")
-    public Command voltageSysIdQuasistaticTestCommand(final SysIdRoutine.Direction direction) {
-        return voltageSysIdRoutine.quasistatic(direction);
-    }
-
-    @SuppressWarnings("unused")
-    public Command voltageSysIdDynamicTestCommand(final SysIdRoutine.Direction direction) {
-        return voltageSysIdRoutine.dynamic(direction);
     }
 }

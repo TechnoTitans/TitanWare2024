@@ -4,7 +4,8 @@ import com.ctre.phoenix6.BaseStatusSignal;
 import com.ctre.phoenix6.StatusSignal;
 import com.ctre.phoenix6.configs.Slot0Configs;
 import com.ctre.phoenix6.configs.TalonFXConfiguration;
-import com.ctre.phoenix6.controls.VelocityVoltage;
+import com.ctre.phoenix6.controls.TorqueCurrentFOC;
+import com.ctre.phoenix6.controls.VelocityTorqueCurrentFOC;
 import com.ctre.phoenix6.controls.VoltageOut;
 import com.ctre.phoenix6.hardware.ParentDevice;
 import com.ctre.phoenix6.hardware.TalonFX;
@@ -13,7 +14,7 @@ import com.ctre.phoenix6.signals.NeutralModeValue;
 import edu.wpi.first.math.system.plant.DCMotor;
 import edu.wpi.first.math.system.plant.LinearSystemId;
 import edu.wpi.first.wpilibj.Notifier;
-import edu.wpi.first.wpilibj.simulation.FlywheelSim;
+import edu.wpi.first.wpilibj.simulation.DCMotorSim;
 import frc.robot.constants.HardwareConstants;
 import frc.robot.utils.closeables.ToClose;
 import frc.robot.utils.control.DeltaTime;
@@ -26,16 +27,24 @@ public class ShooterIOSim implements ShooterIO {
     private final DeltaTime deltaTime;
     private final HardwareConstants.ShooterConstants shooterConstants;
 
+    private final TalonFX ampMotor;
     private final TalonFX leftFlywheelMotor;
     private final TalonFX rightFlywheelMotor;
 
+    private final TalonFXSim ampMotorSim;
     private final TalonFXSim leftMotorSim;
     private final TalonFXSim rightMotorSim;
 
-    private final VelocityVoltage velocityVoltage;
+    private final VelocityTorqueCurrentFOC velocityTorqueCurrentFOC;
+    private final TorqueCurrentFOC torqueCurrentFOC;
     private final VoltageOut voltageOut;
 
     // Cached StatusSignals
+    private final StatusSignal<Double> _ampPosition;
+    private final StatusSignal<Double> _ampVelocity;
+    private final StatusSignal<Double> _ampVoltage;
+    private final StatusSignal<Double> _ampTorqueCurrent;
+    private final StatusSignal<Double> _ampDeviceTemp;
     private final StatusSignal<Double> _leftPosition;
     private final StatusSignal<Double> _leftVelocity;
     private final StatusSignal<Double> _leftVoltage;
@@ -51,15 +60,34 @@ public class ShooterIOSim implements ShooterIO {
         this.deltaTime = new DeltaTime(true);
         this.shooterConstants = shooterConstants;
 
+        this.ampMotor = new TalonFX(shooterConstants.ampMotorId(), shooterConstants.CANBus());
         this.leftFlywheelMotor = new TalonFX(shooterConstants.leftFlywheelMotorId(), shooterConstants.CANBus());
         this.rightFlywheelMotor = new TalonFX(shooterConstants.rightFlywheelMotorId(), shooterConstants.CANBus());
 
-        final FlywheelSim leftFlywheelSim = new FlywheelSim(
-                LinearSystemId.identifyVelocitySystem(
+        final DCMotorSim ampFlywheelSim = new DCMotorSim(
+                LinearSystemId.createDCMotorSystem(
                         0.121 / (2 * Math.PI),
                         0.01 / (2 * Math.PI)
                 ),
-                DCMotor.getFalcon500(1),
+                DCMotor.getFalcon500Foc(1),
+                shooterConstants.leftFlywheelGearing()
+        );
+
+        this.ampMotorSim = new TalonFXSim(
+                ampMotor,
+                shooterConstants.ampMotorGearing(),
+                ampFlywheelSim::update,
+                ampFlywheelSim::setInputVoltage,
+                ampFlywheelSim::getAngularPositionRad,
+                ampFlywheelSim::getAngularVelocityRadPerSec
+        );
+
+        final DCMotorSim leftFlywheelSim = new DCMotorSim(
+                LinearSystemId.createDCMotorSystem(
+                        0.121 / (2 * Math.PI),
+                        0.01 / (2 * Math.PI)
+                ),
+                DCMotor.getFalcon500Foc(1),
                 shooterConstants.leftFlywheelGearing()
         );
 
@@ -68,16 +96,16 @@ public class ShooterIOSim implements ShooterIO {
                 shooterConstants.leftFlywheelGearing(),
                 leftFlywheelSim::update,
                 leftFlywheelSim::setInputVoltage,
-                () -> 0d,
+                leftFlywheelSim::getAngularPositionRad,
                 leftFlywheelSim::getAngularVelocityRadPerSec
         );
 
-        final FlywheelSim rightFlywheelSim = new FlywheelSim(
-                LinearSystemId.identifyVelocitySystem(
+        final DCMotorSim rightFlywheelSim = new DCMotorSim(
+                LinearSystemId.createDCMotorSystem(
                         0.122 / (2 * Math.PI),
                         0.011 / (2 * Math.PI)
                 ),
-                DCMotor.getFalcon500(1),
+                DCMotor.getFalcon500Foc(1),
                 shooterConstants.rightFlywheelGearing()
         );
 
@@ -86,13 +114,19 @@ public class ShooterIOSim implements ShooterIO {
                 shooterConstants.rightFlywheelGearing(),
                 rightFlywheelSim::update,
                 rightFlywheelSim::setInputVoltage,
-                () -> 0d,
+                rightFlywheelSim::getAngularPositionRad,
                 rightFlywheelSim::getAngularVelocityRadPerSec
         );
 
-        this.velocityVoltage = new VelocityVoltage(0);
+        this.velocityTorqueCurrentFOC = new VelocityTorqueCurrentFOC(0);
+        this.torqueCurrentFOC = new TorqueCurrentFOC(0);
         this.voltageOut = new VoltageOut(0);
 
+        this._ampPosition = ampMotor.getPosition();
+        this._ampVelocity = ampMotor.getVelocity();
+        this._ampVoltage = ampMotor.getMotorVoltage();
+        this._ampTorqueCurrent = ampMotor.getTorqueCurrent();
+        this._ampDeviceTemp = ampMotor.getDeviceTemp();
         this._leftPosition = leftFlywheelMotor.getPosition();
         this._leftVelocity = leftFlywheelMotor.getVelocity();
         this._leftVoltage = leftFlywheelMotor.getMotorVoltage();
@@ -106,12 +140,14 @@ public class ShooterIOSim implements ShooterIO {
 
         final Notifier simUpdateNotifier = new Notifier(() -> {
             final double dt = deltaTime.get();
+            ampMotorSim.update(dt);
             leftMotorSim.update(dt);
             rightMotorSim.update(dt);
         });
         ToClose.add(simUpdateNotifier);
         simUpdateNotifier.setName(String.format(
-                "SimUpdate(%d,%d)",
+                "SimUpdate(%d,%d,%d)",
+                ampMotor.getDeviceID(),
                 leftFlywheelMotor.getDeviceID(),
                 rightFlywheelMotor.getDeviceID()
         ));
@@ -121,29 +157,61 @@ public class ShooterIOSim implements ShooterIO {
     @SuppressWarnings("DuplicatedCode")
     @Override
     public void config() {
+        final TalonFXConfiguration ampTalonFXConfiguration = new TalonFXConfiguration();
+        final InvertedValue ampTalonFXInverted = InvertedValue.Clockwise_Positive;
+        ampTalonFXConfiguration.Slot0 = new Slot0Configs()
+                .withKS(0)
+                .withKV(1.5262)
+                .withKA(0.24772)
+                .withKP(15.568);
+        ampTalonFXConfiguration.TorqueCurrent.PeakForwardTorqueCurrent = 120;
+        ampTalonFXConfiguration.TorqueCurrent.PeakReverseTorqueCurrent = -120;
+        ampTalonFXConfiguration.CurrentLimits.StatorCurrentLimit = 60;
+        ampTalonFXConfiguration.CurrentLimits.StatorCurrentLimitEnable = true;
+        ampTalonFXConfiguration.CurrentLimits.SupplyCurrentLimit = 40;
+        ampTalonFXConfiguration.CurrentLimits.SupplyCurrentThreshold = 50;
+        ampTalonFXConfiguration.CurrentLimits.SupplyTimeThreshold = 0.5;
+        ampTalonFXConfiguration.CurrentLimits.SupplyCurrentLimitEnable = true;
+        ampTalonFXConfiguration.Feedback.SensorToMechanismRatio = shooterConstants.ampMotorGearing();
+        ampTalonFXConfiguration.MotorOutput.Inverted = ampTalonFXInverted;
+        ampTalonFXConfiguration.MotorOutput.NeutralMode = NeutralModeValue.Coast;
+        ampMotor.getConfigurator().apply(ampTalonFXConfiguration);
+
         final TalonFXConfiguration leftTalonFXConfiguration = new TalonFXConfiguration();
-        final InvertedValue leftTalonFXInverted = InvertedValue.CounterClockwise_Positive;
+        final InvertedValue leftTalonFXInverted = InvertedValue.Clockwise_Positive;
         leftTalonFXConfiguration.Slot0 = new Slot0Configs()
-                .withKS(0.094)
-                .withKV(0.121)
-                .withKA(0.01)
-                .withKP(0.177);
-        leftTalonFXConfiguration.CurrentLimits.StatorCurrentLimit = 80;
+                .withKS(0)
+                .withKV(1.5238)
+                .withKA(0.25265)
+                .withKP(15.309);
+        leftTalonFXConfiguration.TorqueCurrent.PeakForwardTorqueCurrent = 120;
+        leftTalonFXConfiguration.TorqueCurrent.PeakReverseTorqueCurrent = -120;
+        leftTalonFXConfiguration.CurrentLimits.StatorCurrentLimit = 60;
         leftTalonFXConfiguration.CurrentLimits.StatorCurrentLimitEnable = true;
+        leftTalonFXConfiguration.CurrentLimits.SupplyCurrentLimit = 40;
+        leftTalonFXConfiguration.CurrentLimits.SupplyCurrentThreshold = 50;
+        leftTalonFXConfiguration.CurrentLimits.SupplyTimeThreshold = 0.5;
+        leftTalonFXConfiguration.CurrentLimits.SupplyCurrentLimitEnable = true;
         leftTalonFXConfiguration.Feedback.SensorToMechanismRatio = shooterConstants.leftFlywheelGearing();
         leftTalonFXConfiguration.MotorOutput.Inverted = leftTalonFXInverted;
         leftTalonFXConfiguration.MotorOutput.NeutralMode = NeutralModeValue.Coast;
         leftFlywheelMotor.getConfigurator().apply(leftTalonFXConfiguration);
 
         final TalonFXConfiguration rightTalonFXConfiguration = new TalonFXConfiguration();
-        final InvertedValue rightTalonFXInverted = InvertedValue.Clockwise_Positive;
+        final InvertedValue rightTalonFXInverted = InvertedValue.CounterClockwise_Positive;
         rightTalonFXConfiguration.Slot0 = new Slot0Configs()
-                .withKS(0.11)
-                .withKV(0.122)
-                .withKA(0.011)
-                .withKP(0.17542);
-        rightTalonFXConfiguration.CurrentLimits.StatorCurrentLimit = 80;
+                .withKS(0)
+                .withKV(1.5573)
+                .withKA(0.26688)
+                .withKP(15.575);
+        rightTalonFXConfiguration.TorqueCurrent.PeakForwardTorqueCurrent = 120;
+        rightTalonFXConfiguration.TorqueCurrent.PeakReverseTorqueCurrent = -120;
+        rightTalonFXConfiguration.CurrentLimits.StatorCurrentLimit = 60;
         rightTalonFXConfiguration.CurrentLimits.StatorCurrentLimitEnable = true;
+        rightTalonFXConfiguration.CurrentLimits.SupplyCurrentLimit = 40;
+        rightTalonFXConfiguration.CurrentLimits.SupplyCurrentThreshold = 50;
+        rightTalonFXConfiguration.CurrentLimits.SupplyTimeThreshold = 0.5;
+        rightTalonFXConfiguration.CurrentLimits.SupplyCurrentLimitEnable = true;
         rightTalonFXConfiguration.Feedback.SensorToMechanismRatio = shooterConstants.rightFlywheelGearing();
         rightTalonFXConfiguration.MotorOutput.Inverted = rightTalonFXInverted;
         rightTalonFXConfiguration.MotorOutput.NeutralMode = NeutralModeValue.Coast;
@@ -151,25 +219,32 @@ public class ShooterIOSim implements ShooterIO {
 
         BaseStatusSignal.setUpdateFrequencyForAll(
                 100,
-                _leftPosition,
+                _ampVelocity,
+                _ampVoltage,
+                _ampTorqueCurrent,
                 _leftVelocity,
                 _leftVoltage,
                 _leftTorqueCurrent,
-                _rightPosition,
                 _rightVelocity,
                 _rightVoltage,
                 _rightTorqueCurrent
         );
         BaseStatusSignal.setUpdateFrequencyForAll(
                 4,
+                _ampPosition,
+                _ampDeviceTemp,
+                _leftPosition,
                 _leftDeviceTemp,
+                _rightPosition,
                 _rightDeviceTemp
         );
         ParentDevice.optimizeBusUtilizationForAll(
+                ampMotor,
                 leftFlywheelMotor,
                 rightFlywheelMotor
         );
 
+        SimUtils.setCTRETalonFXSimStateMotorInverted(ampMotor, ampTalonFXInverted);
         SimUtils.setCTRETalonFXSimStateMotorInverted(leftFlywheelMotor, leftTalonFXInverted);
         SimUtils.setCTRETalonFXSimStateMotorInverted(rightFlywheelMotor, rightTalonFXInverted);
     }
@@ -178,22 +253,36 @@ public class ShooterIOSim implements ShooterIO {
     @Override
     public void updateInputs(final ShooterIOInputs inputs) {
         BaseStatusSignal.refreshAll(
+                _ampPosition,
+                _ampVelocity,
+                _ampVoltage,
+                _ampTorqueCurrent,
+                _ampDeviceTemp,
                 _leftPosition,
                 _leftVelocity,
+                _leftVoltage,
                 _leftTorqueCurrent,
                 _leftDeviceTemp,
                 _rightPosition,
                 _rightVelocity,
+                _rightVoltage,
                 _rightTorqueCurrent,
                 _rightDeviceTemp
         );
 
+        inputs.ampPositionRots = _ampPosition.getValue();
+        inputs.ampVelocityRotsPerSec = _ampVelocity.getValue();
+        inputs.ampVoltageVolts = _ampVoltage.getValue();
+        inputs.ampCurrentAmps = _ampTorqueCurrent.getValue();
+        inputs.ampTempCelsius = _ampDeviceTemp.getValue();
         inputs.leftPositionRots = _leftPosition.getValue();
         inputs.leftVelocityRotsPerSec = _leftVelocity.getValue();
+        inputs.leftVoltageVolts = _leftVoltage.getValue();
         inputs.leftCurrentAmps = _leftTorqueCurrent.getValue();
         inputs.leftTempCelsius = _leftDeviceTemp.getValue();
         inputs.rightPositionRots = _rightPosition.getValue();
         inputs.rightVelocityRotsPerSec = _rightVelocity.getValue();
+        inputs.rightVoltageVolts = _rightVoltage.getValue();
         inputs.rightCurrentAmps = _rightTorqueCurrent.getValue();
         inputs.rightTempCelsius = _rightDeviceTemp.getValue();
     }
@@ -204,8 +293,9 @@ public class ShooterIOSim implements ShooterIO {
             final double leftFlywheelVelocity,
             final double rightFlywheelVelocity
     ) {
-        leftFlywheelMotor.setControl(velocityVoltage.withVelocity(leftFlywheelVelocity));
-        rightFlywheelMotor.setControl(velocityVoltage.withVelocity(rightFlywheelVelocity));
+        ampMotor.setControl(velocityTorqueCurrentFOC.withVelocity(ampVelocity));
+        leftFlywheelMotor.setControl(velocityTorqueCurrentFOC.withVelocity(leftFlywheelVelocity));
+        rightFlywheelMotor.setControl(velocityTorqueCurrentFOC.withVelocity(rightFlywheelVelocity));
     }
 
     @Override
@@ -214,7 +304,19 @@ public class ShooterIOSim implements ShooterIO {
             final double leftVolts,
             final double rightVolts
     ) {
+        ampMotor.setControl(voltageOut.withOutput(ampVolts));
         leftFlywheelMotor.setControl(voltageOut.withOutput(leftVolts));
         rightFlywheelMotor.setControl(voltageOut.withOutput(rightVolts));
+    }
+
+    @Override
+    public void toTorqueCurrent(
+            final double ampTorqueCurrentAmps,
+            final double leftTorqueCurrentAmps,
+            final double rightTorqueCurrentAmps
+    ) {
+        ampMotor.setControl(torqueCurrentFOC.withOutput(ampTorqueCurrentAmps));
+        leftFlywheelMotor.setControl(torqueCurrentFOC.withOutput(leftTorqueCurrentAmps));
+        rightFlywheelMotor.setControl(torqueCurrentFOC.withOutput(rightTorqueCurrentAmps));
     }
 }

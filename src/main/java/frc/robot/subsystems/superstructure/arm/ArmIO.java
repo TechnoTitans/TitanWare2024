@@ -5,6 +5,8 @@ import org.littletonrobotics.junction.AutoLog;
 public interface ArmIO {
     @AutoLog
     class ArmIOInputs {
+        boolean pivotLowerLimitSwitch = false;
+
         double leftPivotPositionRots = 0;
         double leftPivotVelocityRotsPerSec = 0;
         double leftPivotVoltageVolts = 0;
@@ -30,6 +32,8 @@ public interface ArmIO {
             final Arm.PositionSetpoint pivotSoftLowerLimit,
             final Arm.PositionSetpoint pivotSoftUpperLimit
     ) {}
+
+    default void setPivotPosition(final double pivotPositionRots) {}
 
     default void toPivotPosition(final double pivotPositionRots) {}
 

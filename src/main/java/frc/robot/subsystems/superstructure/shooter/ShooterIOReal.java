@@ -220,10 +220,12 @@ public class ShooterIOReal implements ShooterIO {
     }
 
     @Override
-    public void setCharacterizationTorqueCurrent(
+    public void toTorqueCurrent(
+            final double ampTorqueCurrentAmps,
             final double leftTorqueCurrentAmps,
             final double rightTorqueCurrentAmps
     ) {
+        ampMotor.setControl(torqueCurrentFOC.withOutput(ampTorqueCurrentAmps));
         leftFlywheelMotor.setControl(torqueCurrentFOC.withOutput(leftTorqueCurrentAmps));
         rightFlywheelMotor.setControl(torqueCurrentFOC.withOutput(rightTorqueCurrentAmps));
     }

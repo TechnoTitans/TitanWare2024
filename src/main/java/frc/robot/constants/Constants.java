@@ -3,7 +3,7 @@ package frc.robot.constants;
 import edu.wpi.first.math.util.Units;
 
 public interface Constants {
-    RobotMode CURRENT_MODE = RobotMode.REAL;
+    RobotMode CURRENT_MODE = RobotMode.SIM;
     double LOOP_PERIOD_SECONDS = 0.02;
 
     enum RobotMode {
@@ -15,7 +15,6 @@ public interface Constants {
     interface Swerve {
         double WHEEL_BASE_M = Units.inchesToMeters(17.161);
         double TRACK_WIDTH_M = Units.inchesToMeters(24.752);
-//        double ROBOT_MAX_SPEED_MPS = Units.feetToMeters(16.5);
         double ROBOT_MAX_SPEED_MPS = Units.feetToMeters(16.5);
         double ROBOT_MAX_ANGULAR_SPEED_RAD_PER_SEC = 2 * Math.PI;
         double TELEOP_MAX_SPEED_MPS = ROBOT_MAX_SPEED_MPS;
