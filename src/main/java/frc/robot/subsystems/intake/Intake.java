@@ -20,13 +20,12 @@ import org.littletonrobotics.junction.Logger;
 import java.util.function.Supplier;
 
 import static edu.wpi.first.units.Units.*;
-import static frc.robot.constants.Constants.Intake.RollerCircumferenceMeters;
 
 public class Intake extends SubsystemBase {
     protected static final String logKey = "Intake";
 
     private static final double MaxRollerSurfaceSpeedMetersPerSec =
-            RollerCircumferenceMeters * Constants.Swerve.ROBOT_MAX_SPEED_MPS;
+            Constants.Intake.RollerCircumferenceMeters * Constants.Swerve.ROBOT_MAX_SPEED_MPS;
 
     private final IntakeIO intakeIO;
     private final IntakeIOInputsAutoLogged inputs;
@@ -41,8 +40,8 @@ public class Intake extends SubsystemBase {
     }
 
     public static class Setpoint {
-        public double frontRollersVelocityRotsPerSecond;
-        public double backRollersVelocityRotsPerSecond;
+        public double rightRollerVelocityRotsPerSecond;
+        public double leftRollerVelocityRotsPerSecond;
         public double shooterFeederRollerVelocityRotsPerSecond;
     }
 
@@ -98,31 +97,31 @@ public class Intake extends SubsystemBase {
                             2 * chassisSpeedTranslation.getNorm(),
                             0.25 * MaxRollerSurfaceSpeedMetersPerSec,
                             MaxRollerSurfaceSpeedMetersPerSec
-                    ) / RollerCircumferenceMeters;
+                    ) / Constants.Intake.RollerCircumferenceMeters;
 
-                    setpoint.frontRollersVelocityRotsPerSecond = rollerSpeedRotsPerSec;
-                    setpoint.backRollersVelocityRotsPerSecond = rollerSpeedRotsPerSec;
+                    setpoint.rightRollerVelocityRotsPerSecond = rollerSpeedRotsPerSec;
+                    setpoint.leftRollerVelocityRotsPerSecond = rollerSpeedRotsPerSec;
                     setpoint.shooterFeederRollerVelocityRotsPerSecond = rollerSpeedRotsPerSec;
                 }
                 case OUTTAKE -> {
-                    setpoint.frontRollersVelocityRotsPerSecond = -MaxRollerSurfaceSpeedMetersPerSec;
-                    setpoint.backRollersVelocityRotsPerSecond = -MaxRollerSurfaceSpeedMetersPerSec;
+                    setpoint.rightRollerVelocityRotsPerSecond = -MaxRollerSurfaceSpeedMetersPerSec;
+                    setpoint.leftRollerVelocityRotsPerSecond = -MaxRollerSurfaceSpeedMetersPerSec;
                     setpoint.shooterFeederRollerVelocityRotsPerSecond = -MaxRollerSurfaceSpeedMetersPerSec;
                 }
                 case IDLE -> {
-                    setpoint.frontRollersVelocityRotsPerSecond = 0.1 * MaxRollerSurfaceSpeedMetersPerSec;
-                    setpoint.backRollersVelocityRotsPerSecond = 0.1 * MaxRollerSurfaceSpeedMetersPerSec;
+                    setpoint.rightRollerVelocityRotsPerSecond = 0.1 * MaxRollerSurfaceSpeedMetersPerSec;
+                    setpoint.leftRollerVelocityRotsPerSecond = 0.1 * MaxRollerSurfaceSpeedMetersPerSec;
                     setpoint.shooterFeederRollerVelocityRotsPerSecond = 0.1 * MaxRollerSurfaceSpeedMetersPerSec;
                 }
             }
 
-            Logger.recordOutput(logKey + "/FrontRollerVelocityRotPerSec", setpoint.frontRollersVelocityRotsPerSecond);
-            Logger.recordOutput(logKey + "/BackRollerVelocityRotPerSec", setpoint.backRollersVelocityRotsPerSecond);
+            Logger.recordOutput(logKey + "/RightRollerVelocityRotPerSec", setpoint.rightRollerVelocityRotsPerSecond);
+            Logger.recordOutput(logKey + "/LeftRollerVelocityRotPerSec", setpoint.leftRollerVelocityRotsPerSecond);
             Logger.recordOutput(logKey + "/ShooterFeederRollerVelocityRotPerSec", setpoint.shooterFeederRollerVelocityRotsPerSecond);
 
             intakeIO.toVelocity(
-                    setpoint.frontRollersVelocityRotsPerSecond,
-                    setpoint.frontRollersVelocityRotsPerSecond,
+                    setpoint.rightRollerVelocityRotsPerSecond,
+                    setpoint.leftRollerVelocityRotsPerSecond,
                     setpoint.shooterFeederRollerVelocityRotsPerSecond
             );
         });
