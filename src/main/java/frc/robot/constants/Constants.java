@@ -61,13 +61,13 @@ public interface Constants {
 
         Transform3d ROBOT_TO_FR_APRILTAG_CAM = new Transform3d(
                 new Translation3d(Units.inchesToMeters(11.838), Units.inchesToMeters(-12.861), Units.inchesToMeters(8.947)),
-                new Rotation3d(7.44802852475369, Units.degreesToRadians(-25), Units.degreesToRadians(-25))
+                new Rotation3d(Units.degreesToRadians(7.44802852475369), Units.degreesToRadians(-25), Units.degreesToRadians(-25))
         );
 
         //L = Left, R = Right, F = Forward, B = Backward (Facing)
         Transform3d ROBOT_TO_FL_APRILTAG_CAM = new Transform3d( // X Z Y
                 new Translation3d(Units.inchesToMeters(11.862), Units.inchesToMeters(12.681), Units.inchesToMeters(8.947)),
-                new Rotation3d(172.57530061265695, Units.degreesToRadians(-25), Units.degreesToRadians(25))
+                new Rotation3d(Units.degreesToRadians(172.57530061265695), Units.degreesToRadians(-25), Units.degreesToRadians(25))
         );
 
         /**
