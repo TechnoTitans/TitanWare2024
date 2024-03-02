@@ -1,6 +1,12 @@
 package frc.robot;
 
 import com.ctre.phoenix6.SignalLogger;
+import com.ctre.phoenix6.configs.CurrentLimitsConfigs;
+import com.ctre.phoenix6.configs.MotorOutputConfigs;
+import com.ctre.phoenix6.configs.TalonFXConfiguration;
+import com.ctre.phoenix6.controls.VoltageOut;
+import com.ctre.phoenix6.hardware.TalonFX;
+import com.ctre.phoenix6.signals.NeutralModeValue;
 import edu.wpi.first.wpilibj.PowerDistribution;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
@@ -22,6 +28,9 @@ public class RobotContainer {
 
     public final Superstructure superstructure;
 
+    private final TalonFX intakeLeft;
+    private final TalonFX intakeRight;
+
     public final CommandXboxController driverController;
     public final CommandXboxController coDriverController;
 
@@ -41,26 +50,68 @@ public class RobotContainer {
                 HardwareConstants.BACK_RIGHT_MODULE
         );
 
-        this.arm = new Arm(Constants.CURRENT_MODE, HardwareConstants.ARM);
+        this.arm = new Arm(Constants.RobotMode.REPLAY, HardwareConstants.ARM);
         this.shooter = new Shooter(Constants.CURRENT_MODE, HardwareConstants.SHOOTER);
 
         this.superstructure = new Superstructure(arm, shooter);
 
+        this.intakeLeft = new TalonFX(20);
+        this.intakeRight = new TalonFX(19);
+
+        this.intakeLeft.getConfigurator().apply(new TalonFXConfiguration()
+                .withCurrentLimits(new CurrentLimitsConfigs()
+                                .withStatorCurrentLimit(60)
+                                .withStatorCurrentLimitEnable(true)
+                )
+                .withMotorOutput(new MotorOutputConfigs()
+                        .withNeutralMode(NeutralModeValue.Coast)
+                )
+        );
+        this.intakeRight.getConfigurator().apply(new TalonFXConfiguration()
+                .withCurrentLimits(new CurrentLimitsConfigs()
+                        .withStatorCurrentLimit(60)
+                        .withStatorCurrentLimitEnable(true)
+                )
+                .withMotorOutput(new MotorOutputConfigs()
+                        .withNeutralMode(NeutralModeValue.Coast)
+                )
+        );
+
         this.driverController = new CommandXboxController(RobotMap.MainController);
         this.coDriverController = new CommandXboxController(RobotMap.CoController);
 
-        this.coDriverController.y().whileTrue(shooter.voltageSysIdCommand());
-        this.coDriverController.leftBumper().onTrue(Commands.runOnce(SignalLogger::stop));
+        final VoltageOut voltageOut = new VoltageOut(0);
+        this.driverController.y().onTrue(
+                Commands.sequence(
+                        superstructure.toGoal(Superstructure.Goal.IDLE),
+//                        Commands.waitUntil(superstructure.atGoalTrigger),
+                        Commands.waitSeconds(6),
+                        superstructure.toGoal(Superstructure.Goal.SUBWOOFER),
+//                        Commands.waitUntil(superstructure.atGoalTrigger),
+                        Commands.waitUntil(superstructure.getShooter().atVelocityTrigger),
+                        Commands.runOnce(() -> {
+                            intakeLeft.setControl(voltageOut.withOutput(10));
+                            intakeRight.setControl(voltageOut.withOutput(10));
+                        }),
+                        Commands.waitSeconds(2),
+                        Commands.runOnce(() -> {
+                            intakeLeft.setControl(voltageOut.withOutput(0));
+                            intakeRight.setControl(voltageOut.withOutput(0));
+                        }),
+                        Commands.waitSeconds(2),
+                        superstructure.toGoal(Superstructure.Goal.IDLE)
+                )
+        );
     }
 
     public Command getAutonomousCommand() {
         return Commands.repeatingSequence(
                 superstructure.toGoal(Superstructure.Goal.IDLE),
                 Commands.waitUntil(superstructure.atGoalTrigger),
-                Commands.waitSeconds(2),
+                Commands.waitSeconds(4),
                 superstructure.toGoal(Superstructure.Goal.SUBWOOFER),
                 Commands.waitUntil(superstructure.atGoalTrigger),
-                Commands.waitSeconds(2)
+                Commands.waitSeconds(4)
         );
     }
 }

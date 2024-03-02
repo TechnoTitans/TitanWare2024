@@ -89,4 +89,12 @@ public class Superstructure {
                 shooter.torqueCurrentSysIdCommand()
         );
     }
+
+    public Arm getArm() {
+        return arm;
+    }
+
+    public Shooter getShooter() {
+        return shooter;
+    }
 }

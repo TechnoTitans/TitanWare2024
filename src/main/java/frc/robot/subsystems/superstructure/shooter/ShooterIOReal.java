@@ -74,9 +74,9 @@ public class ShooterIOReal implements ShooterIO {
         final TalonFXConfiguration ampTalonFXConfiguration = new TalonFXConfiguration();
         // TODO: get feedforward gains
         ampTalonFXConfiguration.Slot0 = new Slot0Configs()
-                .withKS(0)
-                .withKV(0)
-                .withKA(0)
+                .withKS(9.6776)
+                .withKV(0.080065)
+                .withKA(0.14978)
                 .withKP(2);
         ampTalonFXConfiguration.TorqueCurrent.PeakForwardTorqueCurrent = 80;
         ampTalonFXConfiguration.TorqueCurrent.PeakReverseTorqueCurrent = -80;
@@ -93,10 +93,10 @@ public class ShooterIOReal implements ShooterIO {
 
         final TalonFXConfiguration leftTalonFXConfiguration = new TalonFXConfiguration();
         leftTalonFXConfiguration.Slot0 = new Slot0Configs()
-                .withKS(2.4818)
-                .withKV(0.20086)
-                .withKA(0.55503)
-                .withKP(2.5941);
+                .withKS(10.133)
+                .withKV(0.11958)
+                .withKA(0.43716)
+                .withKP(2);
         leftTalonFXConfiguration.TorqueCurrent.PeakForwardTorqueCurrent = 80;
         leftTalonFXConfiguration.TorqueCurrent.PeakReverseTorqueCurrent = -80;
         leftTalonFXConfiguration.CurrentLimits.StatorCurrentLimit = 60;
@@ -112,10 +112,10 @@ public class ShooterIOReal implements ShooterIO {
 
         final TalonFXConfiguration rightTalonFXConfiguration = new TalonFXConfiguration();
         rightTalonFXConfiguration.Slot0 = new Slot0Configs()
-                .withKS(2.4682)
-                .withKV(0.099933)
-                .withKA(0.20584)
-                .withKP(1.2235);
+                .withKS(13.797)
+                .withKV(0.13482)
+                .withKA(0.41707)
+                .withKP(2);
         rightTalonFXConfiguration.TorqueCurrent.PeakForwardTorqueCurrent = 80;
         rightTalonFXConfiguration.TorqueCurrent.PeakReverseTorqueCurrent = -80;
         rightTalonFXConfiguration.CurrentLimits.StatorCurrentLimit = 60;

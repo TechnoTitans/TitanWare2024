@@ -20,7 +20,7 @@ import static edu.wpi.first.units.Units.*;
 public class Shooter extends SubsystemBase {
     protected static final String LogKey = "Shooter";
 
-    private static final double VelocityToleranceRotsPerSec = 0.1;
+    private static final double VelocityToleranceRotsPerSec = 0.5;
     private final ShooterIO shooterIO;
     private final ShooterIOInputsAutoLogged inputs;
 
@@ -42,7 +42,7 @@ public class Shooter extends SubsystemBase {
         STOP(() -> 0, () -> 0, () -> 0),
         IDLE(() -> 10, () -> 10, () -> 10),
         AMP(() -> 4, () -> 4, () -> 4),
-        SUBWOOFER(() -> 6, () -> 6, () -> 6),
+        SUBWOOFER(() -> 80, () -> 80, () -> 80),
         AIM_SPEAKER(() -> 0, () -> 0, () -> 0);
 
         private final DoubleSupplier ampVelocitySupplier;

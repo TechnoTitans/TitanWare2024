@@ -142,13 +142,13 @@ public class Robot extends LoggedRobot {
         // No need to lint this here, X and Y are flipped for robot vs. controller joystick coordinate systems, so we
         // pass the controller X into the robot Y, and vice versa
         //noinspection SuspiciousNameCombination
-//        robotContainer.swerve.setDefaultCommand(
-//                robotContainer.swerve.teleopDriveCommand(
-//                        robotContainer.driverController::getLeftY,
-//                        robotContainer.driverController::getLeftX,
-//                        robotContainer.driverController::getRightX
-//                )
-//        );
+        robotContainer.swerve.setDefaultCommand(
+                robotContainer.swerve.teleopDriveCommand(
+                        robotContainer.driverController::getLeftY,
+                        robotContainer.driverController::getLeftX,
+                        robotContainer.driverController::getRightX
+                )
+        );
     }
 
     @Override
