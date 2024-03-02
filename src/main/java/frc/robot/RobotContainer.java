@@ -54,25 +54,12 @@ public class RobotContainer {
     }
 
     public Command getAutonomousCommand() {
-//        return superstructure.runVoltageCharacterization();
         return Commands.repeatingSequence(
-                superstructure.toSetpoint(
-                        new Superstructure.SuperstructureSetpoint(
-                                0.15,
-                                60,
-                                60,
-                                60
-                        )
-                ),
+                superstructure.toGoal(Superstructure.Goal.IDLE),
+                Commands.waitUntil(superstructure.atGoalTrigger),
                 Commands.waitSeconds(2),
-                superstructure.toSetpoint(
-                        new Superstructure.SuperstructureSetpoint(
-                                0,
-                                15,
-                                15,
-                                15
-                        )
-                ),
+                superstructure.toGoal(Superstructure.Goal.SUBWOOFER),
+                Commands.waitUntil(superstructure.atGoalTrigger),
                 Commands.waitSeconds(2)
         );
     }

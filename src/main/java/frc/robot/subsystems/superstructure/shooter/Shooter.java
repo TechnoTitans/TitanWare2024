@@ -29,7 +29,7 @@ public class Shooter extends SubsystemBase {
 
     public Trigger atVelocityTrigger = new Trigger(this::atVelocitySetpoint);
 
-    private Goal goal;
+    private Goal goal = Goal.STOP;
     private final VelocitySetpoint setpoint;
 
     private static class VelocitySetpoint {
@@ -126,6 +126,7 @@ public class Shooter extends SubsystemBase {
             );
         }
 
+        Logger.recordOutput(LogKey + "/Goal", goal.toString());
         Logger.recordOutput(LogKey + "/AtVelocitySetpoint", atVelocitySetpoint());
         Logger.recordOutput(LogKey + "/VelocitySetpoint/AmpVelocityRotsPerSec", setpoint.ampVelocityRotsPerSec);
         Logger.recordOutput(

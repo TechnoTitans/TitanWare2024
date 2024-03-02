@@ -113,6 +113,7 @@ public class Arm extends SubsystemBase {
             armIO.toPivotPosition(setpoint.pivotPositionRots);
         }
 
+        Logger.recordOutput(LogKey + "/Goal", goal.toString());
         Logger.recordOutput(LogKey + "/PositionSetpoint/PivotPositionRots", setpoint.pivotPositionRots);
         Logger.recordOutput(LogKey + "/AtPositionSetpoint", atPositionSetpoint());
         Logger.recordOutput(LogKey + "/AtPivotLowerLimit", atPivotLowerLimit());
