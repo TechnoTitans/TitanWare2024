@@ -112,9 +112,9 @@ public class Swerve extends SubsystemBase {
                 kinematics,
                 getYaw(),
                 getModulePositions(),
-                new Pose2d()
-//                Constants.Vision.STATE_STD_DEVS,
-//                Constants.Vision.VISION_MEASUREMENT_STD_DEVS
+                new Pose2d(),
+                Constants.Vision.STATE_STD_DEVS,
+                Constants.Vision.VISION_MEASUREMENT_STD_DEVS
         );
 
         this.linearVoltageSysIdRoutine = makeLinearVoltageSysIdRoutine();
