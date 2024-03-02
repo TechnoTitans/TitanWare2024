@@ -320,9 +320,9 @@ public class IntakeIOSim implements IntakeIO {
     }
 
     @Override
-    public void toVoltage(double frontRollersVolts, double backRollersVolts, double shooterFeederRollerVolts) {
-        intakeFrontRollers.setControl(voltageOut.withOutput(frontRollersVolts));
-        intakeBackRollers.setControl(voltageOut.withOutput(backRollersVolts));
+    public void toVoltage(double rightRollerVolts, double leftRollerVolts, double shooterFeederRollerVolts) {
+        rightRoller.setControl(voltageOut.withOutput(rightRollerVolts));
+        leftRoller.setControl(voltageOut.withOutput(leftRollerVolts));
         shooterFeederRoller.setControl(voltageOut.withOutput(shooterFeederRollerVolts));
     }
 }
