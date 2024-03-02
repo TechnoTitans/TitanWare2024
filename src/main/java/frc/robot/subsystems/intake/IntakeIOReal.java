@@ -151,7 +151,7 @@ public class IntakeIOReal implements IntakeIO {
         leftRollerConfig.CurrentLimits.SupplyTimeThreshold = 1.5;
         leftRollerConfig.CurrentLimits.SupplyCurrentLimitEnable = true;
         leftRollerConfig.MotorOutput.NeutralMode = NeutralModeValue.Coast;
-        leftRollerConfig.MotorOutput.Inverted = InvertedValue.Clockwise_Positive;
+        leftRollerConfig.MotorOutput.Inverted = InvertedValue.CounterClockwise_Positive;
         leftRollerConfig.Feedback.FeedbackSensorSource = FeedbackSensorSourceValue.RotorSensor;
         leftRollerConfig.Feedback.SensorToMechanismRatio = intakeConstants.leftMotorGearing();
         leftRoller.getConfigurator().apply(leftRollerConfig);

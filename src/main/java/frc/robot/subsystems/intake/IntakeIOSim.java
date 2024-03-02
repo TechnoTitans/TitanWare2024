@@ -222,7 +222,7 @@ public class IntakeIOSim implements IntakeIO {
         rightRollerConfig.Feedback.SensorToMechanismRatio = intakeConstants.rightMotorGearing();
         rightRoller.getConfigurator().apply(rightRollerConfig);
 
-        final InvertedValue leftInvertedValue = InvertedValue.Clockwise_Positive;
+        final InvertedValue leftInvertedValue = InvertedValue.CounterClockwise_Positive;
         final TalonFXConfiguration leftRollerConfig = new TalonFXConfiguration();
         leftRollerConfig.Slot0 = new Slot0Configs()
                 .withKS(0)

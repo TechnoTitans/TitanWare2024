@@ -46,6 +46,6 @@ public class RobotContainer {
 
     public Command getAutonomousCommand() {
 //        return Commands.waitUntil(() -> !RobotState.isAutonomous());
-        return intake.toVoltageCommand(3, 0, 0);
+        return intake.toVoltageCommand(3, 3, 3);
     }
 }

@@ -128,13 +128,13 @@ public class Intake extends SubsystemBase {
     }
 
     public Command toVoltageCommand(
-            final double frontRollerVoltage,
-            final double backRollerVoltage,
+            final double rightRollerVoltage,
+            final double leftRollerVoltage,
             final double shooterFeederVoltage
     ) {
         return runOnce(() -> intakeIO.toVoltage(
-                frontRollerVoltage,
-                backRollerVoltage,
+                rightRollerVoltage,
+                leftRollerVoltage,
                 shooterFeederVoltage
         ));
     }
