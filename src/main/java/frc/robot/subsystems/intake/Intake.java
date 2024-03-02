@@ -127,6 +127,19 @@ public class Intake extends SubsystemBase {
             );
         });
     }
+
+    public Command toVoltageCommand(
+            final double frontRollerVoltage,
+            final double backRollerVoltage,
+            final double shooterFeederVoltage
+    ) {
+        return runOnce(() -> intakeIO.toVoltage(
+                frontRollerVoltage,
+                backRollerVoltage,
+                shooterFeederVoltage
+        ));
+    }
+
     private SysIdRoutine makeTorqueCurrentSysIdRoutine(
             final Measure<Velocity<Current>> currentRampRate,
             final Measure<Current> stepCurrent,

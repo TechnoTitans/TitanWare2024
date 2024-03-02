@@ -6,6 +6,7 @@ import com.ctre.phoenix6.configs.Slot0Configs;
 import com.ctre.phoenix6.configs.TalonFXConfiguration;
 import com.ctre.phoenix6.controls.TorqueCurrentFOC;
 import com.ctre.phoenix6.controls.VelocityTorqueCurrentFOC;
+import com.ctre.phoenix6.controls.VoltageOut;
 import com.ctre.phoenix6.hardware.ParentDevice;
 import com.ctre.phoenix6.hardware.TalonFX;
 import com.ctre.phoenix6.signals.FeedbackSensorSourceValue;
@@ -37,6 +38,7 @@ public class IntakeIOSim implements IntakeIO {
 
     private final VelocityTorqueCurrentFOC velocityTorqueCurrentFOC;
     private final TorqueCurrentFOC torqueCurrentFOC;
+    private final VoltageOut voltageOut;
 
     private final StatusSignal<Double> _intakeFrontPosition;
     private final StatusSignal<Double> _intakeFrontVelocity;
@@ -120,6 +122,7 @@ public class IntakeIOSim implements IntakeIO {
 
         this.velocityTorqueCurrentFOC = new VelocityTorqueCurrentFOC(0);
         this.torqueCurrentFOC = new TorqueCurrentFOC(0);
+        this.voltageOut = new VoltageOut(0);
 
         this._intakeFrontPosition = intakeFrontRollers.getPosition();
         this._intakeFrontVelocity = intakeFrontRollers.getVelocity();
@@ -313,5 +316,12 @@ public class IntakeIOSim implements IntakeIO {
         intakeFrontRollers.setControl(torqueCurrentFOC.withOutput(frontRollersTorqueCurrentAmp));
         intakeBackRollers.setControl(torqueCurrentFOC.withOutput(backRollersTorqueCurrentAmp));
         shooterFeederRoller.setControl(torqueCurrentFOC.withOutput(shooterFeederRollerTorqueCurrentAmp));
+    }
+
+    @Override
+    public void toVoltage(double frontRollersVolts, double backRollersVolts, double shooterFeederRollerVolts) {
+        intakeFrontRollers.setControl(voltageOut.withOutput(frontRollersVolts));
+        intakeBackRollers.setControl(voltageOut.withOutput(backRollersVolts));
+        shooterFeederRoller.setControl(voltageOut.withOutput(shooterFeederRollerVolts));
     }
 }
