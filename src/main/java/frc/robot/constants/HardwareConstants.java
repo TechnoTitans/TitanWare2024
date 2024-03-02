@@ -40,7 +40,7 @@ public class HardwareConstants {
             1,
             2,
             3,
-            0.320556640625
+            -0.138
     );
 
     public static final SwerveModuleConstants FRONT_RIGHT_MODULE = new SwerveModuleConstants(
@@ -50,7 +50,7 @@ public class HardwareConstants {
             4,
             5,
             6,
-            0.33251953125
+            0.387
     );
 
     public static final SwerveModuleConstants BACK_LEFT_MODULE = new SwerveModuleConstants(
@@ -60,7 +60,7 @@ public class HardwareConstants {
             7,
             8,
             9,
-            0.0478515625
+            0
     );
 
     public static final SwerveModuleConstants BACK_RIGHT_MODULE = new SwerveModuleConstants(
@@ -70,7 +70,7 @@ public class HardwareConstants {
             10,
             11,
             12,
-            0.283203125
+            -0.425
     );
 
     public record GyroConstants(
