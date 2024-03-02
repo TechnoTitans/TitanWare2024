@@ -42,10 +42,12 @@ public class RobotContainer {
 
         this.driverController = new CommandXboxController(RobotMap.MainController);
         this.coDriverController = new CommandXboxController(RobotMap.CoController);
+
+        this.intake.setDefaultCommand(intake.toVoltageCommand(4, 4, 4));
     }
 
     public Command getAutonomousCommand() {
 //        return Commands.waitUntil(() -> !RobotState.isAutonomous());
-        return intake.toVoltageCommand(3, 3, 3);
+        return intake.toVoltageCommand(6, 6, 6);
     }
 }
