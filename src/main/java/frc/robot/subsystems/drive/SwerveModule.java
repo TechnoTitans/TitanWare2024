@@ -1,13 +1,12 @@
 package frc.robot.subsystems.drive;
 
-import com.ctre.phoenix6.hardware.CANcoder;
-import com.ctre.phoenix6.hardware.TalonFX;
 import com.ctre.phoenix6.signals.NeutralModeValue;
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.kinematics.SwerveModulePosition;
 import edu.wpi.first.math.kinematics.SwerveModuleState;
 import frc.robot.constants.Constants;
 import frc.robot.constants.Constants.Swerve.Modules;
+import frc.robot.constants.HardwareConstants;
 import frc.robot.utils.logging.LogUtils;
 import org.littletonrobotics.junction.Logger;
 
@@ -20,11 +19,19 @@ public class SwerveModule {
     private SwerveModulePosition[] odometryPositions;
     private SwerveModuleState lastDesiredState = new SwerveModuleState();
 
-    public SwerveModule(final SwerveModuleIO moduleIO, final String name) {
-        this.name = name;
+    public SwerveModule(
+            final HardwareConstants.SwerveModuleConstants constants,
+            final OdometryThreadRunner odometryThreadRunner,
+            final Constants.RobotMode robotMode
+    ) {
+        this.name = constants.name();
         this.logKey = String.format("%s/%s", Swerve.logKey, name);
 
-        this.moduleIO = moduleIO;
+        this.moduleIO = switch (robotMode) {
+            case REAL -> new SwerveModuleIOTalonFX(constants, odometryThreadRunner);
+            case SIM -> new SwerveModuleIOTalonFXSim(constants, odometryThreadRunner);
+            case REPLAY -> new SwerveModuleIO() {};
+        };
         this.moduleIO.config();
 
         this.inputs = new SwerveModuleIOInputsAutoLogged();
@@ -221,46 +228,5 @@ public class SwerveModule {
      */
     public void setNeutralMode(final NeutralModeValue neutralMode) {
         moduleIO.setNeutralMode(neutralMode);
-    }
-
-    /**
-     * Abstraction to allow for less convoluted/repetitive construction of {@link SwerveModule}s with varying/different
-     * hardware (i.e. motors, encoders, etc...)
-     */
-    public static class Builder {
-        /**
-         * Make a SDS MK4i {@link SwerveModule} with 2 {@link TalonFX}s for the drive and turn motors
-         * and a {@link CANcoder} as the turn encoder.
-         *
-         * @param name                    the name of the {@link SwerveModule}
-         * @param driveMotor              the drive {@link TalonFX}
-         * @param turnMotor               the turn {@link TalonFX}
-         * @param canCoder                the turn {@link CANcoder}
-         * @param magnetOffset            the magnet offset of the turn {@link CANcoder}
-         * @param robotMode               the {@link Constants.RobotMode} describing the current mode
-         * @param odometryThreadRunner    the swerve {@link frc.robot.subsystems.drive.OdometryThreadRunner}
-         * @return the constructed {@link SwerveModule}
-         */
-        public static SwerveModule SDSMK4iTalonFXCANCoder(
-                final String name,
-                final TalonFX driveMotor,
-                final TalonFX turnMotor,
-                final CANcoder canCoder,
-                final double magnetOffset,
-                final Constants.RobotMode robotMode,
-                final OdometryThreadRunner odometryThreadRunner
-        ) {
-            final SwerveModuleIO swerveModuleIO = switch (robotMode) {
-                case REAL -> new SwerveModuleIOTalonFX(
-                        driveMotor, turnMotor, canCoder, magnetOffset, odometryThreadRunner
-                );
-                case SIM -> new SwerveModuleIOTalonFXSim(
-                        driveMotor, turnMotor, canCoder, magnetOffset, odometryThreadRunner
-                );
-                case REPLAY -> new SwerveModuleIO() {};
-            };
-
-            return new SwerveModule(swerveModuleIO, name);
-        }
     }
 }
