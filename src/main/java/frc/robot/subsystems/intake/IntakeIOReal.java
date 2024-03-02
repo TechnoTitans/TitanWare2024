@@ -123,9 +123,9 @@ public class IntakeIOReal implements IntakeIO {
         rightRollerConfig.TorqueCurrent.PeakReverseTorqueCurrent = -80;
         rightRollerConfig.CurrentLimits.StatorCurrentLimit = 60;
         rightRollerConfig.CurrentLimits.StatorCurrentLimitEnable = true;
-        rightRollerConfig.CurrentLimits.SupplyCurrentLimit = 50;
-        rightRollerConfig.CurrentLimits.SupplyCurrentThreshold = 2;
-        rightRollerConfig.CurrentLimits.SupplyTimeThreshold = 0.5;
+        rightRollerConfig.CurrentLimits.SupplyCurrentLimit = 40;
+        rightRollerConfig.CurrentLimits.SupplyCurrentThreshold = 55;
+        rightRollerConfig.CurrentLimits.SupplyTimeThreshold = 1.5;
         rightRollerConfig.CurrentLimits.SupplyCurrentLimitEnable = true;
         rightRollerConfig.MotorOutput.NeutralMode = NeutralModeValue.Coast;
         rightRollerConfig.MotorOutput.Inverted = InvertedValue.CounterClockwise_Positive;
@@ -143,9 +143,9 @@ public class IntakeIOReal implements IntakeIO {
         leftRollerConfig.TorqueCurrent.PeakReverseTorqueCurrent = -80;
         leftRollerConfig.CurrentLimits.StatorCurrentLimit = 60;
         leftRollerConfig.CurrentLimits.StatorCurrentLimitEnable = true;
-        leftRollerConfig.CurrentLimits.SupplyCurrentLimit = 50;
-        leftRollerConfig.CurrentLimits.SupplyCurrentThreshold = 2;
-        leftRollerConfig.CurrentLimits.SupplyTimeThreshold = 0.5;
+        leftRollerConfig.CurrentLimits.SupplyCurrentLimit = 40;
+        leftRollerConfig.CurrentLimits.SupplyCurrentThreshold = 55;
+        leftRollerConfig.CurrentLimits.SupplyTimeThreshold = 1.5;
         leftRollerConfig.CurrentLimits.SupplyCurrentLimitEnable = true;
         leftRollerConfig.MotorOutput.NeutralMode = NeutralModeValue.Coast;
         leftRollerConfig.MotorOutput.Inverted = InvertedValue.Clockwise_Positive;
@@ -153,25 +153,25 @@ public class IntakeIOReal implements IntakeIO {
         leftRollerConfig.Feedback.SensorToMechanismRatio = intakeConstants.leftMotorGearing();
         leftRoller.getConfigurator().apply(leftRollerConfig);
 
-        final TalonFXConfiguration shooterFollowerConfig = new TalonFXConfiguration();
-        shooterFollowerConfig.Slot0 = new Slot0Configs()
+        final TalonFXConfiguration shooterFeederConfig = new TalonFXConfiguration();
+        shooterFeederConfig.Slot0 = new Slot0Configs()
                 .withKP(0)
                 .withKA(0)
                 .withKV(0)
                 .withKS(0);
-        shooterFollowerConfig.TorqueCurrent.PeakForwardTorqueCurrent = 80;
-        shooterFollowerConfig.TorqueCurrent.PeakReverseTorqueCurrent = -80;
-        shooterFollowerConfig.CurrentLimits.StatorCurrentLimit = 60;
-        shooterFollowerConfig.CurrentLimits.StatorCurrentLimitEnable = true;
-        shooterFollowerConfig.CurrentLimits.SupplyCurrentLimit = 50;
-        shooterFollowerConfig.CurrentLimits.SupplyCurrentThreshold = 2;
-        shooterFollowerConfig.CurrentLimits.SupplyTimeThreshold = 0.5;
-        shooterFollowerConfig.CurrentLimits.SupplyCurrentLimitEnable = true;
-        shooterFollowerConfig.MotorOutput.NeutralMode = NeutralModeValue.Coast;
-        shooterFollowerConfig.MotorOutput.Inverted = InvertedValue.CounterClockwise_Positive;
-        shooterFollowerConfig.Feedback.FeedbackSensorSource = FeedbackSensorSourceValue.RotorSensor;
-        shooterFollowerConfig.Feedback.SensorToMechanismRatio = intakeConstants.shooterFeederMotorGearing();
-        shooterFeederRoller.getConfigurator().apply(shooterFollowerConfig);
+        shooterFeederConfig.TorqueCurrent.PeakForwardTorqueCurrent = 80;
+        shooterFeederConfig.TorqueCurrent.PeakReverseTorqueCurrent = -80;
+        shooterFeederConfig.CurrentLimits.StatorCurrentLimit = 60;
+        shooterFeederConfig.CurrentLimits.StatorCurrentLimitEnable = true;
+        shooterFeederConfig.CurrentLimits.SupplyCurrentLimit = 40;
+        shooterFeederConfig.CurrentLimits.SupplyCurrentThreshold = 55;
+        shooterFeederConfig.CurrentLimits.SupplyTimeThreshold = 1.5;
+        shooterFeederConfig.CurrentLimits.SupplyCurrentLimitEnable = true;
+        shooterFeederConfig.MotorOutput.NeutralMode = NeutralModeValue.Coast;
+        shooterFeederConfig.MotorOutput.Inverted = InvertedValue.CounterClockwise_Positive;
+        shooterFeederConfig.Feedback.FeedbackSensorSource = FeedbackSensorSourceValue.RotorSensor;
+        shooterFeederConfig.Feedback.SensorToMechanismRatio = intakeConstants.shooterFeederMotorGearing();
+        shooterFeederRoller.getConfigurator().apply(shooterFeederConfig);
 
         BaseStatusSignal.setUpdateFrequencyForAll(
                 100,
