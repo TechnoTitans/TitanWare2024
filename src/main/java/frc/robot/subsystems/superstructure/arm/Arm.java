@@ -14,10 +14,7 @@ import frc.robot.constants.HardwareConstants;
 import frc.robot.utils.logging.LogUtils;
 import org.littletonrobotics.junction.Logger;
 
-import java.util.Objects;
-import java.util.function.Consumer;
 import java.util.function.DoubleSupplier;
-import java.util.function.Supplier;
 
 import static edu.wpi.first.units.Units.*;
 
@@ -56,7 +53,7 @@ public class Arm extends SubsystemBase {
 
     public enum Goal {
         ZERO(() -> 0),
-        STOW(() -> 0),
+        STOW(() -> Units.degreesToRotations(10)),
         AMP(() -> Units.degreesToRotations(90)),
         SUBWOOFER(() -> Units.degreesToRotations(55)),
         AIM_SPEAKER(() -> 0);
@@ -139,10 +136,7 @@ public class Arm extends SubsystemBase {
     }
 
     public Command toGoal(final Goal goal) {
-        return Commands.sequence(
-                runOnce(() -> this.goal = goal),
-                Commands.waitUntil(atPivotPositionTrigger)
-        );
+        return runOnce(() -> this.goal = goal);
     }
 
     public Command toPivotPositionCommand(final double pivotPositionRots) {

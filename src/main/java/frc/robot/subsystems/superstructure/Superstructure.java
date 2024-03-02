@@ -23,9 +23,28 @@ public class Superstructure {
             double rightVolts
     ) {}
 
+    public enum Goal {
+        SUBWOOFER(Arm.Goal.SUBWOOFER, Shooter.Goal.SUBWOOFER);
+
+        private final Arm.Goal armGoal;
+        private final Shooter.Goal shooterGoal;
+
+        Goal(final Arm.Goal armGoal, final Shooter.Goal shooterGoal) {
+            this.armGoal = armGoal;
+            this.shooterGoal = shooterGoal;
+        }
+    }
+
     public Superstructure(final Arm arm, final Shooter shooter) {
         this.arm = arm;
         this.shooter = shooter;
+    }
+
+    public Command toGoal(final Goal goal) {
+        return Commands.parallel(
+                arm.toGoal(goal.armGoal),
+                shooter.toGoal(goal.shooterGoal)
+        );
     }
 
     public Command toSetpoint(final SuperstructureSetpoint superstructureSetpoint) {

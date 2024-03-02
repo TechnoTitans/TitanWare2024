@@ -13,6 +13,8 @@ import frc.robot.constants.HardwareConstants;
 import frc.robot.utils.logging.LogUtils;
 import org.littletonrobotics.junction.Logger;
 
+import java.util.function.DoubleSupplier;
+
 import static edu.wpi.first.units.Units.*;
 
 public class Shooter extends SubsystemBase {
@@ -25,14 +27,50 @@ public class Shooter extends SubsystemBase {
     private final SysIdRoutine voltageSysIdRoutine;
     private final SysIdRoutine torqueCurrentSysIdRoutine;
 
+    public Trigger atVelocityTrigger = new Trigger(this::atVelocitySetpoint);
+
+    private Goal goal;
     private final VelocitySetpoint setpoint;
+
     private static class VelocitySetpoint {
         public double ampVelocityRotsPerSec = 0;
         public double leftFlywheelVelocityRotsPerSec = 0;
         public double rightFlywheelVelocityRotsPerSec = 0;
     }
 
-    public Trigger atVelocityTrigger = new Trigger(this::atVelocitySetpoint);
+    public enum Goal {
+        STOP(() -> 0, () -> 0, () -> 0),
+        IDLE(() -> 10, () -> 10, () -> 10),
+        AMP(() -> 4, () -> 4, () -> 4),
+        SUBWOOFER(() -> 6, () -> 6, () -> 6),
+        AIM_SPEAKER(() -> 0, () -> 0, () -> 0);
+
+        private final DoubleSupplier ampVelocitySupplier;
+        private final DoubleSupplier leftFlywheelVelocitySupplier;
+        private final DoubleSupplier rightFlywheelVelocitySupplier;
+
+        Goal(
+                final DoubleSupplier ampVelocitySupplier,
+                final DoubleSupplier leftFlywheelVelocitySupplier,
+                final DoubleSupplier rightFlywheelVelocitySupplier
+        ) {
+            this.ampVelocitySupplier = ampVelocitySupplier;
+            this.leftFlywheelVelocitySupplier = leftFlywheelVelocitySupplier;
+            this.rightFlywheelVelocitySupplier = rightFlywheelVelocitySupplier;
+        }
+
+        public double getAmpVelocity() {
+            return ampVelocitySupplier.getAsDouble();
+        }
+
+        public double getLeftFlywheelVelocity() {
+            return leftFlywheelVelocitySupplier.getAsDouble();
+        }
+
+        public double getRightFlywheelVelocity() {
+            return rightFlywheelVelocitySupplier.getAsDouble();
+        }
+    }
 
     public Shooter(final Constants.RobotMode mode, final HardwareConstants.ShooterConstants shooterConstants) {
         this.shooterIO = switch (mode) {
@@ -69,6 +107,25 @@ public class Shooter extends SubsystemBase {
                 LogUtils.microsecondsToMilliseconds(Logger.getRealTimestamp() - shooterPeriodicUpdateStart)
         );
 
+        final double previousAmpVelocity = setpoint.ampVelocityRotsPerSec;
+        final double previousLeftFlywheelVelocity = setpoint.leftFlywheelVelocityRotsPerSec;
+        final double previousRightFlywheelVelocity = setpoint.rightFlywheelVelocityRotsPerSec;
+
+        setpoint.ampVelocityRotsPerSec = goal.getAmpVelocity();
+        setpoint.leftFlywheelVelocityRotsPerSec = goal.getLeftFlywheelVelocity();
+        setpoint.rightFlywheelVelocityRotsPerSec = goal.getRightFlywheelVelocity();
+
+        if (setpoint.ampVelocityRotsPerSec != previousAmpVelocity
+                || setpoint.leftFlywheelVelocityRotsPerSec != previousLeftFlywheelVelocity
+                || setpoint.rightFlywheelVelocityRotsPerSec != previousRightFlywheelVelocity
+        ) {
+            shooterIO.toVelocity(
+                    setpoint.ampVelocityRotsPerSec,
+                    setpoint.leftFlywheelVelocityRotsPerSec,
+                    setpoint.rightFlywheelVelocityRotsPerSec
+            );
+        }
+
         Logger.recordOutput(LogKey + "/AtVelocitySetpoint", atVelocitySetpoint());
         Logger.recordOutput(LogKey + "/VelocitySetpoint/AmpVelocityRotsPerSec", setpoint.ampVelocityRotsPerSec);
         Logger.recordOutput(
@@ -91,6 +148,10 @@ public class Shooter extends SubsystemBase {
                 inputs.rightVelocityRotsPerSec,
                 VelocityToleranceRotsPerSec
         );
+    }
+
+    public Command toGoal(final Goal goal) {
+        return runOnce(() -> this.goal = goal);
     }
 
     public Command toVelocityCommand(
