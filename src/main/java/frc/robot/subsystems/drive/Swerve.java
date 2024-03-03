@@ -4,6 +4,11 @@ import com.choreo.lib.Choreo;
 import com.choreo.lib.ChoreoTrajectory;
 import com.ctre.phoenix6.SignalLogger;
 import com.ctre.phoenix6.signals.NeutralModeValue;
+import com.pathplanner.lib.auto.AutoBuilder;
+import com.pathplanner.lib.util.HolonomicPathFollowerConfig;
+import com.pathplanner.lib.util.PIDConstants;
+import com.pathplanner.lib.util.PathPlannerLogging;
+import com.pathplanner.lib.util.ReplanningConfig;
 import edu.wpi.first.math.MathUtil;
 import edu.wpi.first.math.controller.PIDController;
 import edu.wpi.first.math.estimator.SwerveDrivePoseEstimator;
@@ -32,6 +37,8 @@ import org.littletonrobotics.junction.Logger;
 
 import java.util.Optional;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
+import java.util.function.BooleanSupplier;
+import java.util.function.Consumer;
 import java.util.function.DoubleSupplier;
 
 import static edu.wpi.first.units.Units.*;
@@ -39,6 +46,14 @@ import static edu.wpi.first.units.Units.*;
 public class Swerve extends SubsystemBase {
     protected static final String logKey = "Swerve";
     protected static final String odometryLogKey = "Odometry";
+
+    private static final HolonomicPathFollowerConfig HolonomicPathFollowerConfig = new HolonomicPathFollowerConfig(
+            new PIDConstants(5, 0, 0),
+            new PIDConstants(5, 0, 0),
+            Constants.Swerve.Modules.MODULE_MAX_SPEED_M_PER_SEC,
+            Math.hypot(Constants.Swerve.WHEEL_BASE_M, Constants.Swerve.TRACK_WIDTH_M),
+            new ReplanningConfig()
+    );
 
     private Gyro gyro;
     private final HardwareConstants.GyroConstants gyroConstants;
@@ -82,7 +97,6 @@ public class Swerve extends SubsystemBase {
         this.linearVoltageSysIdRoutine = makeLinearVoltageSysIdRoutine();
         this.linearTorqueCurrentSysIdRoutine = makeLinearTorqueCurrentSysIdRoutine();
         this.angularVoltageSysIdRoutine = makeAngularVoltageSysIdRoutine();
-
         this.odometryThreadRunner.start();
     }
 
@@ -125,6 +139,17 @@ public class Swerve extends SubsystemBase {
         this.linearVoltageSysIdRoutine = makeLinearVoltageSysIdRoutine();
         this.linearTorqueCurrentSysIdRoutine = makeLinearTorqueCurrentSysIdRoutine();
         this.angularVoltageSysIdRoutine = makeAngularVoltageSysIdRoutine();
+
+        Swerve.configurePathPlannerAutoBuilder(
+                this,
+                HolonomicPathFollowerConfig,
+                () -> {
+                    final Optional<DriverStation.Alliance> alliance = DriverStation.getAlliance();
+                    return alliance.isPresent() && alliance.get() == DriverStation.Alliance.Red;
+                },
+                currentPose -> Logger.recordOutput("Auto/CurrentPose", currentPose),
+                targetPose -> Logger.recordOutput("Auto/TargetPose", targetPose)
+        );
         this.odometryThreadRunner.start();
     }
 
@@ -144,7 +169,7 @@ public class Swerve extends SubsystemBase {
      * @param swerveModuleStates raw SwerveModuleStates retrieved directly from the modules
      * @return modified SwerveModuleStates
      */
-    private SwerveModuleState[] modifyModuleStatesForDisplay(final SwerveModuleState[] swerveModuleStates) {
+    private static SwerveModuleState[] modifyModuleStatesForDisplay(final SwerveModuleState[] swerveModuleStates) {
         for (int i = 0; i < swerveModuleStates.length; i++) {
             final SwerveModuleState origLastState = swerveModuleStates[i];
             final double origRots = origLastState.angle.getRotations();
@@ -156,6 +181,26 @@ public class Swerve extends SubsystemBase {
         }
 
         return swerveModuleStates;
+    }
+
+    private static void configurePathPlannerAutoBuilder(
+            final Swerve swerve,
+            final HolonomicPathFollowerConfig holonomicPathFollowerConfig,
+            final BooleanSupplier flipPathSupplier,
+            final Consumer<Pose2d> logCurrentPoseConsumer,
+            final Consumer<Pose2d> logTargetPoseConsumer
+    ) {
+        PathPlannerLogging.setLogCurrentPoseCallback(logCurrentPoseConsumer);
+        PathPlannerLogging.setLogTargetPoseCallback(logTargetPoseConsumer);
+        AutoBuilder.configureHolonomic(
+                swerve::getEstimatedPosition,
+                swerve::resetPosition,
+                swerve::getRobotRelativeSpeeds,
+                swerve::drive,
+                holonomicPathFollowerConfig,
+                flipPathSupplier,
+                swerve
+        );
     }
 
     private SysIdRoutine makeLinearVoltageSysIdRoutine() {
@@ -318,8 +363,10 @@ public class Swerve extends SubsystemBase {
         Logger.recordOutput(logKey + "/FieldRelativeChassisSpeeds", getFieldRelativeSpeeds());
 
         //prep states for display
-        final SwerveModuleState[] lastDesiredStates = modifyModuleStatesForDisplay(getModuleLastDesiredStates());
-        final SwerveModuleState[] currentStates = modifyModuleStatesForDisplay(getModuleStates());
+        // TODO: show unoptimized states instead of optimized ones, that way they don't look wonky - I think that's the
+        //  issue
+        final SwerveModuleState[] lastDesiredStates = Swerve.modifyModuleStatesForDisplay(getModuleLastDesiredStates());
+        final SwerveModuleState[] currentStates = Swerve.modifyModuleStatesForDisplay(getModuleStates());
 
         Logger.recordOutput(logKey + "/DesiredStates", lastDesiredStates);
         Logger.recordOutput(logKey + "/CurrentStates", currentStates);
@@ -387,17 +434,16 @@ public class Swerve extends SubsystemBase {
         gyro.setAngle(angle);
     }
 
-    //TODO add vision
     public void zeroRotation() {
         gyro.zeroRotation();
     }
 
-    public void resetPosition(final Pose2d robotPose) {
-        poseEstimator.resetPosition(gyro.getYawRotation2d(), getModulePositions(), robotPose);
-    }
-
     public Command zeroRotationCommand() {
         return runOnce(this::zeroRotation);
+    }
+
+    public void resetPosition(final Pose2d robotPose) {
+        poseEstimator.resetPosition(gyro.getYawRotation2d(), getModulePositions(), robotPose);
     }
 
     public ChassisSpeeds getRobotRelativeSpeeds() {
