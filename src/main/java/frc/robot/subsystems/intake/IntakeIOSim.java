@@ -14,8 +14,10 @@ import com.ctre.phoenix6.signals.InvertedValue;
 import com.ctre.phoenix6.signals.NeutralModeValue;
 import edu.wpi.first.math.system.plant.DCMotor;
 import edu.wpi.first.math.system.plant.LinearSystemId;
+import edu.wpi.first.wpilibj.DigitalInput;
 import edu.wpi.first.wpilibj.Notifier;
 import edu.wpi.first.wpilibj.simulation.DCMotorSim;
+import edu.wpi.first.wpilibj.simulation.DIOSim;
 import frc.robot.constants.HardwareConstants;
 import frc.robot.utils.closeables.ToClose;
 import frc.robot.utils.control.DeltaTime;
@@ -31,6 +33,9 @@ public class IntakeIOSim implements IntakeIO {
     private final TalonFX rightRoller;
     private final TalonFX leftRoller;
     private final TalonFX shooterFeederRoller;
+
+    private final DigitalInput gamePieceSensor;
+    private final DIOSim gamePieceSensorSim;
 
     private final TalonFXSim rightRollerSim;
     private final TalonFXSim leftRollerSim;
@@ -65,6 +70,9 @@ public class IntakeIOSim implements IntakeIO {
         this.rightRoller = new TalonFX(intakeConstants.rightRollerMotor(), intakeConstants.CANBus());
         this.leftRoller = new TalonFX(intakeConstants.leftRollerMotor(), intakeConstants.CANBus());
         this.shooterFeederRoller = new TalonFX(intakeConstants.shooterFeederRollerMotor(), intakeConstants.CANBus());
+
+        this.gamePieceSensor = new DigitalInput(intakeConstants.sensorDigitalInput());
+        this.gamePieceSensorSim = new DIOSim(gamePieceSensor);
 
         final DCMotorSim rightRollerMotorSim = new DCMotorSim(
                 LinearSystemId.createDCMotorSystem(
@@ -196,6 +204,8 @@ public class IntakeIOSim implements IntakeIO {
         inputs.shooterFeederMotorVoltage = _shooterFeederVoltage.getValue();
         inputs.shooterFeederMotorTorqueCurrentAmps = _shooterFeederTorqueCurrent.getValue();
         inputs.shooterFeederMotorTempCelsius = _shooterFeederDeviceTemp.getValue();
+
+        inputs.gamePieceDetected = gamePieceSensor.get();
     }
 
     @SuppressWarnings("DuplicatedCode")

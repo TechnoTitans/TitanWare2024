@@ -88,6 +88,7 @@ public class HardwareConstants {
             int rightRollerMotor,
             int leftRollerMotor,
             int shooterFeederRollerMotor,
+            int sensorDigitalInput,
             double rightMotorGearing,
             double leftMotorGearing,
             double shooterFeederMotorGearing
@@ -98,8 +99,9 @@ public class HardwareConstants {
             19,
             20,
             21,
+            1,
             2,
             2,
-            1
+            2
     );
 }

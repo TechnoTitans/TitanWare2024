@@ -36,7 +36,8 @@ public class Intake extends SubsystemBase {
     public enum State {
         INTAKE,
         OUTTAKE,
-        IDLE
+        FEED,
+        STOP,
     }
 
     public static class Setpoint {
@@ -89,29 +90,41 @@ public class Intake extends SubsystemBase {
             final Setpoint setpoint = new Setpoint();
             switch (intakeState) {
                 case INTAKE -> {
-                    final ChassisSpeeds chassisSpeeds = chassisSpeedsSupplier.get();
-                    final Translation2d chassisSpeedTranslation = new Translation2d(
-                            chassisSpeeds.vxMetersPerSecond, chassisSpeeds.vyMetersPerSecond);
+                    if (inputs.gamePieceDetected) {
+                        setpoint.rightRollerVelocityRotsPerSecond = 0;
+                        setpoint.leftRollerVelocityRotsPerSecond = 0;
+                        setpoint.shooterFeederRollerVelocityRotsPerSecond = 0;
+                    } else {
+                        final ChassisSpeeds chassisSpeeds = chassisSpeedsSupplier.get();
+                        final Translation2d chassisSpeedTranslation = new Translation2d(
+                                chassisSpeeds.vxMetersPerSecond, chassisSpeeds.vyMetersPerSecond
+                        );
 
-                    final double rollerSpeedRotsPerSec = MathUtil.clamp(
-                            2 * chassisSpeedTranslation.getNorm(),
-                            0.25 * MaxRollerSurfaceSpeedMetersPerSec,
-                            MaxRollerSurfaceSpeedMetersPerSec
-                    ) / Constants.Intake.RollerCircumferenceMeters;
+                        final double rollerSpeedRotsPerSec = MathUtil.clamp(
+                                2 * chassisSpeedTranslation.getNorm(),
+                                0.25 * MaxRollerSurfaceSpeedMetersPerSec,
+                                MaxRollerSurfaceSpeedMetersPerSec
+                        ) / Constants.Intake.RollerCircumferenceMeters;
 
-                    setpoint.rightRollerVelocityRotsPerSecond = rollerSpeedRotsPerSec;
-                    setpoint.leftRollerVelocityRotsPerSecond = rollerSpeedRotsPerSec;
-                    setpoint.shooterFeederRollerVelocityRotsPerSecond = rollerSpeedRotsPerSec;
+                        setpoint.rightRollerVelocityRotsPerSecond = rollerSpeedRotsPerSec;
+                        setpoint.leftRollerVelocityRotsPerSecond = rollerSpeedRotsPerSec;
+                        setpoint.shooterFeederRollerVelocityRotsPerSecond = rollerSpeedRotsPerSec;
+                    }
+                }
+                case FEED -> {
+                    setpoint.rightRollerVelocityRotsPerSecond = MaxRollerSurfaceSpeedMetersPerSec/2;
+                    setpoint.leftRollerVelocityRotsPerSecond = MaxRollerSurfaceSpeedMetersPerSec/2;
+                    setpoint.shooterFeederRollerVelocityRotsPerSecond = MaxRollerSurfaceSpeedMetersPerSec/2;
                 }
                 case OUTTAKE -> {
                     setpoint.rightRollerVelocityRotsPerSecond = -MaxRollerSurfaceSpeedMetersPerSec;
                     setpoint.leftRollerVelocityRotsPerSecond = -MaxRollerSurfaceSpeedMetersPerSec;
                     setpoint.shooterFeederRollerVelocityRotsPerSecond = -MaxRollerSurfaceSpeedMetersPerSec;
                 }
-                case IDLE -> {
-                    setpoint.rightRollerVelocityRotsPerSecond = 0.1 * MaxRollerSurfaceSpeedMetersPerSec;
-                    setpoint.leftRollerVelocityRotsPerSecond = 0.1 * MaxRollerSurfaceSpeedMetersPerSec;
-                    setpoint.shooterFeederRollerVelocityRotsPerSecond = 0.1 * MaxRollerSurfaceSpeedMetersPerSec;
+                case STOP -> {
+                    setpoint.rightRollerVelocityRotsPerSecond = 0;
+                    setpoint.leftRollerVelocityRotsPerSecond = 0;
+                    setpoint.shooterFeederRollerVelocityRotsPerSecond = 0;
                 }
             }
 

@@ -12,6 +12,7 @@ import com.ctre.phoenix6.hardware.TalonFX;
 import com.ctre.phoenix6.signals.FeedbackSensorSourceValue;
 import com.ctre.phoenix6.signals.InvertedValue;
 import com.ctre.phoenix6.signals.NeutralModeValue;
+import edu.wpi.first.wpilibj.DigitalInput;
 import frc.robot.constants.HardwareConstants;
 
 public class IntakeIOReal implements IntakeIO {
@@ -20,6 +21,8 @@ public class IntakeIOReal implements IntakeIO {
     private final TalonFX rightRoller;
     private final TalonFX leftRoller;
     private final TalonFX shooterFeederRoller;
+
+    private final DigitalInput gamePieceSensor;
 
     private final VelocityTorqueCurrentFOC velocityTorqueCurrentFOC;
     private final TorqueCurrentFOC torqueCurrentFOC;
@@ -49,6 +52,8 @@ public class IntakeIOReal implements IntakeIO {
         this.rightRoller = new TalonFX(intakeConstants.rightRollerMotor(), intakeConstants.CANBus());
         this.leftRoller = new TalonFX(intakeConstants.leftRollerMotor(), intakeConstants.CANBus());
         this.shooterFeederRoller = new TalonFX(intakeConstants.shooterFeederRollerMotor(), intakeConstants.CANBus());
+
+        this.gamePieceSensor = new DigitalInput(intakeConstants.sensorDigitalInput());
 
         this.velocityTorqueCurrentFOC = new VelocityTorqueCurrentFOC(0);
         this.torqueCurrentFOC = new TorqueCurrentFOC(0);
@@ -111,6 +116,8 @@ public class IntakeIOReal implements IntakeIO {
         inputs.shooterFeederMotorVoltage = _shooterFeederVoltage.getValue();
         inputs.shooterFeederMotorTorqueCurrentAmps = _shooterFeederTorqueCurrent.getValue();
         inputs.shooterFeederMotorTempCelsius = _shooterFeederDeviceTemp.getValue();
+
+        inputs.gamePieceDetected = gamePieceSensor.get();
     }
 
     @SuppressWarnings("DuplicatedCode")
@@ -130,7 +137,7 @@ public class IntakeIOReal implements IntakeIO {
         rightRollerConfig.CurrentLimits.SupplyCurrentThreshold = 55;
         rightRollerConfig.CurrentLimits.SupplyTimeThreshold = 1.5;
         rightRollerConfig.CurrentLimits.SupplyCurrentLimitEnable = true;
-        rightRollerConfig.MotorOutput.NeutralMode = NeutralModeValue.Coast;
+        rightRollerConfig.MotorOutput.NeutralMode = NeutralModeValue.Brake;
         rightRollerConfig.MotorOutput.Inverted = InvertedValue.CounterClockwise_Positive;
         rightRollerConfig.Feedback.FeedbackSensorSource = FeedbackSensorSourceValue.RotorSensor;
         rightRollerConfig.Feedback.SensorToMechanismRatio = intakeConstants.rightMotorGearing();
@@ -150,7 +157,7 @@ public class IntakeIOReal implements IntakeIO {
         leftRollerConfig.CurrentLimits.SupplyCurrentThreshold = 55;
         leftRollerConfig.CurrentLimits.SupplyTimeThreshold = 1.5;
         leftRollerConfig.CurrentLimits.SupplyCurrentLimitEnable = true;
-        leftRollerConfig.MotorOutput.NeutralMode = NeutralModeValue.Coast;
+        leftRollerConfig.MotorOutput.NeutralMode = NeutralModeValue.Brake;
         leftRollerConfig.MotorOutput.Inverted = InvertedValue.CounterClockwise_Positive;
         leftRollerConfig.Feedback.FeedbackSensorSource = FeedbackSensorSourceValue.RotorSensor;
         leftRollerConfig.Feedback.SensorToMechanismRatio = intakeConstants.leftMotorGearing();
@@ -170,7 +177,7 @@ public class IntakeIOReal implements IntakeIO {
         shooterFeederConfig.CurrentLimits.SupplyCurrentThreshold = 55;
         shooterFeederConfig.CurrentLimits.SupplyTimeThreshold = 1.5;
         shooterFeederConfig.CurrentLimits.SupplyCurrentLimitEnable = true;
-        shooterFeederConfig.MotorOutput.NeutralMode = NeutralModeValue.Coast;
+        shooterFeederConfig.MotorOutput.NeutralMode = NeutralModeValue.Brake;
         shooterFeederConfig.MotorOutput.Inverted = InvertedValue.CounterClockwise_Positive;
         shooterFeederConfig.Feedback.FeedbackSensorSource = FeedbackSensorSourceValue.RotorSensor;
         shooterFeederConfig.Feedback.SensorToMechanismRatio = intakeConstants.shooterFeederMotorGearing();

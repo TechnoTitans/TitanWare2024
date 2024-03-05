@@ -23,6 +23,8 @@ public interface IntakeIO {
         public double shooterFeederMotorVoltage = 0.0;
         public double shooterFeederMotorTorqueCurrentAmps = 0.0;
         public double shooterFeederMotorTempCelsius = 0.0;
+
+        public boolean gamePieceDetected = false;
     }
 
     /**
