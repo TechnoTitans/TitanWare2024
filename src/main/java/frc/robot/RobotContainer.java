@@ -1,6 +1,7 @@
 package frc.robot;
 
 import edu.wpi.first.wpilibj.PowerDistribution;
+import edu.wpi.first.wpilibj.RobotState;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
@@ -8,11 +9,11 @@ import frc.robot.constants.Constants;
 import frc.robot.constants.HardwareConstants;
 import frc.robot.constants.RobotMap;
 import frc.robot.subsystems.drive.Swerve;
-import frc.robot.subsystems.vision.PhotonVision;
 import frc.robot.subsystems.intake.Intake;
 import frc.robot.subsystems.superstructure.Superstructure;
 import frc.robot.subsystems.superstructure.arm.Arm;
 import frc.robot.subsystems.superstructure.shooter.Shooter;
+import frc.robot.subsystems.vision.PhotonVision;
 
 public class RobotContainer {
     public final PowerDistribution powerDistribution;
@@ -36,6 +37,7 @@ public class RobotContainer {
                 PowerDistribution.ModuleType.kRev
         );
         this.powerDistribution.clearStickyFaults();
+        this.powerDistribution.setSwitchableChannel(true);
 
         this.swerve = new Swerve(
                 Constants.CURRENT_MODE,

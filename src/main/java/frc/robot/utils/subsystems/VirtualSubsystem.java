@@ -18,9 +18,9 @@ public class VirtualSubsystem {
             ToClose.add(subsystemNotifier);
 
             subsystemNotifier.startPeriodic(loopPeriodSeconds);
-            subsystemNotifierMap.put(this, subsystemNotifier);
+            VirtualSubsystem.subsystemNotifierMap.put(this, subsystemNotifier);
         } else {
-            loopPeriodSubsystems.add(this);
+            VirtualSubsystem.loopPeriodSubsystems.add(this);
         }
     }
 
