@@ -10,16 +10,16 @@ public enum TitanCamera {
     PHOTON_FL_APRILTAG(
             "FL_Apriltag",
             Constants.Vision.ROBOT_TO_FL_APRILTAG_CAM,
-            CameraProperties.SUPER_SHAM,  //TODO: GET FOR NEW CAMERAS
-            TitanCameraCalibration.fromSimCameraProperties(SimCameraProperties.LL2_640_480()),
+            CameraProperties.PERFECT_90,  //TODO: GET FOR NEW CAMERAS
+            TitanCameraCalibration.fromSimCameraProperties(SimCameraProperties.PERFECT_90DEG()),
             false
     ),
     //TODO: put real numbers here -> do not use PERFECT_90DEG
     PHOTON_FR_APRILTAG(
             "FR_Apriltag",
             Constants.Vision.ROBOT_TO_FR_APRILTAG_CAM,
-            CameraProperties.SUPER_SHAM, //TODO: GET FOR NEW CAMERAS
-            TitanCameraCalibration.fromSimCameraProperties(SimCameraProperties.LL2_640_480()),
+            CameraProperties.PERFECT_90, //TODO: GET FOR NEW CAMERAS
+            TitanCameraCalibration.fromSimCameraProperties(SimCameraProperties.PERFECT_90DEG()),
             false
     );
 

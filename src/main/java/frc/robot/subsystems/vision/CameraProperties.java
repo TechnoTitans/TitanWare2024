@@ -4,9 +4,6 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 public enum CameraProperties {
-    SUPER_SHAM(
-            Resolution.R640x480, 56, 7
-    ),
     PERFECT_90(
             Resolution.R960x720, 90, 80
     );
