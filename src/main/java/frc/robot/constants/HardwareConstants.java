@@ -120,7 +120,7 @@ public class HardwareConstants {
             RobotMap.CanivoreCANBus,
             14,
             15,
-            1,
+            0,
             112.5,
             Units.degreesToRotations(0),
             Units.degreesToRotations(100)

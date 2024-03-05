@@ -2,6 +2,8 @@ package frc.robot.auto;
 
 import com.choreo.lib.Choreo;
 import com.choreo.lib.ChoreoTrajectory;
+import com.choreo.lib.ChoreoTrajectoryState;
+import edu.wpi.first.math.MathUtil;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.wpilibj.DriverStation;
@@ -12,7 +14,9 @@ import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.button.Trigger;
 import frc.robot.subsystems.drive.Swerve;
 
+import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import java.util.function.BooleanSupplier;
 import java.util.function.DoubleSupplier;
 import java.util.function.Supplier;
@@ -32,106 +36,129 @@ public class Autos {
         this.swerve = swerve;
     }
 
-    private static BooleanSupplier placeAndTime(
-            final Supplier<Pose2d> currentPoseSupplier,
-            final DoubleSupplier timeSupplier,
-            final Translation2d place,
-            final double translationToleranceMeters,
-            final double timeSeconds,
-            final double timeToleranceSeconds
-    ) {
-        return () -> currentPoseSupplier
-                .get()
-                .getTranslation()
-                .getDistance(place) < translationToleranceMeters
-                && Math.abs(timeSupplier.getAsDouble() - timeSeconds) < timeToleranceSeconds;
+    private static class AutoTriggers {
+        private final ChoreoTrajectory choreoTrajectory;
+        private final Supplier<Pose2d> poseSupplier;
+        private final DoubleSupplier timeSupplier;
+        private final EventLoop eventLoop;
+
+        public AutoTriggers(
+                final ChoreoTrajectory choreoTrajectory,
+                final Supplier<Pose2d> poseSupplier,
+                final DoubleSupplier timeSupplier
+        ) {
+            this.choreoTrajectory = choreoTrajectory;
+            this.poseSupplier = poseSupplier;
+            this.timeSupplier = timeSupplier;
+            this.eventLoop = new EventLoop();
+        }
+
+        public void poll() {
+            eventLoop.poll();
+        }
+
+        public Trigger autoEnabled() {
+            return new Trigger(eventLoop, DriverStation::isAutonomousEnabled);
+        }
+
+        public Trigger atPlaceAndTime(final double timeSeconds) {
+            final Translation2d place = choreoTrajectory
+                    .sample(timeSeconds, IsRedAlliance.getAsBoolean())
+                    .getPose()
+                    .getTranslation();
+            return new Trigger(
+                    eventLoop,
+                    () -> poseSupplier
+                            .get()
+                            .getTranslation()
+                            .getDistance(place) < TranslationToleranceMeters
+                            && MathUtil.isNear(timeSeconds, timeSupplier.getAsDouble(), TimeToleranceSeconds)
+            );
+        }
     }
 
-    private static BooleanSupplier placeAndTime(
-            final Supplier<Pose2d> currentPoseSupplier,
-            final DoubleSupplier timeSupplier,
-            final ChoreoTrajectory choreoTrajectory,
-            final BooleanSupplier mirrorForRedAllianceSupplier,
-            final double timeSeconds,
-            final double timeToleranceSeconds,
-            final double translationToleranceMeters
-    ) {
-        final boolean mirrorForRedAlliance = mirrorForRedAllianceSupplier.getAsBoolean();
-        return Autos.placeAndTime(
-                currentPoseSupplier,
-                timeSupplier,
-                choreoTrajectory.sample(timeSeconds, mirrorForRedAlliance)
-                        .getPose()
-                        .getTranslation(),
-                translationToleranceMeters,
-                timeSeconds,
-                timeToleranceSeconds
+    private Command followPath(final ChoreoTrajectory choreoTrajectory, final Timer timer) {
+        return Commands.sequence(
+                Commands.runOnce(timer::start),
+                swerve.followChoreoPathCommand(choreoTrajectory),
+                Commands.runOnce(timer::stop)
         );
-    }
-
-    private static BooleanSupplier placeAndTime(
-            final Supplier<Pose2d> currentPoseSupplier,
-            final DoubleSupplier timeSupplier,
-            final ChoreoTrajectory choreoTrajectory,
-            final double timeSeconds
-    ) {
-        return Autos.placeAndTime(
-                currentPoseSupplier,
-                timeSupplier,
-                choreoTrajectory,
-                IsRedAlliance,
-                timeSeconds,
-                TimeToleranceSeconds,
-                TranslationToleranceMeters
-        );
-    }
-
-    private Trigger atPlaceAndTime(
-            final EventLoop eventLoop,
-            final DoubleSupplier timeSupplier,
-            final ChoreoTrajectory choreoTrajectory,
-            final double timeSeconds
-    ) {
-        return new Trigger(
-                eventLoop,
-                Autos.placeAndTime(swerve::getPose, timeSupplier, choreoTrajectory, timeSeconds)
-        );
-    }
-
-    private Command followPath(final ChoreoTrajectory choreoTrajectory) {
-        return swerve.followChoreoPathCommand(choreoTrajectory);
     }
 
     public Command sourceBoth() {
-        final EventLoop eventLoop = new EventLoop();
-        final Timer timer = new Timer();
-
         final ChoreoTrajectory sourceBoth = Choreo.getTrajectory("SourceBoth");
+        final List<ChoreoTrajectory> sourceBothGroup = Choreo.getTrajectoryGroup("SourceBoth");
 
-        atPlaceAndTime(
-                eventLoop,
-                timer::get,
-                sourceBoth,
-                0
-        ).onTrue(
-                Commands.print("shoot preload")
+        final Timer timer = new Timer();
+        final AutoTriggers autoTriggers = new AutoTriggers(sourceBoth, swerve::getPose, timer::get);
+
+        final ChoreoTrajectoryState initialState = sourceBoth.getInitialState();
+        autoTriggers.autoEnabled().whileTrue(
+                Commands.defer(() -> swerve.resetPoseCommand(
+                        IsRedAlliance.getAsBoolean()
+                                ? initialState.flipped().getPose()
+                                : initialState.getPose()
+                        ),
+                        Set.of(swerve)
+                )
         );
 
-        atPlaceAndTime(
-                eventLoop,
-                timer::get,
-                sourceBoth,
-                0.27
-        ).onTrue(
-                Commands.print("run intake for close 0")
-        );
-
-        return Commands.parallel(
-                Commands.runOnce(timer::restart),
+        final ChoreoTrajectory preloadToSpeakerScore0 = sourceBothGroup.get(0);
+        autoTriggers.atPlaceAndTime(0).onTrue(
                 Commands.sequence(
-                        swerve.resetPoseCommand(sourceBoth.getInitialPose()),
-                        followPath(sourceBoth)
-                ).deadlineWith(Commands.run(eventLoop::poll)
-        ));
+                    Commands.print("shoot preload"),
+                    Commands.waitUntil(() -> true), // wait until shot goes out
+                    followPath(preloadToSpeakerScore0, timer)
+                )
+        );
+
+        autoTriggers.atPlaceAndTime(0.27).onTrue(
+                Commands.sequence(
+                        Commands.print("run intake for close 0 (first note)"),
+                        Commands.waitUntil(() -> true).withTimeout(1), // wait until intake has note, or timeout
+                        Commands.print("run intake to idle")
+                )
+        );
+
+        final ChoreoTrajectory speakerScore0ToSpeakerScore1 = sourceBothGroup.get(1);
+        autoTriggers.atPlaceAndTime(1.475).onTrue(
+                Commands.sequence(
+                        Commands.print("shoot speaker0"),
+                        followPath(speakerScore0ToSpeakerScore1, timer)
+                )
+        );
+
+        autoTriggers.atPlaceAndTime(3.46).onTrue(
+                Commands.sequence(
+                        Commands.print("run intake for speaker1"),
+                        Commands.waitUntil(() -> true).withTimeout(1), // wait until intake has note, or timeout
+                        Commands.print("run intake to idle")
+                )
+        );
+
+        final ChoreoTrajectory speakerScore1ToSpeakerScore2 = sourceBothGroup.get(2);
+        autoTriggers.atPlaceAndTime(5.91).onTrue(
+                Commands.sequence(
+                        Commands.print("shoot speaker1"),
+                        followPath(speakerScore1ToSpeakerScore2, timer)
+                )
+        );
+
+        autoTriggers.atPlaceAndTime(7.00).onTrue(
+                Commands.sequence(
+                        Commands.print("run intake for speaker2"),
+                        Commands.waitUntil(() -> true).withTimeout(1), // wait until intake has note, or timeout
+                        Commands.print("run intake to idle")
+                )
+        );
+
+        autoTriggers.atPlaceAndTime(9.3).onTrue(
+                Commands.sequence(
+                        Commands.print("shoot speaker2")
+                )
+        );
+
+        return Commands.run(autoTriggers::poll)
+                .until(autoTriggers.autoEnabled().negate());
     }
 }
