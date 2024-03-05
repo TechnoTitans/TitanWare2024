@@ -1,6 +1,7 @@
 package frc.robot.constants;
 
 import edu.wpi.first.math.geometry.Translation2d;
+import edu.wpi.first.math.util.Units;
 import frc.robot.subsystems.drive.OdometryThreadRunner;
 import frc.robot.subsystems.drive.SwerveModule;
 
@@ -103,5 +104,45 @@ public class HardwareConstants {
             2,
             2,
             2
+    );
+  
+    public record ArmConstants(
+            String CANBus,
+            int leftPivotMotorId,
+            int rightPivotMotorId,
+            int pivotZeroingSwitchDIOChannel,
+            double pivotGearing,
+            double pivotSoftLowerLimitRots,
+            double pivotSoftUpperLimitRots
+    ) {}
+
+    public static final ArmConstants ARM = new ArmConstants(
+            RobotMap.CanivoreCANBus,
+            14,
+            15,
+            1,
+            112.5,
+            Units.degreesToRotations(0),
+            Units.degreesToRotations(100)
+    );
+
+    public record ShooterConstants(
+            String CANBus,
+            int ampMotorId,
+            double ampMotorGearing,
+            int leftFlywheelMotorId,
+            double leftFlywheelGearing,
+            int rightFlywheelMotorId,
+            double rightFlywheelGearing
+    ) {}
+
+    public static final ShooterConstants SHOOTER = new ShooterConstants(
+            RobotMap.RioCANBus,
+            16,
+            0.5,
+            17,
+            0.5,
+            18,
+            0.5
     );
 }

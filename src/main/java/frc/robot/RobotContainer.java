@@ -8,12 +8,20 @@ import frc.robot.constants.HardwareConstants;
 import frc.robot.constants.RobotMap;
 import frc.robot.subsystems.drive.Swerve;
 import frc.robot.subsystems.intake.Intake;
+import frc.robot.subsystems.superstructure.Superstructure;
+import frc.robot.subsystems.superstructure.arm.Arm;
+import frc.robot.subsystems.superstructure.shooter.Shooter;
 
 public class RobotContainer {
     public final PowerDistribution powerDistribution;
 
     public final Swerve swerve;
     public final Intake intake;
+
+    public final Arm arm;
+    public final Shooter shooter;
+
+    public final Superstructure superstructure;
 
     public final CommandXboxController driverController;
     public final CommandXboxController coDriverController;
@@ -40,14 +48,38 @@ public class RobotContainer {
                 swerve::getFieldRelativeSpeeds
         );
 
+        this.arm = new Arm(Constants.RobotMode.REPLAY, HardwareConstants.ARM);
+        this.shooter = new Shooter(Constants.CURRENT_MODE, HardwareConstants.SHOOTER);
+
+        this.superstructure = new Superstructure(arm, shooter);
+
         this.driverController = new CommandXboxController(RobotMap.MainController);
         this.coDriverController = new CommandXboxController(RobotMap.CoController);
-
-//        this.intake.setDefaultCommand(intake.toVoltageCommand(4, 4, 4));
     }
 
     public Command getAutonomousCommand() {
-//        return Commands.waitUntil(() -> !RobotState.isAutonomous());
-        return intake.toVoltageCommand(6, 6, 6);
+        this.driverController.y().onTrue(
+                Commands.sequence(
+                        superstructure.toGoal(Superstructure.Goal.IDLE),
+//                        Commands.waitUntil(superstructure.atGoalTrigger),
+                        Commands.waitSeconds(6),
+                        superstructure.toGoal(Superstructure.Goal.SUBWOOFER),
+//                        Commands.waitUntil(superstructure.atGoalTrigger),
+                        Commands.waitUntil(superstructure.getShooter().atVelocityTrigger),
+                        Commands.waitSeconds(4),
+                        superstructure.toGoal(Superstructure.Goal.IDLE)
+                )
+        );
+    }
+
+    public Command getAutonomousCommand() {
+        return Commands.repeatingSequence(
+                superstructure.toGoal(Superstructure.Goal.IDLE),
+                Commands.waitUntil(superstructure.atGoalTrigger),
+                Commands.waitSeconds(4),
+                superstructure.toGoal(Superstructure.Goal.SUBWOOFER),
+                Commands.waitUntil(superstructure.atGoalTrigger),
+                Commands.waitSeconds(4)
+        );
     }
 }

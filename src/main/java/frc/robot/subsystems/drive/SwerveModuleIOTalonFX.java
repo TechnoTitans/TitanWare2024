@@ -122,12 +122,14 @@ public class SwerveModuleIOTalonFX implements SwerveModuleIO {
         turnTalonFXConfiguration.Slot0 = new Slot0Configs()
                 .withKP(30)
                 .withKS(0.5);
-        turnTalonFXConfiguration.TorqueCurrent.PeakForwardTorqueCurrent = 60;
-        turnTalonFXConfiguration.TorqueCurrent.PeakReverseTorqueCurrent = -60;
-        driveTalonFXConfiguration.CurrentLimits.SupplyCurrentLimit = 40;
-        driveTalonFXConfiguration.CurrentLimits.SupplyCurrentThreshold = 50;
-        driveTalonFXConfiguration.CurrentLimits.SupplyTimeThreshold = 0.5;
-        driveTalonFXConfiguration.CurrentLimits.SupplyCurrentLimitEnable = true;
+        turnTalonFXConfiguration.TorqueCurrent.PeakForwardTorqueCurrent = 40;
+        turnTalonFXConfiguration.TorqueCurrent.PeakReverseTorqueCurrent = -40;
+        turnTalonFXConfiguration.CurrentLimits.StatorCurrentLimit = 60;
+        turnTalonFXConfiguration.CurrentLimits.StatorCurrentLimitEnable = true;
+        turnTalonFXConfiguration.CurrentLimits.SupplyCurrentLimit = 40;
+        turnTalonFXConfiguration.CurrentLimits.SupplyCurrentThreshold = 60;
+        turnTalonFXConfiguration.CurrentLimits.SupplyTimeThreshold = 1.5;
+        turnTalonFXConfiguration.CurrentLimits.SupplyCurrentLimitEnable = true;
         turnTalonFXConfiguration.Feedback.FeedbackRemoteSensorID = turnEncoder.getDeviceID();
         turnTalonFXConfiguration.Feedback.FeedbackSensorSource = FeedbackSensorSourceValue.FusedCANcoder;
         turnTalonFXConfiguration.Feedback.RotorToSensorRatio = Modules.TURNER_GEAR_RATIO;
