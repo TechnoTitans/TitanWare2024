@@ -4,7 +4,6 @@ import com.ctre.phoenix6.BaseStatusSignal;
 import com.ctre.phoenix6.StatusSignal;
 import com.ctre.phoenix6.configs.Slot0Configs;
 import com.ctre.phoenix6.configs.TalonFXConfiguration;
-import com.ctre.phoenix6.controls.Follower;
 import com.ctre.phoenix6.controls.MotionMagicExpoTorqueCurrentFOC;
 import com.ctre.phoenix6.controls.TorqueCurrentFOC;
 import com.ctre.phoenix6.controls.VoltageOut;
@@ -24,7 +23,6 @@ public class ArmIOReal implements ArmIO {
     private final MotionMagicExpoTorqueCurrentFOC motionMagicExpoTorqueCurrentFOC;
     private final TorqueCurrentFOC torqueCurrentFOC;
     private final VoltageOut voltageOut;
-    private final Follower leftPivotFollower;
 
     // Cached StatusSignals
     private final StatusSignal<Double> _leftPosition;
@@ -47,7 +45,6 @@ public class ArmIOReal implements ArmIO {
         this.motionMagicExpoTorqueCurrentFOC = new MotionMagicExpoTorqueCurrentFOC(0);
         this.torqueCurrentFOC = new TorqueCurrentFOC(0);
         this.voltageOut = new VoltageOut(0);
-        this.leftPivotFollower = new Follower(leftPivotMotor.getDeviceID(), true);
 
         this._leftPosition = leftPivotMotor.getPosition();
         this._leftVelocity = leftPivotMotor.getVelocity();
@@ -118,7 +115,7 @@ public class ArmIOReal implements ArmIO {
         rightPivotMotor.getConfigurator().apply(rightTalonFXConfiguration);
 
         BaseStatusSignal.setUpdateFrequencyForAll(
-                250,
+                100,
                 _leftPosition,
                 _leftVelocity,
                 _leftVoltage,
@@ -171,18 +168,18 @@ public class ArmIOReal implements ArmIO {
     @Override
     public void toPivotPosition(final double pivotPositionRots) {
         leftPivotMotor.setControl(motionMagicExpoTorqueCurrentFOC.withPosition(pivotPositionRots));
-        rightPivotMotor.setControl(leftPivotFollower);
+        rightPivotMotor.setControl(motionMagicExpoTorqueCurrentFOC.withPosition(pivotPositionRots));
     }
 
     @Override
     public void toPivotVoltage(final double pivotVolts) {
         leftPivotMotor.setControl(voltageOut.withOutput(pivotVolts));
-        rightPivotMotor.setControl(leftPivotFollower);
+        rightPivotMotor.setControl(voltageOut.withOutput(pivotVolts));
     }
 
     @Override
     public void toPivotTorqueCurrent(double pivotTorqueCurrentAmps) {
         leftPivotMotor.setControl(torqueCurrentFOC.withOutput(pivotTorqueCurrentAmps));
-        rightPivotMotor.setControl(leftPivotFollower);
+        rightPivotMotor.setControl(torqueCurrentFOC.withOutput(pivotTorqueCurrentAmps));
     }
 }
