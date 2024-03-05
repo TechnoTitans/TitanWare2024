@@ -101,17 +101,22 @@ public class SwerveModuleIOTalonFX implements SwerveModuleIO {
         turnEncoder.getConfigurator().apply(canCoderConfiguration);
 
         driveTalonFXConfiguration.Slot0 = new Slot0Configs()
-                .withKP(50)
-                .withKS(4.796)
-                .withKA(2.549);
+                .withKS(3.16)
+                .withKV(0.16023)
+                .withKA(3.5602)
+                .withKP(12.193);
         driveTalonFXConfiguration.TorqueCurrent.PeakForwardTorqueCurrent = Modules.SLIP_CURRENT_A;
         driveTalonFXConfiguration.TorqueCurrent.PeakReverseTorqueCurrent = -Modules.SLIP_CURRENT_A;
         driveTalonFXConfiguration.CurrentLimits.StatorCurrentLimit = Modules.SLIP_CURRENT_A;
         driveTalonFXConfiguration.CurrentLimits.StatorCurrentLimitEnable = true;
+        driveTalonFXConfiguration.CurrentLimits.SupplyCurrentLimit = 40;
+        driveTalonFXConfiguration.CurrentLimits.SupplyCurrentThreshold = 50;
+        driveTalonFXConfiguration.CurrentLimits.SupplyTimeThreshold = 0.5;
+        driveTalonFXConfiguration.CurrentLimits.SupplyCurrentLimitEnable = true;
         driveTalonFXConfiguration.ClosedLoopRamps.TorqueClosedLoopRampPeriod = 0.2;
         driveTalonFXConfiguration.Feedback.SensorToMechanismRatio = Modules.DRIVER_GEAR_RATIO;
         driveTalonFXConfiguration.MotorOutput.NeutralMode = NeutralModeValue.Brake;
-        driveTalonFXConfiguration.MotorOutput.Inverted = InvertedValue.CounterClockwise_Positive;
+        driveTalonFXConfiguration.MotorOutput.Inverted = InvertedValue.Clockwise_Positive;
         driveMotor.getConfigurator().apply(driveTalonFXConfiguration);
 
         turnTalonFXConfiguration.Slot0 = new Slot0Configs()
@@ -119,18 +124,17 @@ public class SwerveModuleIOTalonFX implements SwerveModuleIO {
                 .withKS(0.5);
         turnTalonFXConfiguration.TorqueCurrent.PeakForwardTorqueCurrent = 40;
         turnTalonFXConfiguration.TorqueCurrent.PeakReverseTorqueCurrent = -40;
+        turnTalonFXConfiguration.CurrentLimits.StatorCurrentLimit = 60;
+        turnTalonFXConfiguration.CurrentLimits.StatorCurrentLimitEnable = true;
+        turnTalonFXConfiguration.CurrentLimits.SupplyCurrentLimit = 40;
+        turnTalonFXConfiguration.CurrentLimits.SupplyCurrentThreshold = 60;
+        turnTalonFXConfiguration.CurrentLimits.SupplyTimeThreshold = 1.5;
+        turnTalonFXConfiguration.CurrentLimits.SupplyCurrentLimitEnable = true;
         turnTalonFXConfiguration.Feedback.FeedbackRemoteSensorID = turnEncoder.getDeviceID();
         turnTalonFXConfiguration.Feedback.FeedbackSensorSource = FeedbackSensorSourceValue.FusedCANcoder;
         turnTalonFXConfiguration.Feedback.RotorToSensorRatio = Modules.TURNER_GEAR_RATIO;
         turnTalonFXConfiguration.MotorOutput.NeutralMode = NeutralModeValue.Brake;
         turnTalonFXConfiguration.MotorOutput.Inverted = InvertedValue.Clockwise_Positive;
-
-        turnTalonFXConfiguration.MotionMagic.MotionMagicCruiseVelocity =
-                100.0 / Modules.TURNER_GEAR_RATIO;
-        turnTalonFXConfiguration.MotionMagic.MotionMagicExpo_kV = 0.12 * Modules.TURNER_GEAR_RATIO;
-        turnTalonFXConfiguration.MotionMagic.MotionMagicExpo_kA = 0.1;
-        turnTalonFXConfiguration.ClosedLoopGeneral.ContinuousWrap = true;
-
         turnMotor.getConfigurator().apply(turnTalonFXConfiguration);
 
         velocityTorqueCurrentFOC.UpdateFreqHz = 0;

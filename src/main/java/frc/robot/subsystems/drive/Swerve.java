@@ -237,9 +237,9 @@ public class Swerve extends SubsystemBase {
         return new SysIdRoutine(
                 new SysIdRoutine.Config(
                         // this is actually amps/sec not volts/sec
-                        Volts.of(2).per(Second),
+                        Volts.of(4).per(Second),
                         // this is actually amps not volts
-                        Volts.of(10),
+                        Volts.of(12),
                         Seconds.of(20),
                         state -> SignalLogger.writeString("state", state.toString())
                 ),
@@ -519,18 +519,23 @@ public class Swerve extends SubsystemBase {
         //  "mathematically correct"
         // see https://www.chiefdelphi.com/t/whitepaper-swerve-drive-skew-and-second-order-kinematics/416964/40
         // lookahead 4 loop cycles cause uh the goated teams do it and it works so uh
-        final double dtSeconds = 4 * Constants.LOOP_PERIOD_SECONDS;
-        final Pose2d desiredDeltaPose = new Pose2d(
-                speeds.vxMetersPerSecond * dtSeconds,
-                speeds.vyMetersPerSecond * dtSeconds,
-                Rotation2d.fromRadians(speeds.omegaRadiansPerSecond * dtSeconds)
-        );
+//        final double dtSeconds = 4 * Constants.LOOP_PERIOD_SECONDS;
+//        final Pose2d desiredDeltaPose = new Pose2d(
+//                speeds.vxMetersPerSecond * dtSeconds,
+//                speeds.vyMetersPerSecond * dtSeconds,
+//                Rotation2d.fromRadians(speeds.omegaRadiansPerSecond * dtSeconds)
+//        );
+//
+//        final Twist2d twist2d = new Pose2d().log(desiredDeltaPose);
+//        final ChassisSpeeds correctedSpeeds = new ChassisSpeeds(
+//                twist2d.dx / dtSeconds,
+//                twist2d.dy / dtSeconds,
+//                twist2d.dtheta / dtSeconds
+//        );
 
-        final Twist2d twist2d = new Pose2d().log(desiredDeltaPose);
-        final ChassisSpeeds correctedSpeeds = new ChassisSpeeds(
-                twist2d.dx / dtSeconds,
-                twist2d.dy / dtSeconds,
-                twist2d.dtheta / dtSeconds
+        final ChassisSpeeds correctedSpeeds = ChassisSpeeds.discretize(
+                speeds,
+                4 * Constants.LOOP_PERIOD_SECONDS
         );
 
         drive(kinematics.toSwerveModuleStates(correctedSpeeds));

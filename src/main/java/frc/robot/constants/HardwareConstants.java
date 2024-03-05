@@ -1,6 +1,7 @@
 package frc.robot.constants;
 
 import edu.wpi.first.math.geometry.Translation2d;
+import edu.wpi.first.math.util.Units;
 import frc.robot.subsystems.drive.OdometryThreadRunner;
 import frc.robot.subsystems.drive.SwerveModule;
 
@@ -40,7 +41,7 @@ public class HardwareConstants {
             1,
             2,
             3,
-            0.320556640625
+            -0.138
     );
 
     public static final SwerveModuleConstants FRONT_RIGHT_MODULE = new SwerveModuleConstants(
@@ -50,7 +51,7 @@ public class HardwareConstants {
             4,
             5,
             6,
-            0.33251953125
+            0.387
     );
 
     public static final SwerveModuleConstants BACK_LEFT_MODULE = new SwerveModuleConstants(
@@ -60,7 +61,7 @@ public class HardwareConstants {
             7,
             8,
             9,
-            0.0478515625
+            0
     );
 
     public static final SwerveModuleConstants BACK_RIGHT_MODULE = new SwerveModuleConstants(
@@ -70,7 +71,7 @@ public class HardwareConstants {
             10,
             11,
             12,
-            0.283203125
+            -0.425
     );
 
     public record GyroConstants(
@@ -81,5 +82,67 @@ public class HardwareConstants {
     public static final GyroConstants GYRO = new GyroConstants(
             RobotMap.CanivoreCANBus,
             13
+    );
+
+    public record IntakeConstants(
+            String CANBus,
+            int rightRollerMotor,
+            int leftRollerMotor,
+            int shooterFeederRollerMotor,
+            int sensorDigitalInput,
+            double rightMotorGearing,
+            double leftMotorGearing,
+            double shooterFeederMotorGearing
+    ) {}
+
+    public static final IntakeConstants INTAKE = new IntakeConstants(
+            RobotMap.RioCANBus,
+            19,
+            20,
+            21,
+            1,
+            2,
+            2,
+            2
+    );
+  
+    public record ArmConstants(
+            String CANBus,
+            int leftPivotMotorId,
+            int rightPivotMotorId,
+            int pivotZeroingSwitchDIOChannel,
+            double pivotGearing,
+            double pivotSoftLowerLimitRots,
+            double pivotSoftUpperLimitRots
+    ) {}
+
+    public static final ArmConstants ARM = new ArmConstants(
+            RobotMap.CanivoreCANBus,
+            14,
+            15,
+            1,
+            112.5,
+            Units.degreesToRotations(0),
+            Units.degreesToRotations(100)
+    );
+
+    public record ShooterConstants(
+            String CANBus,
+            int ampMotorId,
+            double ampMotorGearing,
+            int leftFlywheelMotorId,
+            double leftFlywheelGearing,
+            int rightFlywheelMotorId,
+            double rightFlywheelGearing
+    ) {}
+
+    public static final ShooterConstants SHOOTER = new ShooterConstants(
+            RobotMap.RioCANBus,
+            16,
+            0.5,
+            17,
+            0.5,
+            18,
+            0.5
     );
 }

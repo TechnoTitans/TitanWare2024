@@ -3,7 +3,7 @@ package frc.robot.constants;
 import edu.wpi.first.math.util.Units;
 
 public interface Constants {
-    RobotMode CURRENT_MODE = RobotMode.SIM;
+    RobotMode CURRENT_MODE = RobotMode.REAL;
     double LOOP_PERIOD_SECONDS = 0.02;
 
     enum RobotMode {
@@ -29,7 +29,7 @@ public interface Constants {
             double TURNER_GEAR_RATIO = 150.0 / 7.0;
 
             //TODO: TUNE AT DE
-            double SLIP_CURRENT_A = 55;
+            double SLIP_CURRENT_A = 80;
             double COUPLING_GEAR_RATIO = 50d / 14;
 
             double WHEEL_CIRCUMFERENCE_M = 2 * Math.PI * WHEEL_RADIUS_M;
@@ -42,5 +42,10 @@ public interface Constants {
             /** Simulated steer voltage required to overcome friction. */
             double STEER_KS_VOLTS = 0.25;
         }
+    }
+
+    interface Intake {
+        double RollerRadiusMeters = Units.inchesToMeters(1);
+        double RollerCircumferenceMeters = Math.PI * RollerRadiusMeters * 2;
     }
 }
