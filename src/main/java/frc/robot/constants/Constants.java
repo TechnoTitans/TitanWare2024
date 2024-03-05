@@ -51,6 +51,11 @@ public interface Constants {
         }
     }
 
+    interface Intake {
+        double RollerRadiusMeters = Units.inchesToMeters(1);
+        double RollerCircumferenceMeters = Math.PI * RollerRadiusMeters * 2;
+    }
+
     interface NetworkTables {
         boolean USE_STRUCT_AND_PROTOBUF = true;
     }

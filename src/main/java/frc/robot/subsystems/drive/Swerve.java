@@ -464,24 +464,6 @@ public class Swerve extends SubsystemBase {
     }
 
     public void drive(final ChassisSpeeds speeds) {
-        // TODO: maybe replace with ChassisSpeeds.discretize() or some other tyler math that's more
-        //  "mathematically correct"
-        // see https://www.chiefdelphi.com/t/whitepaper-swerve-drive-skew-and-second-order-kinematics/416964/40
-        // lookahead 4 loop cycles cause uh the goated teams do it and it works so uh
-//        final double dtSeconds = 4 * Constants.LOOP_PERIOD_SECONDS;
-//        final Pose2d desiredDeltaPose = new Pose2d(
-//                speeds.vxMetersPerSecond * dtSeconds,
-//                speeds.vyMetersPerSecond * dtSeconds,
-//                Rotation2d.fromRadians(speeds.omegaRadiansPerSecond * dtSeconds)
-//        );
-//
-//        final Twist2d twist2d = new Pose2d().log(desiredDeltaPose);
-//        final ChassisSpeeds correctedSpeeds = new ChassisSpeeds(
-//                twist2d.dx / dtSeconds,
-//                twist2d.dy / dtSeconds,
-//                twist2d.dtheta / dtSeconds
-//        );
-
         final ChassisSpeeds correctedSpeeds = ChassisSpeeds.discretize(
                 speeds,
                 4 * Constants.LOOP_PERIOD_SECONDS
