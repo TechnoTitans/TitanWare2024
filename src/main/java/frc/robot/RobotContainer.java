@@ -8,6 +8,7 @@ import frc.robot.constants.Constants;
 import frc.robot.constants.HardwareConstants;
 import frc.robot.constants.RobotMap;
 import frc.robot.subsystems.drive.Swerve;
+import frc.robot.subsystems.intake.Intake;
 import frc.robot.subsystems.superstructure.Superstructure;
 import frc.robot.subsystems.superstructure.arm.Arm;
 import frc.robot.subsystems.superstructure.shooter.Shooter;
@@ -16,6 +17,8 @@ public class RobotContainer {
     public final PowerDistribution powerDistribution;
 
     public final Swerve swerve;
+    public final Intake intake;
+
     public final Arm arm;
     public final Shooter shooter;
 
@@ -38,6 +41,12 @@ public class RobotContainer {
                 HardwareConstants.FRONT_RIGHT_MODULE,
                 HardwareConstants.BACK_LEFT_MODULE,
                 HardwareConstants.BACK_RIGHT_MODULE
+        );
+
+        this.intake = new Intake(
+                Constants.CURRENT_MODE,
+                HardwareConstants.INTAKE,
+                swerve::getFieldRelativeSpeeds
         );
 
         this.arm = new Arm(Constants.RobotMode.REPLAY, HardwareConstants.ARM);
