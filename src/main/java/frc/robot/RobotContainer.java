@@ -2,6 +2,7 @@ package frc.robot;
 
 import edu.wpi.first.wpilibj.PowerDistribution;
 import edu.wpi.first.wpilibj2.command.Command;
+import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
 import frc.robot.constants.Constants;
 import frc.robot.constants.HardwareConstants;
@@ -55,9 +56,7 @@ public class RobotContainer {
 
         this.driverController = new CommandXboxController(RobotMap.MainController);
         this.coDriverController = new CommandXboxController(RobotMap.CoController);
-    }
 
-    public Command getAutonomousCommand() {
         this.driverController.y().onTrue(
                 Commands.sequence(
                         superstructure.toGoal(Superstructure.Goal.IDLE),
