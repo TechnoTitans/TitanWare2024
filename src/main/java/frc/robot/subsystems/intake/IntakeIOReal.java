@@ -137,7 +137,7 @@ public class IntakeIOReal implements IntakeIO {
         rightRollerConfig.CurrentLimits.SupplyCurrentThreshold = 55;
         rightRollerConfig.CurrentLimits.SupplyTimeThreshold = 1.5;
         rightRollerConfig.CurrentLimits.SupplyCurrentLimitEnable = true;
-        rightRollerConfig.MotorOutput.NeutralMode = NeutralModeValue.Brake;
+        rightRollerConfig.MotorOutput.NeutralMode = NeutralModeValue.Coast;
         rightRollerConfig.MotorOutput.Inverted = InvertedValue.CounterClockwise_Positive;
         rightRollerConfig.Feedback.FeedbackSensorSource = FeedbackSensorSourceValue.RotorSensor;
         rightRollerConfig.Feedback.SensorToMechanismRatio = intakeConstants.rightMotorGearing();
@@ -157,7 +157,7 @@ public class IntakeIOReal implements IntakeIO {
         leftRollerConfig.CurrentLimits.SupplyCurrentThreshold = 55;
         leftRollerConfig.CurrentLimits.SupplyTimeThreshold = 1.5;
         leftRollerConfig.CurrentLimits.SupplyCurrentLimitEnable = true;
-        leftRollerConfig.MotorOutput.NeutralMode = NeutralModeValue.Brake;
+        leftRollerConfig.MotorOutput.NeutralMode = NeutralModeValue.Coast;
         leftRollerConfig.MotorOutput.Inverted = InvertedValue.CounterClockwise_Positive;
         leftRollerConfig.Feedback.FeedbackSensorSource = FeedbackSensorSourceValue.RotorSensor;
         leftRollerConfig.Feedback.SensorToMechanismRatio = intakeConstants.leftMotorGearing();
