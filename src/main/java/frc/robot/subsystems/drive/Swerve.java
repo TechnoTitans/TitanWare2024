@@ -193,8 +193,8 @@ public class Swerve extends SubsystemBase {
         PathPlannerLogging.setLogCurrentPoseCallback(logCurrentPoseConsumer);
         PathPlannerLogging.setLogTargetPoseCallback(logTargetPoseConsumer);
         AutoBuilder.configureHolonomic(
-                swerve::getEstimatedPosition,
-                swerve::resetPosition,
+                swerve::getPose,
+                swerve::resetPose,
                 swerve::getRobotRelativeSpeeds,
                 swerve::drive,
                 holonomicPathFollowerConfig,
@@ -403,7 +403,7 @@ public class Swerve extends SubsystemBase {
      * Get the estimated {@link Pose2d} of the robot from the {@link SwerveDrivePoseEstimator}.
      * @return the estimated position of the robot, as a {@link Pose2d}
      */
-    public Pose2d getEstimatedPosition() {
+    public Pose2d getPose() {
         return poseEstimator.getEstimatedPosition();
     }
 
@@ -442,8 +442,12 @@ public class Swerve extends SubsystemBase {
         return runOnce(this::zeroRotation);
     }
 
-    public void resetPosition(final Pose2d robotPose) {
+    public void resetPose(final Pose2d robotPose) {
         poseEstimator.resetPosition(gyro.getYawRotation2d(), getModulePositions(), robotPose);
+    }
+
+    public Command resetPoseCommand(final Pose2d robotPose) {
+        return runOnce(() -> resetPose(robotPose));
     }
 
     public ChassisSpeeds getRobotRelativeSpeeds() {
@@ -641,7 +645,7 @@ public class Swerve extends SubsystemBase {
     public Command followChoreoPathCommand(final ChoreoTrajectory choreoTrajectory) {
         return Choreo.choreoSwerveCommand(
                 choreoTrajectory,
-                this::getEstimatedPosition,
+                this::getPose,
                 new PIDController(5, 0, 0),
                 new PIDController(5, 0, 0),
                 new PIDController(5, 0, 0),
