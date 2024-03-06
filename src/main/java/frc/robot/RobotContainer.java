@@ -45,8 +45,7 @@ public class RobotContainer {
 
         this.intake = new Intake(
                 Constants.CURRENT_MODE,
-                HardwareConstants.INTAKE,
-                swerve::getFieldRelativeSpeeds
+                HardwareConstants.INTAKE
         );
 
         this.arm = new Arm(Constants.RobotMode.REPLAY, HardwareConstants.ARM);
