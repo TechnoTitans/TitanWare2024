@@ -34,7 +34,7 @@ public class IntakeIOSim implements IntakeIO {
     private final TalonFX leftRoller;
     private final TalonFX shooterFeederRoller;
 
-    private final DigitalInput gamePieceSensor;
+    private final DigitalInput shooterBeamBreak;
     private final DIOSim gamePieceSensorSim;
 
     private final TalonFXSim rightRollerSim;
@@ -71,8 +71,8 @@ public class IntakeIOSim implements IntakeIO {
         this.leftRoller = new TalonFX(intakeConstants.leftRollerMotor(), intakeConstants.CANBus());
         this.shooterFeederRoller = new TalonFX(intakeConstants.shooterFeederRollerMotor(), intakeConstants.CANBus());
 
-        this.gamePieceSensor = new DigitalInput(intakeConstants.sensorDigitalInput());
-        this.gamePieceSensorSim = new DIOSim(gamePieceSensor);
+        this.shooterBeamBreak = new DigitalInput(intakeConstants.sensorDigitalInput());
+        this.gamePieceSensorSim = new DIOSim(shooterBeamBreak);
 
         final DCMotorSim rightRollerMotorSim = new DCMotorSim(
                 LinearSystemId.createDCMotorSystem(
@@ -205,7 +205,7 @@ public class IntakeIOSim implements IntakeIO {
         inputs.shooterFeederTorqueCurrentAmps= _shooterFeederTorqueCurrent.getValue();
         inputs.shooterFeederTempCelsius = _shooterFeederDeviceTemp.getValue();
 
-        inputs.shooterBeamBreak = gamePieceSensor.get();
+        inputs.shooterBeamBreak = !shooterBeamBreak.get();
     }
 
     @SuppressWarnings("DuplicatedCode")

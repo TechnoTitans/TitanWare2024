@@ -18,7 +18,7 @@ import org.littletonrobotics.junction.Logger;
 import static edu.wpi.first.units.Units.*;
 
 public class Intake extends SubsystemBase {
-    protected static final String logKey = "Intake";
+    protected static final String LogKey = "Intake";
 
     private final IntakeIO intakeIO;
     private final IntakeIOInputsAutoLogged inputs;
@@ -63,12 +63,15 @@ public class Intake extends SubsystemBase {
     public void periodic() {
         final double intakeIOPeriodicStart = Logger.getRealTimestamp();
         intakeIO.updateInputs(inputs);
-        Logger.processInputs(logKey, inputs);
+        Logger.processInputs(LogKey, inputs);
 
         Logger.recordOutput(
-                logKey + "/PeriodicIOPeriodMs",
+                LogKey + "/PeriodicIOPeriodMs",
                 LogUtils.microsecondsToMilliseconds(Logger.getRealTimestamp() - intakeIOPeriodicStart)
         );
+        Logger.recordOutput(LogKey + "/Setpoint/RightRollerVelocityRotsPerSec", setpoint.rightRollerVelocityRotsPerSec);
+        Logger.recordOutput(LogKey + "/Setpoint/LeftRollerVelocityRotsPerSec", setpoint.leftRollerVelocityRotsPerSec);
+        Logger.recordOutput(LogKey + "/Setpoint/ShooterFeederRotsPerSec", setpoint.shooterFeederRotsPerSec);
     }
 
     public Command intakeCommand() {

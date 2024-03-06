@@ -22,7 +22,7 @@ public class IntakeIOReal implements IntakeIO {
     private final TalonFX leftRoller;
     private final TalonFX shooterFeederRoller;
 
-    private final DigitalInput gamePieceSensor;
+    private final DigitalInput shooterBeamBreak;
 
     private final VelocityTorqueCurrentFOC velocityTorqueCurrentFOC;
     private final TorqueCurrentFOC torqueCurrentFOC;
@@ -53,7 +53,7 @@ public class IntakeIOReal implements IntakeIO {
         this.leftRoller = new TalonFX(intakeConstants.leftRollerMotor(), intakeConstants.CANBus());
         this.shooterFeederRoller = new TalonFX(intakeConstants.shooterFeederRollerMotor(), intakeConstants.CANBus());
 
-        this.gamePieceSensor = new DigitalInput(intakeConstants.sensorDigitalInput());
+        this.shooterBeamBreak = new DigitalInput(intakeConstants.sensorDigitalInput());
 
         this.velocityTorqueCurrentFOC = new VelocityTorqueCurrentFOC(0);
         this.torqueCurrentFOC = new TorqueCurrentFOC(0);
@@ -117,7 +117,7 @@ public class IntakeIOReal implements IntakeIO {
         inputs.shooterFeederTorqueCurrentAmps= _shooterFeederTorqueCurrent.getValue();
         inputs.shooterFeederTempCelsius = _shooterFeederDeviceTemp.getValue();
 
-        inputs.shooterBeamBreak = gamePieceSensor.get();
+        inputs.shooterBeamBreak = !shooterBeamBreak.get();
     }
 
     @SuppressWarnings("DuplicatedCode")
