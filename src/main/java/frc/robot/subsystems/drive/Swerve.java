@@ -7,7 +7,6 @@ import edu.wpi.first.math.estimator.SwerveDrivePoseEstimator;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.geometry.Translation2d;
-import edu.wpi.first.math.geometry.Twist2d;
 import edu.wpi.first.math.kinematics.ChassisSpeeds;
 import edu.wpi.first.math.kinematics.SwerveDriveKinematics;
 import edu.wpi.first.math.kinematics.SwerveModulePosition;
@@ -112,9 +111,9 @@ public class Swerve extends SubsystemBase {
                 kinematics,
                 getYaw(),
                 getModulePositions(),
-                new Pose2d()
-//                Constants.Vision.STATE_STD_DEVS,
-//                Constants.Vision.VISION_MEASUREMENT_STD_DEVS
+                new Pose2d(),
+                Constants.Vision.STATE_STD_DEVS,
+                Constants.Vision.VISION_MEASUREMENT_STD_DEVS
         );
 
         this.linearVoltageSysIdRoutine = makeLinearVoltageSysIdRoutine();
@@ -209,10 +208,12 @@ public class Swerve extends SubsystemBase {
         );
     }
 
+    @SuppressWarnings("unused")
     public Command linearTorqueCurrentSysIdQuasistaticCommand(final SysIdRoutine.Direction direction) {
         return linearTorqueCurrentSysIdRoutine.quasistatic(direction);
     }
 
+    @SuppressWarnings("unused")
     public Command linearTorqueCurrentSysIdDynamicCommand(final SysIdRoutine.Direction direction) {
         return linearTorqueCurrentSysIdRoutine.dynamic(direction);
     }
@@ -241,10 +242,12 @@ public class Swerve extends SubsystemBase {
         );
     }
 
+    @SuppressWarnings("unused")
     public Command angularVoltageSysIdQuasistaticCommand(final SysIdRoutine.Direction direction) {
         return angularVoltageSysIdRoutine.quasistatic(direction);
     }
 
+    @SuppressWarnings("unused")
     public Command angularVoltageSysIdDynamicCommand(final SysIdRoutine.Direction direction) {
         return angularVoltageSysIdRoutine.dynamic(direction);
     }
@@ -382,14 +385,13 @@ public class Swerve extends SubsystemBase {
         gyro.setAngle(angle);
     }
 
-    // TODO: add vision
     public void zeroRotation() {
-//    public void zeroRotation(final PhotonVision photonVision) {
         gyro.zeroRotation();
-//        photonVision.resetPosition(
-//                photonVision.getEstimatedPosition(),
-//                Rotation2d.fromDegrees(0)
-//        );
+        poseEstimator.resetPosition(
+                Rotation2d.fromRadians(0),
+                getModulePositions(),
+                getEstimatedPosition()
+        );
     }
 
     public Command zeroRotationCommand() {
@@ -461,24 +463,6 @@ public class Swerve extends SubsystemBase {
     }
 
     public void drive(final ChassisSpeeds speeds) {
-        // TODO: maybe replace with ChassisSpeeds.discretize() or some other tyler math that's more
-        //  "mathematically correct"
-        // see https://www.chiefdelphi.com/t/whitepaper-swerve-drive-skew-and-second-order-kinematics/416964/40
-        // lookahead 4 loop cycles cause uh the goated teams do it and it works so uh
-//        final double dtSeconds = 4 * Constants.LOOP_PERIOD_SECONDS;
-//        final Pose2d desiredDeltaPose = new Pose2d(
-//                speeds.vxMetersPerSecond * dtSeconds,
-//                speeds.vyMetersPerSecond * dtSeconds,
-//                Rotation2d.fromRadians(speeds.omegaRadiansPerSecond * dtSeconds)
-//        );
-//
-//        final Twist2d twist2d = new Pose2d().log(desiredDeltaPose);
-//        final ChassisSpeeds correctedSpeeds = new ChassisSpeeds(
-//                twist2d.dx / dtSeconds,
-//                twist2d.dy / dtSeconds,
-//                twist2d.dtheta / dtSeconds
-//        );
-
         final ChassisSpeeds correctedSpeeds = ChassisSpeeds.discretize(
                 speeds,
                 4 * Constants.LOOP_PERIOD_SECONDS

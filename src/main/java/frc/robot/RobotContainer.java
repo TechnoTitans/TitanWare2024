@@ -1,6 +1,7 @@
 package frc.robot;
 
 import edu.wpi.first.wpilibj.PowerDistribution;
+import edu.wpi.first.wpilibj.RobotState;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
@@ -12,6 +13,7 @@ import frc.robot.subsystems.intake.Intake;
 import frc.robot.subsystems.superstructure.Superstructure;
 import frc.robot.subsystems.superstructure.arm.Arm;
 import frc.robot.subsystems.superstructure.shooter.Shooter;
+import frc.robot.subsystems.vision.PhotonVision;
 
 public class RobotContainer {
     public final PowerDistribution powerDistribution;
@@ -24,6 +26,8 @@ public class RobotContainer {
 
     public final Superstructure superstructure;
 
+    public final PhotonVision photonVision;
+
     public final CommandXboxController driverController;
     public final CommandXboxController coDriverController;
 
@@ -33,6 +37,7 @@ public class RobotContainer {
                 PowerDistribution.ModuleType.kRev
         );
         this.powerDistribution.clearStickyFaults();
+        this.powerDistribution.setSwitchableChannel(true);
 
         this.swerve = new Swerve(
                 Constants.CURRENT_MODE,
@@ -54,31 +59,13 @@ public class RobotContainer {
 
         this.superstructure = new Superstructure(arm, shooter);
 
+        this.photonVision = new PhotonVision(Constants.CURRENT_MODE, swerve, swerve.getPoseEstimator());
+
         this.driverController = new CommandXboxController(RobotMap.MainController);
         this.coDriverController = new CommandXboxController(RobotMap.CoController);
-
-        this.driverController.y().onTrue(
-                Commands.sequence(
-                        superstructure.toGoal(Superstructure.Goal.IDLE),
-//                        Commands.waitUntil(superstructure.atGoalTrigger),
-                        Commands.waitSeconds(6),
-                        superstructure.toGoal(Superstructure.Goal.SUBWOOFER),
-//                        Commands.waitUntil(superstructure.atGoalTrigger),
-                        Commands.waitUntil(superstructure.getShooter().atVelocityTrigger),
-                        Commands.waitSeconds(4),
-                        superstructure.toGoal(Superstructure.Goal.IDLE)
-                )
-        );
     }
 
     public Command getAutonomousCommand() {
-        return Commands.repeatingSequence(
-                superstructure.toGoal(Superstructure.Goal.IDLE),
-                Commands.waitUntil(superstructure.atGoalTrigger),
-                Commands.waitSeconds(4),
-                superstructure.toGoal(Superstructure.Goal.SUBWOOFER),
-                Commands.waitUntil(superstructure.atGoalTrigger),
-                Commands.waitSeconds(4)
-        );
+        return Commands.waitUntil(() -> !RobotState.isAutonomous());
     }
 }
