@@ -22,7 +22,7 @@ public class IntakeIOReal implements IntakeIO {
     private final TalonFX leftRoller;
     private final TalonFX shooterFeederRoller;
 
-    private final DigitalInput gamePieceSensor;
+    private final DigitalInput shooterBeamBreak;
 
     private final VelocityTorqueCurrentFOC velocityTorqueCurrentFOC;
     private final TorqueCurrentFOC torqueCurrentFOC;
@@ -53,7 +53,7 @@ public class IntakeIOReal implements IntakeIO {
         this.leftRoller = new TalonFX(intakeConstants.leftRollerMotor(), intakeConstants.CANBus());
         this.shooterFeederRoller = new TalonFX(intakeConstants.shooterFeederRollerMotor(), intakeConstants.CANBus());
 
-        this.gamePieceSensor = new DigitalInput(intakeConstants.sensorDigitalInput());
+        this.shooterBeamBreak = new DigitalInput(intakeConstants.sensorDigitalInput());
 
         this.velocityTorqueCurrentFOC = new VelocityTorqueCurrentFOC(0);
         this.torqueCurrentFOC = new TorqueCurrentFOC(0);
@@ -99,25 +99,25 @@ public class IntakeIOReal implements IntakeIO {
                 _shooterFeederDeviceTemp
         );
 
-        inputs.rightMotorPositionRots = _rightRollerPosition.getValue();
-        inputs.rightMotorVelocityRotsPerSec = _rightRollerVelocity.getValue();
-        inputs.rightMotorVoltage = _rightRollerVoltage.getValue();
-        inputs.rightMotorTorqueCurrentAmps = _rightRollerTorqueCurrent.getValue();
-        inputs.rightMotorTempCelsius = _rightRollerDeviceTemp.getValue();
+        inputs.rightPositionRots = _rightRollerPosition.getValue();
+        inputs.rightVelocityRotsPerSec = _rightRollerVelocity.getValue();
+        inputs.rightVoltage = _rightRollerVoltage.getValue();
+        inputs.rightTorqueCurrentAmps = _rightRollerTorqueCurrent.getValue();
+        inputs.rightTempCelsius = _rightRollerDeviceTemp.getValue();
 
-        inputs.leftMotorPositionRots = _leftRollerPosition.getValue();
+        inputs.leftPositionRots = _leftRollerPosition.getValue();
         inputs.leftVelocityRotsPerSec = _leftRollerVelocity.getValue();
-        inputs.leftMotorVoltage = _leftRollerVoltage.getValue();
+        inputs.leftVoltage = _leftRollerVoltage.getValue();
         inputs.leftTorqueCurrentAmps = _leftRollerTorqueCurrent.getValue();
         inputs.leftTempCelsius = _leftRollerDeviceTemp.getValue();
 
-        inputs.shooterFeederMotorPositionRots = _shooterFeederPosition.getValue();
-        inputs.shooterFeederMotorVelocityRotsPerSec = _shooterFeederVelocity.getValue();
-        inputs.shooterFeederMotorVoltage = _shooterFeederVoltage.getValue();
-        inputs.shooterFeederMotorTorqueCurrentAmps = _shooterFeederTorqueCurrent.getValue();
-        inputs.shooterFeederMotorTempCelsius = _shooterFeederDeviceTemp.getValue();
+        inputs.shooterFeederPositionRots = _shooterFeederPosition.getValue();
+        inputs.shooterFeederVelocityRotsPerSec = _shooterFeederVelocity.getValue();
+        inputs.shooterFeederVoltage = _shooterFeederVoltage.getValue();
+        inputs.shooterFeederTorqueCurrentAmps= _shooterFeederTorqueCurrent.getValue();
+        inputs.shooterFeederTempCelsius = _shooterFeederDeviceTemp.getValue();
 
-        inputs.gamePieceDetected = gamePieceSensor.get();
+        inputs.shooterBeamBreak = !shooterBeamBreak.get();
     }
 
     @SuppressWarnings("DuplicatedCode")

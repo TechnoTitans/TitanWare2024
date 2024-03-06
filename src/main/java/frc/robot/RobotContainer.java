@@ -1,7 +1,6 @@
 package frc.robot;
 
 import edu.wpi.first.wpilibj.PowerDistribution;
-import edu.wpi.first.wpilibj.RobotState;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
@@ -50,8 +49,7 @@ public class RobotContainer {
 
         this.intake = new Intake(
                 Constants.CURRENT_MODE,
-                HardwareConstants.INTAKE,
-                swerve::getFieldRelativeSpeeds
+                HardwareConstants.INTAKE
         );
 
         this.arm = new Arm(Constants.RobotMode.REPLAY, HardwareConstants.ARM);
@@ -63,9 +61,22 @@ public class RobotContainer {
 
         this.driverController = new CommandXboxController(RobotMap.MainController);
         this.coDriverController = new CommandXboxController(RobotMap.CoController);
+
+        this.driverController.y().onTrue(
+                Commands.sequence(
+                        superstructure.toGoal(Superstructure.Goal.IDLE),
+//                        Commands.waitUntil(superstructure.atGoalTrigger),
+                        Commands.waitSeconds(6),
+                        superstructure.toGoal(Superstructure.Goal.SUBWOOFER),
+//                        Commands.waitUntil(superstructure.atGoalTrigger),
+                        Commands.waitUntil(superstructure.getShooter().atVelocityTrigger),
+                        Commands.waitSeconds(4),
+                        superstructure.toGoal(Superstructure.Goal.IDLE)
+                )
+        );
     }
 
     public Command getAutonomousCommand() {
-        return Commands.waitUntil(() -> !RobotState.isAutonomous());
+        return intake.outtakeCommand();
     }
 }
