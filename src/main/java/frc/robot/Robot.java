@@ -11,6 +11,7 @@ import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.CommandScheduler;
 import frc.robot.constants.Constants;
 import frc.robot.utils.closeables.ToClose;
+import frc.robot.utils.subsystems.VirtualSubsystem;
 import org.littletonrobotics.junction.LogFileUtil;
 import org.littletonrobotics.junction.LoggedRobot;
 import org.littletonrobotics.junction.Logger;
@@ -116,6 +117,7 @@ public class Robot extends LoggedRobot {
     @Override
     public void robotPeriodic() {
         CommandScheduler.getInstance().run();
+        VirtualSubsystem.run();
     }
 
     @Override
