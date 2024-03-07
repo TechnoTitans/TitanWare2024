@@ -10,7 +10,7 @@ import edu.wpi.first.math.util.Units;
 import org.photonvision.PhotonPoseEstimator;
 
 public interface Constants {
-    RobotMode CURRENT_MODE = RobotMode.REAL;
+    RobotMode CURRENT_MODE = RobotMode.SIM;
     double LOOP_PERIOD_SECONDS = 0.02;
 
     enum RobotMode {
@@ -49,11 +49,6 @@ public interface Constants {
             /** Simulated steer voltage required to overcome friction. */
             double STEER_KS_VOLTS = 0.25;
         }
-    }
-
-    interface Intake {
-        double RollerRadiusMeters = Units.inchesToMeters(1);
-        double RollerCircumferenceMeters = Math.PI * RollerRadiusMeters * 2;
     }
 
     interface NetworkTables {

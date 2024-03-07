@@ -77,6 +77,6 @@ public class RobotContainer {
     }
 
     public Command getAutonomousCommand() {
-        return intake.outtakeCommand();
+        return intake.outtakeCommand().withTimeout(5);
     }
 }

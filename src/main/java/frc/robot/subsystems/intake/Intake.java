@@ -25,6 +25,7 @@ public class Intake extends SubsystemBase {
 
     private final VelocitySetpoint setpoint;
     public final Trigger shooterBeamBreakBroken;
+    public final Trigger noteJammed;
 
     private static class VelocitySetpoint {
         public double rightRollerVelocityRotsPerSec;
@@ -48,6 +49,7 @@ public class Intake extends SubsystemBase {
 
         this.setpoint = new VelocitySetpoint();
         this.shooterBeamBreakBroken = new Trigger(() -> inputs.shooterBeamBreak);
+        this.noteJammed = new Trigger(() -> inputs.leftTorqueCurrentAmps >= 40 || inputs.rightTorqueCurrentAmps >= 40);
 
         this.torqueCurrentSysIdRoutine = makeTorqueCurrentSysIdRoutine(
                 Amps.of(2).per(Second),
@@ -76,8 +78,12 @@ public class Intake extends SubsystemBase {
 
     public Command intakeCommand() {
         return toVelocityCommand(9, 9, 9)
-                .until(shooterBeamBreakBroken)
-                .andThen(stopCommand());
+                .until(shooterBeamBreakBroken.or(noteJammed))
+                .andThen(Commands.either(
+                        outtakeCommand().until(noteJammed.negate()).withTimeout(5),
+                        stopCommand(),
+                        noteJammed
+                ));
     }
 
     public Command feedCommand() {
@@ -99,17 +105,30 @@ public class Intake extends SubsystemBase {
             final double leftRollerVelocityRotsPerSec,
             final double shooterFeederRotsPerSec
     ) {
-        return runOnce(() -> {
-            setpoint.rightRollerVelocityRotsPerSec = rightRollerVelocityRotsPerSec;
-            setpoint.leftRollerVelocityRotsPerSec = leftRollerVelocityRotsPerSec;
-            setpoint.shooterFeederRotsPerSec = shooterFeederRotsPerSec;
+        return startEnd(
+                () -> {
+                    setpoint.rightRollerVelocityRotsPerSec = rightRollerVelocityRotsPerSec;
+                    setpoint.leftRollerVelocityRotsPerSec = leftRollerVelocityRotsPerSec;
+                    setpoint.shooterFeederRotsPerSec = shooterFeederRotsPerSec;
 
-            intakeIO.toVelocity(
-                    rightRollerVelocityRotsPerSec,
-                    leftRollerVelocityRotsPerSec,
-                    shooterFeederRotsPerSec
-            );
-        });
+                    intakeIO.toVelocity(
+                            rightRollerVelocityRotsPerSec,
+                            leftRollerVelocityRotsPerSec,
+                            shooterFeederRotsPerSec
+                    );
+                },
+                () -> {
+                    setpoint.rightRollerVelocityRotsPerSec = 0;
+                    setpoint.leftRollerVelocityRotsPerSec = 0;
+                    setpoint.shooterFeederRotsPerSec = 0;
+
+                    intakeIO.toVelocity(
+                            rightRollerVelocityRotsPerSec,
+                            leftRollerVelocityRotsPerSec,
+                            shooterFeederRotsPerSec
+                    );
+                }
+        );
     }
 
     public Command toVoltageCommand(
@@ -117,11 +136,18 @@ public class Intake extends SubsystemBase {
             final double leftRollerVoltage,
             final double shooterFeederVoltage
     ) {
-        return runOnce(() -> intakeIO.toVoltage(
-                rightRollerVoltage,
-                leftRollerVoltage,
-                shooterFeederVoltage
-        ));
+        return startEnd(
+                () -> intakeIO.toVoltage(
+                        rightRollerVoltage,
+                        leftRollerVoltage,
+                        shooterFeederVoltage
+                ),
+                () -> intakeIO.toVoltage(
+                        0,
+                        0,
+                        0
+                )
+        );
     }
 
     private SysIdRoutine makeTorqueCurrentSysIdRoutine(
