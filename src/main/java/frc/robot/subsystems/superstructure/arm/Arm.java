@@ -92,7 +92,7 @@ public class Arm extends SubsystemBase {
         this.pivotSoftUpperLimit = new PositionSetpoint()
                 .withPivotPositionRots(armConstants.pivotSoftUpperLimitRots());
 
-        this.armIO.config(pivotSoftLowerLimit, pivotSoftUpperLimit);
+        this.armIO.config();
     }
 
     @Override
@@ -158,7 +158,10 @@ public class Arm extends SubsystemBase {
                         () -> armIO.toPivotVoltage(-3),
                         () -> armIO.toPivotVoltage(0)
                 ).until(() -> inputs.pivotLowerLimitSwitch),
-                runOnce(() -> armIO.setPivotPosition(0))
+                runOnce(() -> {
+                    armIO.setPivotPosition(0);
+                    armIO.configureSoftLimits(pivotSoftLowerLimit, pivotSoftUpperLimit);
+                })
         );
     }
 
