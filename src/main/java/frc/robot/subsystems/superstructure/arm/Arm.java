@@ -54,7 +54,7 @@ public class Arm extends SubsystemBase {
     public enum Goal {
         ZERO(() -> 0),
         STOW(() -> Units.degreesToRotations(10)),
-        AMP(() -> Units.degreesToRotations(90)),
+        AMP(() -> Units.degreesToRotations(100)),
         SUBWOOFER(() -> Units.degreesToRotations(55)),
         AIM_SPEAKER(() -> 0);
 
@@ -83,8 +83,8 @@ public class Arm extends SubsystemBase {
         );
         this.torqueCurrentSysIdRoutine = makeTorqueCurrentSysIdRoutine(
                 Amps.of(2).per(Second),
-                Amps.of(8),
-                Seconds.of(6)
+                Amps.of(10),
+                Seconds.of(10)
         );
 
         this.setpoint = new PositionSetpoint();
@@ -93,7 +93,7 @@ public class Arm extends SubsystemBase {
         this.pivotSoftUpperLimit = new PositionSetpoint()
                 .withPivotPositionRots(armConstants.pivotSoftUpperLimitRots());
 
-        this.armIO.config(pivotSoftLowerLimit, pivotSoftUpperLimit);
+        this.armIO.config();
     }
 
     @Override
@@ -159,10 +159,28 @@ public class Arm extends SubsystemBase {
         //  and potentially do a 2nd, slower, pass to be more accurate
         return Commands.sequence(
                 startEnd(
-                        () -> armIO.toPivotVoltage(-3),
+                        () -> armIO.toPivotVoltage(-1),
                         () -> armIO.toPivotVoltage(0)
                 ).until(() -> inputs.pivotLowerLimitSwitch),
-                runOnce(() -> armIO.setPivotPosition(0))
+                runOnce(() -> {
+                    armIO.setPivotPosition(0);
+                    armIO.configureSoftLimits(pivotSoftLowerLimit, pivotSoftUpperLimit);
+                })
+        );
+    }
+
+    public Command homePivotCurrentCommand() {
+        return Commands.sequence(
+                startEnd(
+                        () -> armIO.toPivotVoltage(-1),
+                        () -> armIO.toPivotVoltage(0)
+                ).until(() -> Math.abs(inputs.leftPivotTorqueCurrentAmps) >= 25
+                        && Math.abs(inputs.rightPivotTorqueCurrentAmps) >= 25
+                ),
+                runOnce(() -> {
+                    armIO.setPivotPosition(0);
+                    armIO.configureSoftLimits(pivotSoftLowerLimit, pivotSoftUpperLimit);
+                })
         );
     }
 

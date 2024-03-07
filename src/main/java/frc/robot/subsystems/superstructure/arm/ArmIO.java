@@ -28,16 +28,18 @@ public interface ArmIO {
      */
     default void updateInputs(final ArmIOInputs inputs) {}
 
-    default void config(
-            final Arm.PositionSetpoint pivotSoftLowerLimit,
-            final Arm.PositionSetpoint pivotSoftUpperLimit
-    ) {}
+    default void config() {}
 
     default void setPivotPosition(final double pivotPositionRots) {}
 
     default void toPivotPosition(final double pivotPositionRots) {}
 
     default void toPivotVoltage(final double pivotVolts) {}
+
+    default void configureSoftLimits(
+            final Arm.PositionSetpoint pivotSoftLowerLimit,
+            final Arm.PositionSetpoint pivotSoftUpperLimit
+    ) {}
 
     default void toPivotTorqueCurrent(final double pivotTorqueCurrentAmps) {}
 }

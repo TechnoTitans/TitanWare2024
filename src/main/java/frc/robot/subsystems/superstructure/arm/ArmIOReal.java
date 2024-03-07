@@ -3,8 +3,11 @@ package frc.robot.subsystems.superstructure.arm;
 import com.ctre.phoenix6.BaseStatusSignal;
 import com.ctre.phoenix6.StatusSignal;
 import com.ctre.phoenix6.configs.Slot0Configs;
+import com.ctre.phoenix6.configs.SoftwareLimitSwitchConfigs;
 import com.ctre.phoenix6.configs.TalonFXConfiguration;
+import com.ctre.phoenix6.configs.TalonFXConfigurator;
 import com.ctre.phoenix6.controls.MotionMagicExpoTorqueCurrentFOC;
+import com.ctre.phoenix6.controls.MotionMagicExpoVoltage;
 import com.ctre.phoenix6.controls.TorqueCurrentFOC;
 import com.ctre.phoenix6.controls.VoltageOut;
 import com.ctre.phoenix6.hardware.ParentDevice;
@@ -13,6 +16,7 @@ import com.ctre.phoenix6.signals.GravityTypeValue;
 import com.ctre.phoenix6.signals.InvertedValue;
 import com.ctre.phoenix6.signals.NeutralModeValue;
 import frc.robot.constants.HardwareConstants;
+import frc.robot.utils.ctre.Phoenix6Utils;
 
 public class ArmIOReal implements ArmIO {
     private final HardwareConstants.ArmConstants armConstants;
@@ -20,7 +24,8 @@ public class ArmIOReal implements ArmIO {
     private final TalonFX leftPivotMotor;
     private final TalonFX rightPivotMotor;
 
-    private final MotionMagicExpoTorqueCurrentFOC motionMagicExpoTorqueCurrentFOC;
+//    private final MotionMagicExpoTorqueCurrentFOC motionMagicExpoTorqueCurrentFOC;
+    private final MotionMagicExpoVoltage motionMagicExpoVoltage;
     private final TorqueCurrentFOC torqueCurrentFOC;
     private final VoltageOut voltageOut;
 
@@ -42,7 +47,8 @@ public class ArmIOReal implements ArmIO {
         this.leftPivotMotor = new TalonFX(armConstants.leftPivotMotorId(), armConstants.CANBus());
         this.rightPivotMotor = new TalonFX(armConstants.rightPivotMotorId(), armConstants.CANBus());
 
-        this.motionMagicExpoTorqueCurrentFOC = new MotionMagicExpoTorqueCurrentFOC(0);
+//        this.motionMagicExpoTorqueCurrentFOC = new MotionMagicExpoTorqueCurrentFOC(0);
+        this.motionMagicExpoVoltage = new MotionMagicExpoVoltage(0);
         this.torqueCurrentFOC = new TorqueCurrentFOC(0);
         this.voltageOut = new VoltageOut(0);
 
@@ -60,31 +66,32 @@ public class ArmIOReal implements ArmIO {
 
     @SuppressWarnings("DuplicatedCode")
     @Override
-    public void config(
-            final Arm.PositionSetpoint pivotSoftLowerLimit,
-            final Arm.PositionSetpoint pivotSoftUpperLimit
-    ) {
+    public void config() {
         final TalonFXConfiguration leftTalonFXConfiguration = new TalonFXConfiguration();
         final InvertedValue leftTalonFXInverted = InvertedValue.Clockwise_Positive;
         leftTalonFXConfiguration.Slot0 = new Slot0Configs()
-                .withKS(0)
-                .withKG(0.11)
-                .withGravityType(GravityTypeValue.Arm_Cosine)
-                .withKV(13.97)
-                .withKA(0.015)
-                .withKP(50); // TODO: tune Kp
+//                .withKS(0)
+//                .withKG(0.11)
+//                .withGravityType(GravityTypeValue.Arm_Cosine)
+//                .withKV(13.97)
+//                .withKA(0.015)
+//                .withKP(50); // TODO: tune Kp
+
+//                .withKS(0.16803)
+//                .withKG(0.16766)
+//                .withGravityType(GravityTypeValue.Arm_Cosine)
+//                .withKV(13.623)
+//                .withKA(0.2573 / 2)
+                .withKP(30);
+//                .withKD(3.5442);
         leftTalonFXConfiguration.MotionMagic.MotionMagicCruiseVelocity = 0;
-        leftTalonFXConfiguration.MotionMagic.MotionMagicExpo_kV = 13.97;
+        leftTalonFXConfiguration.MotionMagic.MotionMagicExpo_kV = 13.623;
         leftTalonFXConfiguration.MotionMagic.MotionMagicExpo_kA = 0.015;
         leftTalonFXConfiguration.TorqueCurrent.PeakForwardTorqueCurrent = 80;
         leftTalonFXConfiguration.TorqueCurrent.PeakReverseTorqueCurrent = -80;
         leftTalonFXConfiguration.CurrentLimits.StatorCurrentLimit = 60;
         leftTalonFXConfiguration.CurrentLimits.StatorCurrentLimitEnable = true;
         leftTalonFXConfiguration.Feedback.SensorToMechanismRatio = armConstants.pivotGearing();
-        leftTalonFXConfiguration.SoftwareLimitSwitch.ReverseSoftLimitThreshold = pivotSoftLowerLimit.pivotPositionRots;
-        leftTalonFXConfiguration.SoftwareLimitSwitch.ReverseSoftLimitEnable = true;
-        leftTalonFXConfiguration.SoftwareLimitSwitch.ForwardSoftLimitThreshold = pivotSoftUpperLimit.pivotPositionRots;
-        leftTalonFXConfiguration.SoftwareLimitSwitch.ForwardSoftLimitEnable = true;
         leftTalonFXConfiguration.MotorOutput.Inverted = leftTalonFXInverted;
         leftTalonFXConfiguration.MotorOutput.NeutralMode = NeutralModeValue.Brake;
         leftPivotMotor.getConfigurator().apply(leftTalonFXConfiguration);
@@ -92,12 +99,20 @@ public class ArmIOReal implements ArmIO {
         final TalonFXConfiguration rightTalonFXConfiguration = new TalonFXConfiguration();
         final InvertedValue rightTalonFXInverted = InvertedValue.CounterClockwise_Positive;
         rightTalonFXConfiguration.Slot0 = new Slot0Configs()
-                .withKS(0)
-                .withKG(0.11)
-                .withGravityType(GravityTypeValue.Arm_Cosine)
-                .withKV(13.97)
-                .withKA(0.015)
-                .withKP(50); // TODO: tune Kp
+//                .withKS(0)
+//                .withKG(0.11)
+//                .withGravityType(GravityTypeValue.Arm_Cosine)
+//                .withKV(13.97)
+//                .withKA(0.015)
+//                .withKP(50); // TODO: tune Kp
+
+//                .withKS(0.16803)
+//                .withKG(0.16766)
+//                .withGravityType(GravityTypeValue.Arm_Cosine)
+//                .withKV(13.623)
+//                .withKA(0.2573 / 2)
+                .withKP(30);
+//                .withKD(3.5442);
         rightTalonFXConfiguration.MotionMagic.MotionMagicCruiseVelocity = 0;
         rightTalonFXConfiguration.MotionMagic.MotionMagicExpo_kV = 13.97;
         rightTalonFXConfiguration.MotionMagic.MotionMagicExpo_kA = 0.015;
@@ -106,10 +121,6 @@ public class ArmIOReal implements ArmIO {
         rightTalonFXConfiguration.CurrentLimits.StatorCurrentLimit = 60;
         rightTalonFXConfiguration.CurrentLimits.StatorCurrentLimitEnable = true;
         rightTalonFXConfiguration.Feedback.SensorToMechanismRatio = armConstants.pivotGearing();
-        rightTalonFXConfiguration.SoftwareLimitSwitch.ReverseSoftLimitThreshold = pivotSoftLowerLimit.pivotPositionRots;
-        rightTalonFXConfiguration.SoftwareLimitSwitch.ReverseSoftLimitEnable = true;
-        rightTalonFXConfiguration.SoftwareLimitSwitch.ForwardSoftLimitThreshold = pivotSoftUpperLimit.pivotPositionRots;
-        rightTalonFXConfiguration.SoftwareLimitSwitch.ForwardSoftLimitEnable = true;
         rightTalonFXConfiguration.MotorOutput.Inverted = rightTalonFXInverted;
         rightTalonFXConfiguration.MotorOutput.NeutralMode = NeutralModeValue.Brake;
         rightPivotMotor.getConfigurator().apply(rightTalonFXConfiguration);
@@ -167,14 +178,42 @@ public class ArmIOReal implements ArmIO {
 
     @Override
     public void toPivotPosition(final double pivotPositionRots) {
-        leftPivotMotor.setControl(motionMagicExpoTorqueCurrentFOC.withPosition(pivotPositionRots));
-        rightPivotMotor.setControl(motionMagicExpoTorqueCurrentFOC.withPosition(pivotPositionRots));
+        leftPivotMotor.setControl(motionMagicExpoVoltage.withPosition(pivotPositionRots));
+        rightPivotMotor.setControl(motionMagicExpoVoltage.withPosition(pivotPositionRots));
     }
 
     @Override
     public void toPivotVoltage(final double pivotVolts) {
         leftPivotMotor.setControl(voltageOut.withOutput(pivotVolts));
         rightPivotMotor.setControl(voltageOut.withOutput(pivotVolts));
+    }
+
+    @Override
+    public void configureSoftLimits(
+            final Arm.PositionSetpoint pivotSoftLowerLimit,
+            final Arm.PositionSetpoint pivotSoftUpperLimit
+    ) {
+        final TalonFXConfigurator leftConfigurator = leftPivotMotor.getConfigurator();
+        final TalonFXConfiguration leftConfiguration = new TalonFXConfiguration();
+        Phoenix6Utils.reportIfNotOk(leftPivotMotor, leftConfigurator.refresh(leftConfiguration));
+
+        leftConfiguration.SoftwareLimitSwitch.ReverseSoftLimitThreshold = pivotSoftLowerLimit.pivotPositionRots;
+        leftConfiguration.SoftwareLimitSwitch.ReverseSoftLimitEnable = true;
+        leftConfiguration.SoftwareLimitSwitch.ForwardSoftLimitThreshold = pivotSoftUpperLimit.pivotPositionRots;
+        leftConfiguration.SoftwareLimitSwitch.ForwardSoftLimitEnable = true;
+
+        Phoenix6Utils.reportIfNotOk(leftPivotMotor, leftConfigurator.apply(leftConfiguration));
+
+        final TalonFXConfigurator rightConfigurator = rightPivotMotor.getConfigurator();
+        final TalonFXConfiguration rightConfiguration = new TalonFXConfiguration();
+        Phoenix6Utils.reportIfNotOk(rightPivotMotor, rightConfigurator.refresh(rightConfiguration));
+
+        rightConfiguration.SoftwareLimitSwitch.ReverseSoftLimitThreshold = pivotSoftLowerLimit.pivotPositionRots;
+        rightConfiguration.SoftwareLimitSwitch.ReverseSoftLimitEnable = true;
+        rightConfiguration.SoftwareLimitSwitch.ForwardSoftLimitThreshold = pivotSoftUpperLimit.pivotPositionRots;
+        rightConfiguration.SoftwareLimitSwitch.ForwardSoftLimitEnable = true;
+
+        Phoenix6Utils.reportIfNotOk(rightPivotMotor, rightConfigurator.apply(rightConfiguration));
     }
 
     @Override

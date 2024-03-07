@@ -141,6 +141,8 @@ public class Robot extends LoggedRobot {
             autonomousCommand.cancel();
         }
 
+        robotContainer.arm.homePivotCurrentCommand().schedule();
+
         // No need to lint this here, X and Y are flipped for robot vs. controller joystick coordinate systems, so we
         // pass the controller X into the robot Y, and vice versa
         //noinspection SuspiciousNameCombination

@@ -1,5 +1,6 @@
 package frc.robot;
 
+import com.ctre.phoenix6.SignalLogger;
 import edu.wpi.first.wpilibj.PowerDistribution;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
@@ -13,6 +14,7 @@ import frc.robot.subsystems.superstructure.Superstructure;
 import frc.robot.subsystems.superstructure.arm.Arm;
 import frc.robot.subsystems.superstructure.shooter.Shooter;
 import frc.robot.subsystems.vision.PhotonVision;
+import frc.robot.utils.teleop.Profiler;
 
 public class RobotContainer {
     public final PowerDistribution powerDistribution;
@@ -52,7 +54,7 @@ public class RobotContainer {
                 HardwareConstants.INTAKE
         );
 
-        this.arm = new Arm(Constants.RobotMode.REPLAY, HardwareConstants.ARM);
+        this.arm = new Arm(Constants.CURRENT_MODE, HardwareConstants.ARM);
         this.shooter = new Shooter(Constants.CURRENT_MODE, HardwareConstants.SHOOTER);
 
         this.superstructure = new Superstructure(arm, shooter);
@@ -62,21 +64,59 @@ public class RobotContainer {
         this.driverController = new CommandXboxController(RobotMap.MainController);
         this.coDriverController = new CommandXboxController(RobotMap.CoController);
 
-        this.driverController.y().onTrue(
+        driverController.y().onTrue(swerve.zeroCommand());
+
+//        intake.toVoltageCommand(6, 6, 6);
+//        driverController.b().onTrue(
+//                intake.toVoltageCommand(8, 8, 8)
+//        );
+//        shooter.setDefaultCommand(shooter.toVoltageCommand(7, -6, -6));
+
+        driverController.leftBumper().whileTrue(
                 Commands.sequence(
-                        superstructure.toGoal(Superstructure.Goal.IDLE),
-//                        Commands.waitUntil(superstructure.atGoalTrigger),
-                        Commands.waitSeconds(6),
-                        superstructure.toGoal(Superstructure.Goal.SUBWOOFER),
-//                        Commands.waitUntil(superstructure.atGoalTrigger),
-                        Commands.waitUntil(superstructure.getShooter().atVelocityTrigger),
-                        Commands.waitSeconds(4),
-                        superstructure.toGoal(Superstructure.Goal.IDLE)
+                        Commands.parallel(
+                                arm.toGoal(Arm.Goal.SUBWOOFER),
+                                shooter.toVoltageCommand(10, 10, 10)
+                        ),
+                        Commands.waitSeconds(2),
+                        intake.toVoltageCommand(9, 9, 9)
+                )
+        ).onFalse(
+                Commands.parallel(
+                        arm.toGoal(Arm.Goal.STOW),
+                        shooter.toGoal(Shooter.Goal.IDLE),
+                        intake.toVoltageCommand(9, 9, 0)
                 )
         );
+
+
+        driverController.leftBumper().whileTrue(
+                Commands.startEnd(
+                        () -> Profiler.setSwerveSpeed(Profiler.SwerveSpeed.FAST),
+                        () -> Profiler.setSwerveSpeed(Profiler.SwerveSpeed.NORMAL)
+                )
+        );
+
+        driverController.rightBumper().whileTrue(
+                Commands.startEnd(
+                        () -> Profiler.setSwerveSpeed(Profiler.SwerveSpeed.SLOW),
+                        () -> Profiler.setSwerveSpeed(Profiler.SwerveSpeed.NORMAL)
+                )
+        );
+
     }
 
     public Command getAutonomousCommand() {
-        return intake.outtakeCommand();
+        return Commands.sequence(
+                arm.homePivotCurrentCommand(),
+                Commands.repeatingSequence(
+                        arm.toGoal(Arm.Goal.STOW),
+                        Commands.waitSeconds(2),
+                        arm.toGoal(Arm.Goal.SUBWOOFER),
+                        Commands.waitSeconds(2),
+                        arm.toGoal(Arm.Goal.AMP),
+                        Commands.waitSeconds(4)
+                )
+        );
     }
 }

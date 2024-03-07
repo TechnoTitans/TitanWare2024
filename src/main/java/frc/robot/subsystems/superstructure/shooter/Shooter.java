@@ -41,7 +41,7 @@ public class Shooter extends SubsystemBase {
     public enum Goal {
         STOP(() -> 0, () -> 0, () -> 0),
         IDLE(() -> 10, () -> 10, () -> 10),
-        AMP(() -> 4, () -> 4, () -> 4),
+        AMP(() -> 60, () -> -60, () -> -60),
         SUBWOOFER(() -> 80, () -> 80, () -> 80),
         AIM_SPEAKER(() -> 0, () -> 0, () -> 0);
 

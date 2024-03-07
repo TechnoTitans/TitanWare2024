@@ -171,7 +171,7 @@ public class IntakeIOReal implements IntakeIO {
                 .withKS(0);
         shooterFeederConfig.TorqueCurrent.PeakForwardTorqueCurrent = 80;
         shooterFeederConfig.TorqueCurrent.PeakReverseTorqueCurrent = -80;
-        shooterFeederConfig.CurrentLimits.StatorCurrentLimit = 60;
+        shooterFeederConfig.CurrentLimits.StatorCurrentLimit = 80;
         shooterFeederConfig.CurrentLimits.StatorCurrentLimitEnable = true;
         shooterFeederConfig.CurrentLimits.SupplyCurrentLimit = 40;
         shooterFeederConfig.CurrentLimits.SupplyCurrentThreshold = 55;

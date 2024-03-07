@@ -81,9 +81,9 @@ public class Intake extends SubsystemBase {
     }
 
     public Command feedCommand() {
-        return toVelocityCommand(9, 9, 9)
-                .until(shooterBeamBreakBroken.negate())
-                .andThen(stopCommand());
+        return toVelocityCommand(9, 9, 9);
+//                .until(shooterBeamBreakBroken.negate())
+//                .andThen(stopCommand());
     }
 
     public Command outtakeCommand() {
