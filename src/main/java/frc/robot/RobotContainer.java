@@ -99,7 +99,7 @@ public class RobotContainer {
         );
 
         final Supplier<Rotation2d> pointAtSpeakerRotationSupplier =
-                () -> swerve.getEstimatedPosition()
+                () -> swerve.getPose()
                         .getTranslation()
                         .minus(FieldConstants.getSpeakerPose().getTranslation())
                         .getAngle();
@@ -118,7 +118,7 @@ public class RobotContainer {
                                 pointAtSpeakerRotationSupplier
                         ),
                         superstructure.toState(() -> ShotParameters.get(
-                                swerve.getEstimatedPosition()
+                                swerve.getPose()
                                         .minus(FieldConstants.getSpeakerPose())
                                         .getTranslation()
                                         .getNorm())
@@ -128,7 +128,7 @@ public class RobotContainer {
                                 .until(superstructure.atGoalTrigger.and(
                                         () -> MathUtil.isNear(
                                                 pointAtSpeakerRotationSupplier.get().getRadians(),
-                                                swerve.getEstimatedPosition().getRotation().getRadians(),
+                                                swerve.getPose().getRotation().getRadians(),
                                                 rotationToleranceRadians
                                 )))
                                 .andThen(intake.feedCommand())

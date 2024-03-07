@@ -444,7 +444,7 @@ public class Swerve extends SubsystemBase {
         poseEstimator.resetPosition(
                 Rotation2d.fromRadians(0),
                 getModulePositions(),
-                getEstimatedPosition()
+                getPose()
         );
     }
 
