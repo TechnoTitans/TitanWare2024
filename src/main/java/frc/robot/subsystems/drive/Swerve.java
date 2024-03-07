@@ -3,11 +3,11 @@ package frc.robot.subsystems.drive;
 import com.ctre.phoenix6.SignalLogger;
 import com.ctre.phoenix6.signals.NeutralModeValue;
 import edu.wpi.first.math.MathUtil;
+import edu.wpi.first.math.controller.ProfiledPIDController;
 import edu.wpi.first.math.estimator.SwerveDrivePoseEstimator;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.geometry.Translation2d;
-import edu.wpi.first.math.geometry.Twist2d;
 import edu.wpi.first.math.kinematics.ChassisSpeeds;
 import edu.wpi.first.math.kinematics.SwerveDriveKinematics;
 import edu.wpi.first.math.kinematics.SwerveModulePosition;
@@ -28,6 +28,7 @@ import org.littletonrobotics.junction.Logger;
 
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.function.DoubleSupplier;
+import java.util.function.Supplier;
 
 import static edu.wpi.first.units.Units.*;
 
@@ -112,9 +113,9 @@ public class Swerve extends SubsystemBase {
                 kinematics,
                 getYaw(),
                 getModulePositions(),
-                new Pose2d()
-//                Constants.Vision.STATE_STD_DEVS,
-//                Constants.Vision.VISION_MEASUREMENT_STD_DEVS
+                new Pose2d(),
+                Constants.Vision.STATE_STD_DEVS,
+                Constants.Vision.VISION_MEASUREMENT_STD_DEVS
         );
 
         this.linearVoltageSysIdRoutine = makeLinearVoltageSysIdRoutine();
@@ -187,9 +188,9 @@ public class Swerve extends SubsystemBase {
         return new SysIdRoutine(
                 new SysIdRoutine.Config(
                         // this is actually amps/sec not volts/sec
-                        Volts.of(2).per(Second),
+                        Volts.of(4).per(Second),
                         // this is actually amps not volts
-                        Volts.of(10),
+                        Volts.of(12),
                         Seconds.of(20),
                         state -> SignalLogger.writeString("state", state.toString())
                 ),
@@ -209,10 +210,12 @@ public class Swerve extends SubsystemBase {
         );
     }
 
+    @SuppressWarnings("unused")
     public Command linearTorqueCurrentSysIdQuasistaticCommand(final SysIdRoutine.Direction direction) {
         return linearTorqueCurrentSysIdRoutine.quasistatic(direction);
     }
 
+    @SuppressWarnings("unused")
     public Command linearTorqueCurrentSysIdDynamicCommand(final SysIdRoutine.Direction direction) {
         return linearTorqueCurrentSysIdRoutine.dynamic(direction);
     }
@@ -241,10 +244,12 @@ public class Swerve extends SubsystemBase {
         );
     }
 
+    @SuppressWarnings("unused")
     public Command angularVoltageSysIdQuasistaticCommand(final SysIdRoutine.Direction direction) {
         return angularVoltageSysIdRoutine.quasistatic(direction);
     }
 
+    @SuppressWarnings("unused")
     public Command angularVoltageSysIdDynamicCommand(final SysIdRoutine.Direction direction) {
         return angularVoltageSysIdRoutine.dynamic(direction);
     }
@@ -382,14 +387,13 @@ public class Swerve extends SubsystemBase {
         gyro.setAngle(angle);
     }
 
-    // TODO: add vision
     public void zeroRotation() {
-//    public void zeroRotation(final PhotonVision photonVision) {
         gyro.zeroRotation();
-//        photonVision.resetPosition(
-//                photonVision.getEstimatedPosition(),
-//                Rotation2d.fromDegrees(0)
-//        );
+        poseEstimator.resetPosition(
+                Rotation2d.fromRadians(0),
+                getModulePositions(),
+                getEstimatedPosition()
+        );
     }
 
     public Command zeroRotationCommand() {
@@ -406,9 +410,14 @@ public class Swerve extends SubsystemBase {
     }
 
     public ChassisSpeeds getFieldRelativeSpeeds() {
-        return ChassisSpeeds.fromFieldRelativeSpeeds(
-                getRobotRelativeSpeeds(),
-                getYaw().times(-1)
+        return ChassisSpeeds.fromRobotRelativeSpeeds(
+                kinematics.toChassisSpeeds(
+                        frontLeft.getState(),
+                        frontRight.getState(),
+                        backLeft.getState(),
+                        backRight.getState()
+                ),
+                getYaw()
         );
     }
 
@@ -461,25 +470,42 @@ public class Swerve extends SubsystemBase {
     }
 
     public void drive(final ChassisSpeeds speeds) {
-        // TODO: maybe replace with ChassisSpeeds.discretize() or some other tyler math that's more
-        //  "mathematically correct"
-        // see https://www.chiefdelphi.com/t/whitepaper-swerve-drive-skew-and-second-order-kinematics/416964/40
-        // lookahead 4 loop cycles cause uh the goated teams do it and it works so uh
-        final double dtSeconds = 4 * Constants.LOOP_PERIOD_SECONDS;
-        final Pose2d desiredDeltaPose = new Pose2d(
-                speeds.vxMetersPerSecond * dtSeconds,
-                speeds.vyMetersPerSecond * dtSeconds,
-                Rotation2d.fromRadians(speeds.omegaRadiansPerSecond * dtSeconds)
-        );
-
-        final Twist2d twist2d = new Pose2d().log(desiredDeltaPose);
-        final ChassisSpeeds correctedSpeeds = new ChassisSpeeds(
-                twist2d.dx / dtSeconds,
-                twist2d.dy / dtSeconds,
-                twist2d.dtheta / dtSeconds
+        final ChassisSpeeds correctedSpeeds = ChassisSpeeds.discretize(
+                speeds,
+                4 * Constants.LOOP_PERIOD_SECONDS
         );
 
         drive(kinematics.toSwerveModuleStates(correctedSpeeds));
+    }
+
+    public Command teleopDriveFacingAngleCommand(
+            final ProfiledPIDController rotationController,
+            final DoubleSupplier xSpeedSupplier,
+            final DoubleSupplier ySpeedSupplier,
+            final Supplier<Rotation2d> rotationSupplier
+    ) {
+        rotationController.enableContinuousInput(-Math.PI, Math.PI);
+        return run(() -> {
+            final Profiler.DriverProfile driverProfile = Profiler.getDriverProfile();
+            final Profiler.SwerveSpeed swerveSpeed = Profiler.getSwerveSpeed();
+
+            final double throttleWeight = swerveSpeed.getThrottleWeight();
+            final Translation2d leftStickSpeeds = ControllerUtils.getStickXYSquaredInput(
+                    xSpeedSupplier.getAsDouble(),
+                    ySpeedSupplier.getAsDouble(),
+                    0.01,
+                    Constants.Swerve.TELEOP_MAX_SPEED_MPS,
+                    driverProfile.getThrottleSensitivity(),
+                    throttleWeight
+            );
+
+            drive(
+                    leftStickSpeeds.getX(),
+                    leftStickSpeeds.getY(),
+                    rotationController.calculate(getYaw().getRadians(), rotationSupplier.get().getRadians()),
+                    true
+            );
+        });
     }
 
     public Command teleopDriveCommand(
