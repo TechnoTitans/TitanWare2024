@@ -52,19 +52,18 @@ public class Arm extends SubsystemBase {
     }
 
     public enum Goal {
-        ZERO(() -> 0),
-        STOW(() -> Units.degreesToRotations(10)),
-        AMP(() -> Units.degreesToRotations(90)),
-        SUBWOOFER(() -> Units.degreesToRotations(55)),
-        AIM_SPEAKER(() -> 0);
+        ZERO(0),
+        STOW(Units.degreesToRotations(10)),
+        AMP(Units.degreesToRotations(90)),
+        SUBWOOFER(Units.degreesToRotations(55));
 
-        private final DoubleSupplier pivotPositionGoalSupplier;
-        Goal(final DoubleSupplier pivotPositionGoalSupplier) {
-            this.pivotPositionGoalSupplier = pivotPositionGoalSupplier;
+        private final double pivotPositionGoal;
+        Goal(final double pivotPositionGoal) {
+            this.pivotPositionGoal = pivotPositionGoal;
         }
 
         public double getPivotPositionGoal() {
-            return pivotPositionGoalSupplier.getAsDouble();
+            return pivotPositionGoal;
         }
     }
 
@@ -140,18 +139,15 @@ public class Arm extends SubsystemBase {
         return runOnce(() -> this.goal = goal);
     }
 
-    public Command toPivotPositionCommand(final double pivotPositionRots) {
-        return Commands.sequence(
-                runOnce(() -> {
-                    setpoint.pivotPositionRots = pivotPositionRots;
-                    armIO.toPivotPosition(pivotPositionRots);
-                }),
-                Commands.waitUntil(atPivotPositionTrigger)
-        );
+    public Command toPivotPositionCommand(final DoubleSupplier pivotPositionRots) {
+        return run(() -> {
+            setpoint.pivotPositionRots = pivotPositionRots.getAsDouble();
+            armIO.toPivotPosition(setpoint.pivotPositionRots);
+        });
     }
 
-    public Command toPivotVoltageCommand(final double pivotVoltageVolts) {
-        return runOnce(() -> armIO.toPivotVoltage(pivotVoltageVolts));
+    public Command toPivotVoltageCommand(final DoubleSupplier pivotVoltageVolts) {
+        return run(() -> armIO.toPivotVoltage(pivotVoltageVolts.getAsDouble()));
     }
 
     public Command homePivotCommand() {

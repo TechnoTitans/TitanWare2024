@@ -3,6 +3,7 @@ package frc.robot.subsystems.drive;
 import com.ctre.phoenix6.SignalLogger;
 import com.ctre.phoenix6.signals.NeutralModeValue;
 import edu.wpi.first.math.MathUtil;
+import edu.wpi.first.math.controller.ProfiledPIDController;
 import edu.wpi.first.math.estimator.SwerveDrivePoseEstimator;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
@@ -27,6 +28,7 @@ import org.littletonrobotics.junction.Logger;
 
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.function.DoubleSupplier;
+import java.util.function.Supplier;
 
 import static edu.wpi.first.units.Units.*;
 
@@ -408,9 +410,14 @@ public class Swerve extends SubsystemBase {
     }
 
     public ChassisSpeeds getFieldRelativeSpeeds() {
-        return ChassisSpeeds.fromFieldRelativeSpeeds(
-                getRobotRelativeSpeeds(),
-                getYaw().times(-1)
+        return ChassisSpeeds.fromRobotRelativeSpeeds(
+                kinematics.toChassisSpeeds(
+                        frontLeft.getState(),
+                        frontRight.getState(),
+                        backLeft.getState(),
+                        backRight.getState()
+                ),
+                getYaw()
         );
     }
 
@@ -469,6 +476,36 @@ public class Swerve extends SubsystemBase {
         );
 
         drive(kinematics.toSwerveModuleStates(correctedSpeeds));
+    }
+
+    public Command teleopDriveFacingAngleCommand(
+            final ProfiledPIDController rotationController,
+            final DoubleSupplier xSpeedSupplier,
+            final DoubleSupplier ySpeedSupplier,
+            final Supplier<Rotation2d> rotationSupplier
+    ) {
+        rotationController.enableContinuousInput(-Math.PI, Math.PI);
+        return run(() -> {
+            final Profiler.DriverProfile driverProfile = Profiler.getDriverProfile();
+            final Profiler.SwerveSpeed swerveSpeed = Profiler.getSwerveSpeed();
+
+            final double throttleWeight = swerveSpeed.getThrottleWeight();
+            final Translation2d leftStickSpeeds = ControllerUtils.getStickXYSquaredInput(
+                    xSpeedSupplier.getAsDouble(),
+                    ySpeedSupplier.getAsDouble(),
+                    0.01,
+                    Constants.Swerve.TELEOP_MAX_SPEED_MPS,
+                    driverProfile.getThrottleSensitivity(),
+                    throttleWeight
+            );
+
+            drive(
+                    leftStickSpeeds.getX(),
+                    leftStickSpeeds.getY(),
+                    rotationController.calculate(getYaw().getRadians(), rotationSupplier.get().getRadians()),
+                    true
+            );
+        });
     }
 
     public Command teleopDriveCommand(

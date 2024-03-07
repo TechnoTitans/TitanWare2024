@@ -39,36 +39,35 @@ public class Shooter extends SubsystemBase {
     }
 
     public enum Goal {
-        STOP(() -> 0, () -> 0, () -> 0),
-        IDLE(() -> 10, () -> 10, () -> 10),
-        AMP(() -> 4, () -> 4, () -> 4),
-        SUBWOOFER(() -> 80, () -> 80, () -> 80),
-        AIM_SPEAKER(() -> 0, () -> 0, () -> 0);
+        STOP(0, 0, 0),
+        IDLE(60, 40, 40),
+        AMP(4, 4, 4),
+        SUBWOOFER(80, 80, 80);
 
-        private final DoubleSupplier ampVelocitySupplier;
-        private final DoubleSupplier leftFlywheelVelocitySupplier;
-        private final DoubleSupplier rightFlywheelVelocitySupplier;
+        private final double ampVelocity;
+        private final double leftFlywheelVelocity;
+        private final double rightFlywheelVelocity;
 
         Goal(
-                final DoubleSupplier ampVelocitySupplier,
-                final DoubleSupplier leftFlywheelVelocitySupplier,
-                final DoubleSupplier rightFlywheelVelocitySupplier
+                final double ampVelocity,
+                final double leftFlywheelVelocity,
+                final double rightFlywheelVelocity
         ) {
-            this.ampVelocitySupplier = ampVelocitySupplier;
-            this.leftFlywheelVelocitySupplier = leftFlywheelVelocitySupplier;
-            this.rightFlywheelVelocitySupplier = rightFlywheelVelocitySupplier;
+            this.ampVelocity = ampVelocity;
+            this.leftFlywheelVelocity = leftFlywheelVelocity;
+            this.rightFlywheelVelocity = rightFlywheelVelocity;
         }
 
         public double getAmpVelocity() {
-            return ampVelocitySupplier.getAsDouble();
+            return ampVelocity;
         }
 
         public double getLeftFlywheelVelocity() {
-            return leftFlywheelVelocitySupplier.getAsDouble();
+            return leftFlywheelVelocity;
         }
 
         public double getRightFlywheelVelocity() {
-            return rightFlywheelVelocitySupplier.getAsDouble();
+            return rightFlywheelVelocity;
         }
     }
 
@@ -156,28 +155,33 @@ public class Shooter extends SubsystemBase {
     }
 
     public Command toVelocityCommand(
-            final double ampVelocityRotsPerSec,
-            final double leftFlywheelVelocityRotsPerSec,
-            final double rightFlywheelVelocityRotsPerSec
+            final DoubleSupplier ampVelocityRotsPerSec,
+            final DoubleSupplier leftFlywheelVelocityRotsPerSec,
+            final DoubleSupplier rightFlywheelVelocityRotsPerSec
     ) {
-        return Commands.sequence(
-                runOnce(() -> {
-                    setpoint.ampVelocityRotsPerSec = ampVelocityRotsPerSec;
-                    setpoint.leftFlywheelVelocityRotsPerSec = leftFlywheelVelocityRotsPerSec;
-                    setpoint.rightFlywheelVelocityRotsPerSec = rightFlywheelVelocityRotsPerSec;
+        return Commands.run(() -> {
+                setpoint.ampVelocityRotsPerSec = ampVelocityRotsPerSec.getAsDouble();
+                setpoint.leftFlywheelVelocityRotsPerSec = leftFlywheelVelocityRotsPerSec.getAsDouble();
+                setpoint.rightFlywheelVelocityRotsPerSec = rightFlywheelVelocityRotsPerSec.getAsDouble();
 
-                    shooterIO.toVelocity(ampVelocityRotsPerSec, leftFlywheelVelocityRotsPerSec, rightFlywheelVelocityRotsPerSec);
-                }),
-                Commands.waitUntil(atVelocityTrigger)
-        );
+                shooterIO.toVelocity(
+                        setpoint.ampVelocityRotsPerSec,
+                        setpoint.leftFlywheelVelocityRotsPerSec,
+                        setpoint.rightFlywheelVelocityRotsPerSec
+                );
+        });
     }
 
     public Command toVoltageCommand(
-            final double ampVoltage,
-            final double leftFlywheelVoltage,
-            final double rightFlywheelVoltage
+            final DoubleSupplier ampVoltage,
+            final DoubleSupplier leftFlywheelVoltage,
+            final DoubleSupplier rightFlywheelVoltage
     ) {
-        return runOnce(() -> shooterIO.toVoltage(ampVoltage, leftFlywheelVoltage, rightFlywheelVoltage));
+        return run(() -> shooterIO.toVoltage(
+                ampVoltage.getAsDouble(),
+                leftFlywheelVoltage.getAsDouble(),
+                rightFlywheelVoltage.getAsDouble()
+        ));
     }
 
     private SysIdRoutine makeVoltageSysIdRoutine(

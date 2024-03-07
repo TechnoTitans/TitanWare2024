@@ -1,30 +1,20 @@
 package frc.robot.subsystems.superstructure;
 
+import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.button.Trigger;
 import frc.robot.subsystems.superstructure.arm.Arm;
 import frc.robot.subsystems.superstructure.shooter.Shooter;
 
+import java.util.function.DoubleSupplier;
+import java.util.function.Supplier;
+
 public class Superstructure {
     private final Arm arm;
     private final Shooter shooter;
 
     public final Trigger atGoalTrigger;
-
-    public record SuperstructureSetpoint(
-            double armPivotPositionRots,
-            double ampVelocityRotsPerSec,
-            double leftVelocityRotsPerSec,
-            double rightVelocityRotsPerSec
-    ) {}
-
-    public record VoltageSetpoint(
-            double armPivotVolts,
-            double ampVolts,
-            double leftVolts,
-            double rightVolts
-    ) {}
 
     public enum Goal {
         IDLE(Arm.Goal.STOW, Shooter.Goal.IDLE),
@@ -52,24 +42,39 @@ public class Superstructure {
         );
     }
 
-    public Command toSetpoint(final SuperstructureSetpoint superstructureSetpoint) {
-        return Commands.parallel(
-                arm.toPivotPositionCommand(superstructureSetpoint.armPivotPositionRots),
-                shooter.toVelocityCommand(
-                        superstructureSetpoint.ampVelocityRotsPerSec,
-                        superstructureSetpoint.leftVelocityRotsPerSec,
-                        superstructureSetpoint.rightVelocityRotsPerSec
-                )
+    public Command toState(final Supplier<ShotParameters.Parameters> parametersSupplier) {
+        return toState(
+                () -> parametersSupplier.get().armPivotAngle(),
+                () -> parametersSupplier.get().ampVelocityRotsPerSec(),
+                () -> parametersSupplier.get().leftVelocityRotsPerSec(),
+                () -> parametersSupplier.get().rightVelocityRotsPerSec()
         );
     }
 
-    public Command toVoltageSetpoint(final VoltageSetpoint voltageSetpoint) {
+    public Command toState(
+            final Supplier<Rotation2d> armPivotPosition,
+            final DoubleSupplier ampVelocityRotsPerSec,
+            final DoubleSupplier leftVelocityRotsPerSec,
+            final DoubleSupplier rightVelocityRotsPerSec
+    ) {
         return Commands.parallel(
-                arm.toPivotVoltageCommand(voltageSetpoint.armPivotVolts),
+                arm.toPivotPositionCommand(() -> armPivotPosition.get().getRotations()),
+                shooter.toVelocityCommand(ampVelocityRotsPerSec, leftVelocityRotsPerSec, rightVelocityRotsPerSec)
+        );
+    }
+
+    public Command toVoltage(
+            final DoubleSupplier armPivotVolts,
+            final DoubleSupplier ampVolts,
+            final DoubleSupplier leftVolts,
+            final DoubleSupplier rightVolts
+    ) {
+        return Commands.parallel(
+                arm.toPivotVoltageCommand(armPivotVolts),
                 shooter.toVoltageCommand(
-                        voltageSetpoint.ampVolts,
-                        voltageSetpoint.leftVolts,
-                        voltageSetpoint.rightVolts
+                        ampVolts,
+                        leftVolts,
+                        rightVolts
                 )
         );
     }
@@ -77,8 +82,8 @@ public class Superstructure {
     @SuppressWarnings("unused")
     public Command runVoltageCharacterization() {
         return Commands.parallel(
-                arm.torqueCurrentSysIdCommand(),
-                shooter.torqueCurrentSysIdCommand()
+                arm.voltageSysIdCommand(),
+                shooter.voltageSysIdCommand()
         );
     }
 
@@ -88,13 +93,5 @@ public class Superstructure {
                 arm.torqueCurrentSysIdCommand(),
                 shooter.torqueCurrentSysIdCommand()
         );
-    }
-
-    public Arm getArm() {
-        return arm;
-    }
-
-    public Shooter getShooter() {
-        return shooter;
     }
 }
