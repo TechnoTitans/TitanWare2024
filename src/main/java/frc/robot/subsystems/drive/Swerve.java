@@ -14,8 +14,10 @@ import edu.wpi.first.math.kinematics.SwerveModulePosition;
 import edu.wpi.first.math.kinematics.SwerveModuleState;
 import edu.wpi.first.units.Current;
 import edu.wpi.first.units.Measure;
+import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
+import edu.wpi.first.wpilibj2.command.button.Trigger;
 import edu.wpi.first.wpilibj2.command.sysid.SysIdRoutine;
 import frc.robot.constants.Constants;
 import frc.robot.constants.HardwareConstants;
@@ -78,6 +80,10 @@ public class Swerve extends SubsystemBase {
         this.linearVoltageSysIdRoutine = makeLinearVoltageSysIdRoutine();
         this.linearTorqueCurrentSysIdRoutine = makeLinearTorqueCurrentSysIdRoutine();
         this.angularVoltageSysIdRoutine = makeAngularVoltageSysIdRoutine();
+
+        new Trigger(DriverStation::isDisabled)
+                .onTrue(runOnce(() -> setNeutralMode(NeutralModeValue.Brake)).ignoringDisable(true))
+                .onFalse(runOnce(() -> setNeutralMode(NeutralModeValue.Coast)));
 
         this.odometryThreadRunner.start();
     }
