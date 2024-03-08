@@ -6,7 +6,6 @@ import frc.robot.constants.Constants;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
-import java.util.function.Supplier;
 import java.util.stream.Stream;
 
 public record AutoOption(
