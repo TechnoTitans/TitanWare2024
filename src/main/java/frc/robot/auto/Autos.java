@@ -316,4 +316,140 @@ public class Autos {
         return Commands.run(autoTriggers::poll)
                 .until(() -> !DriverStation.isAutonomousEnabled());
     }
+
+    public Command speaker_0_1_2() {
+        final String trajectoryName = "Speaker_0_1_2";
+        final ChoreoTrajectory trajectory = Choreo.getTrajectory(trajectoryName);
+        final List<ChoreoTrajectory> trajectoryGroup = Choreo.getTrajectoryGroup(trajectoryName);
+
+        final Timer timer = new Timer();
+        final AutoTriggers autoTriggers = new AutoTriggers(trajectory, swerve::getPose, timer::get);
+
+        final ChoreoTrajectoryState initialState = trajectory.getInitialState();
+        autoTriggers.autoEnabled().whileTrue(
+                Commands.sequence(
+                        Commands.defer(() -> swerve.resetPoseCommand(
+                                        IsRedAlliance.getAsBoolean()
+                                                ? initialState.flipped().getPose()
+                                                : initialState.getPose()
+                                ),
+                                Set.of(swerve)
+                        ),
+                        Commands.print("shoot preload"),
+                        Commands.waitUntil(() -> true), // wait until shot goes out
+                        followPath(trajectoryGroup.get(0), timer)
+                )
+
+        );
+
+        autoTriggers.atTime(0.1).onTrue(
+                Commands.sequence(
+                        Commands.print("run intake for close 0 (first note)"),
+                        Commands.waitUntil(() -> true).withTimeout(2), // wait until intake has note, or timeout
+                        Commands.print("run intake to idle")
+                )
+        );
+
+        autoTriggers.atTime(1.58).onTrue(
+                Commands.sequence(
+                        Commands.print("Shoot"),
+                        Commands.waitUntil(() -> true),
+                        followPath(trajectoryGroup.get(1), timer)
+                )
+        );
+
+        autoTriggers.atTime(1.7).onTrue(
+                Commands.sequence(
+                        Commands.print("run intake for close 0 (first note)"),
+                        Commands.waitUntil(() -> true).withTimeout(4), // wait until intake has note, or timeout
+                        Commands.print("run intake to idle")
+                )
+        );
+
+        autoTriggers.atTime(2.92).onTrue(
+                Commands.sequence(
+                        Commands.print("shoot"),
+                        Commands.waitUntil(() -> true).withTimeout(1),
+                        followPath(trajectoryGroup.get(2), timer)
+                )
+        );
+
+        autoTriggers.atTime(3).onTrue(
+                Commands.sequence(
+                        Commands.print("run intake for close 0 (first note)"),
+                        Commands.waitUntil(() -> true).withTimeout(4), // wait until intake has note, or timeout
+                        Commands.print("run intake to idle")
+                )
+        );
+
+        autoTriggers.atTime(4.31).onTrue(
+                Commands.sequence(
+                        Commands.print("shoot"),
+                        Commands.waitUntil(() -> true).withTimeout(1)
+                )
+        );
+
+        return Commands.run(autoTriggers::poll)
+                .until(() -> !DriverStation.isAutonomousEnabled());
+    }
+
+    public Command ampSpeaker2Center3() {
+        final String trajectoryName = "AmpSpeaker2Center3";
+        final ChoreoTrajectory trajectory = Choreo.getTrajectory(trajectoryName);
+        final List<ChoreoTrajectory> trajectoryGroup = Choreo.getTrajectoryGroup(trajectoryName);
+
+        final Timer timer = new Timer();
+        final AutoTriggers autoTriggers = new AutoTriggers(trajectory, swerve::getPose, timer::get);
+
+        final ChoreoTrajectoryState initialState = trajectory.getInitialState();
+        autoTriggers.autoEnabled().whileTrue(
+                Commands.sequence(
+                        Commands.defer(() -> swerve.resetPoseCommand(
+                                        IsRedAlliance.getAsBoolean()
+                                                ? initialState.flipped().getPose()
+                                                : initialState.getPose()
+                                ),
+                                Set.of(swerve)
+                        ),
+                        Commands.print("shoot preload"),
+                        Commands.waitUntil(() -> true), // wait until shot goes out
+                        followPath(trajectoryGroup.get(0), timer)
+                )
+
+        );
+
+        autoTriggers.atTime(0.1).onTrue(
+                Commands.sequence(
+                        Commands.print("run intake for close 0 (first note)"),
+                        Commands.waitUntil(() -> true).withTimeout(2), // wait until intake has note, or timeout
+                        Commands.print("run intake to idle")
+                )
+        );
+
+        autoTriggers.atTime(1.46).onTrue(
+                Commands.sequence(
+                        Commands.print("Shoot"),
+                        Commands.waitUntil(() -> true),
+                        followPath(trajectoryGroup.get(1), timer)
+                )
+        );
+
+        autoTriggers.atTime(1.6).onTrue(
+                Commands.sequence(
+                        Commands.print("run intake for close 0 (first note)"),
+                        Commands.waitUntil(() -> true).withTimeout(4), // wait until intake has note, or timeout
+                        Commands.print("run intake to idle")
+                )
+        );
+
+        autoTriggers.atTime(5.59).onTrue(
+                Commands.sequence(
+                        Commands.print("shoot"),
+                        Commands.waitUntil(() -> true).withTimeout(1)
+                )
+        );
+
+        return Commands.run(autoTriggers::poll)
+                .until(() -> !DriverStation.isAutonomousEnabled());
+    }
 }

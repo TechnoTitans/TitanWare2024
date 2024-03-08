@@ -88,23 +88,33 @@ public class RobotContainer {
                 )
         );
         autoChooser.addAutoOption(new AutoOption(
-                "PreloadAndBack",
+                "SourceSpeaker0",
                 autos.sourceSpeaker0(),
                 Constants.CompetitionType.COMPETITION
         ));
         autoChooser.addAutoOption(new AutoOption(
-                "PreloadBackCenter1",
+                "SourceSpeaker0Center1",
                 autos.sourceSpeaker0Center1(),
                 Constants.CompetitionType.COMPETITION
         ));
         autoChooser.addAutoOption(new AutoOption(
-                "PreloadBackCenter2",
+                "SourceSpeaker0Center1_2",
                 autos.sourceSpeaker0Center1_2(),
                 Constants.CompetitionType.COMPETITION
         ));
         autoChooser.addAutoOption(new AutoOption(
                 "Walton",
                 autos.walton(),
+                Constants.CompetitionType.COMPETITION
+        ));
+        autoChooser.addAutoOption(new AutoOption(
+                "Speaker0_1_2",
+                autos.speaker_0_1_2(),
+                Constants.CompetitionType.COMPETITION
+        ));
+        autoChooser.addAutoOption(new AutoOption(
+                "AmpSpeaker2Center3",
+                autos.ampSpeaker2Center3(),
                 Constants.CompetitionType.COMPETITION
         ));
     }
