@@ -10,13 +10,19 @@ import edu.wpi.first.math.util.Units;
 import org.photonvision.PhotonPoseEstimator;
 
 public interface Constants {
-    RobotMode CURRENT_MODE = RobotMode.REAL;
+    RobotMode CURRENT_MODE = RobotMode.SIM;
+    CompetitionType CURRENT_COMPETITION_TYPE = CompetitionType.COMPETITION;
     double LOOP_PERIOD_SECONDS = 0.02;
 
     enum RobotMode {
         REAL,
         SIM,
         REPLAY
+    }
+
+    enum CompetitionType {
+        TESTING,
+        COMPETITION
     }
 
     interface Swerve {
@@ -57,6 +63,10 @@ public interface Constants {
     }
 
     interface NetworkTables {
+        String AUTO_TABLE = "AutoSelector";
+        String AUTO_PUBLISHER = "AutoOptions";
+        String AUTO_SELECTED_SUBSCRIBER = "SelectedAuto";
+
         boolean USE_STRUCT_AND_PROTOBUF = true;
     }
 

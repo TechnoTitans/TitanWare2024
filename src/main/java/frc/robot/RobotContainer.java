@@ -1,9 +1,13 @@
 package frc.robot;
 
+import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.PowerDistribution;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
+import frc.robot.auto.AutoChooser;
+import frc.robot.auto.AutoOption;
+import frc.robot.auto.Autos;
 import frc.robot.constants.Constants;
 import frc.robot.constants.FieldConstants;
 import frc.robot.constants.HardwareConstants;
@@ -26,6 +30,9 @@ public class RobotContainer {
     public final Shooter shooter;
 
     public final Superstructure superstructure;
+
+    public final Autos autos;
+    private final AutoChooser<String, AutoOption> autoChooser;
 
     public final PhotonVision photonVision;
 
@@ -54,27 +61,55 @@ public class RobotContainer {
                 HardwareConstants.INTAKE
         );
 
-        this.arm = new Arm(Constants.RobotMode.REPLAY, HardwareConstants.ARM);
+        this.arm = new Arm(Constants.CURRENT_MODE, HardwareConstants.ARM);
         this.shooter = new Shooter(Constants.CURRENT_MODE, HardwareConstants.SHOOTER);
 
         this.superstructure = new Superstructure(arm, shooter);
 
         this.photonVision = new PhotonVision(Constants.CURRENT_MODE, swerve, swerve.getPoseEstimator());
 
+        this.autos = new Autos(swerve);
+
         this.driverController = new CommandXboxController(RobotMap.MainController);
         this.coDriverController = new CommandXboxController(RobotMap.CoController);
 
-        this.driverController.y().onTrue(
-                Commands.sequence(
-                        superstructure.toGoal(Superstructure.Goal.IDLE),
-                        Commands.waitUntil(superstructure.atGoalTrigger),
-                        Commands.waitSeconds(6),
-                        superstructure.toGoal(Superstructure.Goal.SUBWOOFER),
-                        Commands.waitUntil(superstructure.atGoalTrigger),
-                        Commands.waitSeconds(4),
-                        superstructure.toGoal(Superstructure.Goal.IDLE)
+        this.autoChooser = new AutoChooser<>(
+                new AutoOption(
+                        "DoNothing",
+                        Commands.waitUntil(() -> !DriverStation.isAutonomousEnabled()),
+                        Constants.CompetitionType.COMPETITION
                 )
         );
+        autoChooser.addAutoOption(new AutoOption(
+                "SourceSpeaker0",
+                autos.sourceSpeaker0(),
+                Constants.CompetitionType.COMPETITION
+        ));
+        autoChooser.addAutoOption(new AutoOption(
+                "SourceSpeaker0Center1",
+                autos.sourceSpeaker0Center1(),
+                Constants.CompetitionType.COMPETITION
+        ));
+        autoChooser.addAutoOption(new AutoOption(
+                "SourceSpeaker0Center1_2",
+                autos.sourceSpeaker0Center1_2(),
+                Constants.CompetitionType.COMPETITION
+        ));
+        autoChooser.addAutoOption(new AutoOption(
+                "Walton",
+                autos.walton(),
+                Constants.CompetitionType.COMPETITION
+        ));
+        autoChooser.addAutoOption(new AutoOption(
+                "Speaker0_1_2",
+                autos.speaker_0_1_2(),
+                Constants.CompetitionType.COMPETITION
+        ));
+        autoChooser.addAutoOption(new AutoOption(
+                "AmpSpeaker2Center3",
+                autos.ampSpeaker2Center3(),
+                Constants.CompetitionType.COMPETITION
+        ));
     }
 
     public Command stopAndShoot() {
@@ -129,6 +164,6 @@ public class RobotContainer {
     }
 
     public Command getAutonomousCommand() {
-        return intake.outtakeCommand();
+        return autoChooser.getSelected().autoCommand();
     }
 }

@@ -1,8 +1,16 @@
 package frc.robot.subsystems.drive;
 
+import com.choreo.lib.Choreo;
+import com.choreo.lib.ChoreoTrajectory;
 import com.ctre.phoenix6.SignalLogger;
 import com.ctre.phoenix6.signals.NeutralModeValue;
+import com.pathplanner.lib.auto.AutoBuilder;
+import com.pathplanner.lib.util.HolonomicPathFollowerConfig;
+import com.pathplanner.lib.util.PIDConstants;
+import com.pathplanner.lib.util.PathPlannerLogging;
+import com.pathplanner.lib.util.ReplanningConfig;
 import edu.wpi.first.math.MathUtil;
+import edu.wpi.first.math.controller.PIDController;
 import edu.wpi.first.math.controller.ProfiledPIDController;
 import edu.wpi.first.math.estimator.SwerveDrivePoseEstimator;
 import edu.wpi.first.math.geometry.Pose2d;
@@ -16,6 +24,7 @@ import edu.wpi.first.math.trajectory.TrapezoidProfile;
 import edu.wpi.first.math.util.Units;
 import edu.wpi.first.units.Current;
 import edu.wpi.first.units.Measure;
+import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
@@ -30,7 +39,10 @@ import frc.robot.utils.teleop.ControllerUtils;
 import frc.robot.utils.teleop.Profiler;
 import org.littletonrobotics.junction.Logger;
 
+import java.util.Optional;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
+import java.util.function.BooleanSupplier;
+import java.util.function.Consumer;
 import java.util.function.DoubleSupplier;
 import java.util.function.Supplier;
 
@@ -40,6 +52,14 @@ import static frc.robot.constants.Constants.Swerve.*;
 public class Swerve extends SubsystemBase {
     protected static final String LogKey = "Swerve";
     protected static final String OdometryLogKey = "Odometry";
+
+    private static final HolonomicPathFollowerConfig HolonomicPathFollowerConfig = new HolonomicPathFollowerConfig(
+            new PIDConstants(5, 0, 0),
+            new PIDConstants(5, 0, 0),
+            Constants.Swerve.Modules.MODULE_MAX_SPEED_M_PER_SEC,
+            Math.hypot(Constants.Swerve.WHEEL_BASE_M, Constants.Swerve.TRACK_WIDTH_M),
+            new ReplanningConfig()
+    );
 
     private Gyro gyro;
     private final HardwareConstants.GyroConstants gyroConstants;
@@ -99,7 +119,6 @@ public class Swerve extends SubsystemBase {
         this.linearVoltageSysIdRoutine = makeLinearVoltageSysIdRoutine();
         this.linearTorqueCurrentSysIdRoutine = makeLinearTorqueCurrentSysIdRoutine();
         this.angularVoltageSysIdRoutine = makeAngularVoltageSysIdRoutine();
-
         this.odometryThreadRunner.start();
     }
 
@@ -153,6 +172,17 @@ public class Swerve extends SubsystemBase {
         this.linearVoltageSysIdRoutine = makeLinearVoltageSysIdRoutine();
         this.linearTorqueCurrentSysIdRoutine = makeLinearTorqueCurrentSysIdRoutine();
         this.angularVoltageSysIdRoutine = makeAngularVoltageSysIdRoutine();
+
+        Swerve.configurePathPlannerAutoBuilder(
+                this,
+                HolonomicPathFollowerConfig,
+                () -> {
+                    final Optional<DriverStation.Alliance> alliance = DriverStation.getAlliance();
+                    return alliance.isPresent() && alliance.get() == DriverStation.Alliance.Red;
+                },
+                currentPose -> Logger.recordOutput("Auto/CurrentPose", currentPose),
+                targetPose -> Logger.recordOutput("Auto/TargetPose", targetPose)
+        );
         this.odometryThreadRunner.start();
     }
 
@@ -184,6 +214,126 @@ public class Swerve extends SubsystemBase {
         }
 
         return swerveModuleStates;
+    }
+
+    private static void configurePathPlannerAutoBuilder(
+            final Swerve swerve,
+            final HolonomicPathFollowerConfig holonomicPathFollowerConfig,
+            final BooleanSupplier flipPathSupplier,
+            final Consumer<Pose2d> logCurrentPoseConsumer,
+            final Consumer<Pose2d> logTargetPoseConsumer
+    ) {
+        PathPlannerLogging.setLogCurrentPoseCallback(logCurrentPoseConsumer);
+        PathPlannerLogging.setLogTargetPoseCallback(logTargetPoseConsumer);
+        AutoBuilder.configureHolonomic(
+                swerve::getPose,
+                swerve::resetPose,
+                swerve::getRobotRelativeSpeeds,
+                swerve::drive,
+                holonomicPathFollowerConfig,
+                flipPathSupplier,
+                swerve
+        );
+    }
+
+    private SysIdRoutine makeLinearVoltageSysIdRoutine() {
+        return new SysIdRoutine(
+                new SysIdRoutine.Config(
+                        Volts.of(0.5).per(Second),
+                        Volts.of(4),
+                        Seconds.of(20),
+                        state -> SignalLogger.writeString("state", state.toString())
+                ),
+                new SysIdRoutine.Mechanism(
+                        voltageMeasure -> {
+                            final double volts = voltageMeasure.in(Volts);
+                            frontLeft.driveVoltageCharacterization(volts, 0);
+                            frontRight.driveVoltageCharacterization(volts, 0);
+                            backLeft.driveVoltageCharacterization(volts, 0);
+                            backRight.driveVoltageCharacterization(volts, 0);
+                        },
+                        null,
+                        this
+                )
+        );
+    }
+
+    public Command linearVoltageSysIdQuasistaticCommand(final SysIdRoutine.Direction direction) {
+        return linearVoltageSysIdRoutine.quasistatic(direction);
+    }
+
+    public Command linearVoltageSysIdDynamicCommand(final SysIdRoutine.Direction direction) {
+        return linearVoltageSysIdRoutine.dynamic(direction);
+    }
+
+    private SysIdRoutine makeLinearTorqueCurrentSysIdRoutine() {
+        return new SysIdRoutine(
+                new SysIdRoutine.Config(
+                        // this is actually amps/sec not volts/sec
+                        Volts.of(4).per(Second),
+                        // this is actually amps not volts
+                        Volts.of(12),
+                        Seconds.of(20),
+                        state -> SignalLogger.writeString("state", state.toString())
+                ),
+                new SysIdRoutine.Mechanism(
+                        voltageMeasure -> {
+                            // convert the voltage measure to an amperage measure by tricking it
+                            final Measure<Current> currentMeasure = Amps.of(voltageMeasure.magnitude());
+                            final double amps = currentMeasure.in(Amps);
+                            frontLeft.driveTorqueCurrentCharacterization(amps, 0);
+                            frontRight.driveTorqueCurrentCharacterization(amps, 0);
+                            backLeft.driveTorqueCurrentCharacterization(amps, 0);
+                            backRight.driveTorqueCurrentCharacterization(amps, 0);
+                        },
+                        null,
+                        this
+                )
+        );
+    }
+
+    @SuppressWarnings("unused")
+    public Command linearTorqueCurrentSysIdQuasistaticCommand(final SysIdRoutine.Direction direction) {
+        return linearTorqueCurrentSysIdRoutine.quasistatic(direction);
+    }
+
+    @SuppressWarnings("unused")
+    public Command linearTorqueCurrentSysIdDynamicCommand(final SysIdRoutine.Direction direction) {
+        return linearTorqueCurrentSysIdRoutine.dynamic(direction);
+    }
+
+    private SysIdRoutine makeAngularVoltageSysIdRoutine() {
+        return new SysIdRoutine(
+                new SysIdRoutine.Config(
+                        // this is actually amps/sec not volts/sec
+                        Volts.of(1).per(Second),
+                        Volts.of(10),
+                        Seconds.of(20),
+                        state -> SignalLogger.writeString("state", state.toString())
+                ),
+                new SysIdRoutine.Mechanism(
+                        voltageMeasure -> {
+                            // convert the voltage measure to an amperage measure by tricking it
+                            final double volts = voltageMeasure.in(Volts);
+                            frontLeft.driveVoltageCharacterization(volts, -0.125);
+                            frontRight.driveVoltageCharacterization(volts, 0.625);
+                            backLeft.driveVoltageCharacterization(volts, 0.125);
+                            backRight.driveVoltageCharacterization(volts, -0.625);
+                        },
+                        null,
+                        this
+                )
+        );
+    }
+
+    @SuppressWarnings("unused")
+    public Command angularVoltageSysIdQuasistaticCommand(final SysIdRoutine.Direction direction) {
+        return angularVoltageSysIdRoutine.quasistatic(direction);
+    }
+
+    @SuppressWarnings("unused")
+    public Command angularVoltageSysIdDynamicCommand(final SysIdRoutine.Direction direction) {
+        return angularVoltageSysIdRoutine.dynamic(direction);
     }
 
     @Override
@@ -329,6 +479,14 @@ public class Swerve extends SubsystemBase {
 
     public Command zeroRotationCommand() {
         return runOnce(this::zeroRotation);
+    }
+
+    public void resetPose(final Pose2d robotPose) {
+        poseEstimator.resetPosition(gyro.getYawRotation2d(), getModulePositions(), robotPose);
+    }
+
+    public Command resetPoseCommand(final Pose2d robotPose) {
+        return runOnce(() -> resetPose(robotPose));
     }
 
     public ChassisSpeeds getRobotRelativeSpeeds() {
@@ -542,6 +700,22 @@ public class Swerve extends SubsystemBase {
         frontRight.setNeutralMode(neutralMode);
         backLeft.setNeutralMode(neutralMode);
         backRight.setNeutralMode(neutralMode);
+    }
+
+    public Command followChoreoPathCommand(final ChoreoTrajectory choreoTrajectory) {
+        return Choreo.choreoSwerveCommand(
+                choreoTrajectory,
+                this::getPose,
+                new PIDController(5, 0, 0),
+                new PIDController(5, 0, 0),
+                new PIDController(5, 0, 0),
+                this::drive,
+                () -> {
+                    final Optional<DriverStation.Alliance> alliance = DriverStation.getAlliance();
+                    return alliance.isPresent() && alliance.get() == DriverStation.Alliance.Red;
+                },
+                this
+        );
     }
 
     private SysIdRoutine makeLinearVoltageSysIdRoutine() {
