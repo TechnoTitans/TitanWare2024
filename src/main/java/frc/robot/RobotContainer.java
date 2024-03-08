@@ -61,7 +61,7 @@ public class RobotContainer {
                 HardwareConstants.INTAKE
         );
 
-        this.arm = new Arm(Constants.RobotMode.REPLAY, HardwareConstants.ARM);
+        this.arm = new Arm(Constants.CURRENT_MODE, HardwareConstants.ARM);
         this.shooter = new Shooter(Constants.CURRENT_MODE, HardwareConstants.SHOOTER);
 
         this.superstructure = new Superstructure(arm, shooter);
@@ -133,6 +133,15 @@ public class RobotContainer {
     }
 
     public Command getAutonomousCommand() {
-        return intake.outtakeCommand();
+        return Commands.sequence(
+                arm.toPivotVoltageCommand(() -> 3)
+//                superstructure.toGoal(Superstructure.Goal.IDLE),
+//                Commands.waitUntil(superstructure.atGoalTrigger),
+//                Commands.waitSeconds(6),
+//                superstructure.toGoal(Superstructure.Goal.SUBWOOFER),
+//                Commands.waitUntil(superstructure.atGoalTrigger),
+//                Commands.waitSeconds(4),
+//                superstructure.toGoal(Superstructure.Goal.IDLE)
+        );
     }
 }
