@@ -28,7 +28,9 @@ public interface ArmIO {
      */
     default void updateInputs(final ArmIOInputs inputs) {}
 
-    default void config(
+    default void config() {}
+
+    default void configureSoftLimits(
             final Arm.PositionSetpoint pivotSoftLowerLimit,
             final Arm.PositionSetpoint pivotSoftUpperLimit
     ) {}

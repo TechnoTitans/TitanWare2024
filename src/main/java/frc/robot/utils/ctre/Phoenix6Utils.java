@@ -3,7 +3,10 @@ package frc.robot.utils.ctre;
 import com.ctre.phoenix6.BaseStatusSignal;
 import com.ctre.phoenix6.StatusCode;
 import com.ctre.phoenix6.StatusSignal;
+import com.ctre.phoenix6.configs.TalonFXConfiguration;
+import com.ctre.phoenix6.configs.TalonFXConfigurator;
 import com.ctre.phoenix6.hardware.ParentDevice;
+import com.ctre.phoenix6.hardware.TalonFX;
 import edu.wpi.first.wpilibj.DriverStation;
 
 public class Phoenix6Utils {
@@ -71,5 +74,25 @@ public class Phoenix6Utils {
                     false
             );
         }
+    }
+
+    @SuppressWarnings("UnusedReturnValue")
+    public static StatusCode configureTalonFXSoftLimits(
+            final TalonFX talonFX,
+            final double reverseSoftLimitRots,
+            final double forwardSoftLimitRots
+    ) {
+        final TalonFXConfigurator configurator = talonFX.getConfigurator();
+        final TalonFXConfiguration configuration = new TalonFXConfiguration();
+        Phoenix6Utils.reportIfNotOk(talonFX, configurator.refresh(configuration));
+
+        configuration.SoftwareLimitSwitch.ReverseSoftLimitThreshold = reverseSoftLimitRots;
+        configuration.SoftwareLimitSwitch.ReverseSoftLimitEnable = true;
+        configuration.SoftwareLimitSwitch.ForwardSoftLimitThreshold = forwardSoftLimitRots;
+        configuration.SoftwareLimitSwitch.ForwardSoftLimitEnable = true;
+
+        final StatusCode statusCode = configurator.apply(configuration);
+        Phoenix6Utils.reportIfNotOk(talonFX, statusCode);
+        return statusCode;
     }
 }
