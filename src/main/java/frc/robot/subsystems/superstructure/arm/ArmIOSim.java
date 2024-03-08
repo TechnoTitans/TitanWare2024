@@ -129,10 +129,7 @@ public class ArmIOSim implements ArmIO {
 
     @SuppressWarnings("DuplicatedCode")
     @Override
-    public void config(
-            final Arm.PositionSetpoint pivotSoftLowerLimit,
-            final Arm.PositionSetpoint pivotSoftUpperLimit
-    ) {
+    public void config() {
         final TalonFXConfiguration leftTalonFXConfiguration = new TalonFXConfiguration();
         final InvertedValue leftTalonFXInverted = InvertedValue.Clockwise_Positive;
         leftTalonFXConfiguration.Slot0 = new Slot0Configs()
@@ -148,10 +145,6 @@ public class ArmIOSim implements ArmIO {
         leftTalonFXConfiguration.CurrentLimits.StatorCurrentLimit = 60;
         leftTalonFXConfiguration.CurrentLimits.StatorCurrentLimitEnable = true;
         leftTalonFXConfiguration.Feedback.SensorToMechanismRatio = armConstants.pivotGearing();
-        leftTalonFXConfiguration.SoftwareLimitSwitch.ReverseSoftLimitThreshold = pivotSoftLowerLimit.pivotPositionRots;
-        leftTalonFXConfiguration.SoftwareLimitSwitch.ReverseSoftLimitEnable = true;
-        leftTalonFXConfiguration.SoftwareLimitSwitch.ForwardSoftLimitThreshold = pivotSoftUpperLimit.pivotPositionRots;
-        leftTalonFXConfiguration.SoftwareLimitSwitch.ForwardSoftLimitEnable = true;
         leftTalonFXConfiguration.MotorOutput.Inverted = leftTalonFXInverted;
         leftTalonFXConfiguration.MotorOutput.NeutralMode = NeutralModeValue.Brake;
         leftPivotMotor.getConfigurator().apply(leftTalonFXConfiguration);
@@ -171,10 +164,6 @@ public class ArmIOSim implements ArmIO {
         rightTalonFXConfiguration.CurrentLimits.StatorCurrentLimit = 60;
         rightTalonFXConfiguration.CurrentLimits.StatorCurrentLimitEnable = true;
         rightTalonFXConfiguration.Feedback.SensorToMechanismRatio = armConstants.pivotGearing();
-        rightTalonFXConfiguration.SoftwareLimitSwitch.ReverseSoftLimitThreshold = pivotSoftLowerLimit.pivotPositionRots;
-        rightTalonFXConfiguration.SoftwareLimitSwitch.ReverseSoftLimitEnable = true;
-        rightTalonFXConfiguration.SoftwareLimitSwitch.ForwardSoftLimitThreshold = pivotSoftUpperLimit.pivotPositionRots;
-        rightTalonFXConfiguration.SoftwareLimitSwitch.ForwardSoftLimitEnable = true;
         rightTalonFXConfiguration.MotorOutput.Inverted = rightTalonFXInverted;
         rightTalonFXConfiguration.MotorOutput.NeutralMode = NeutralModeValue.Brake;
         rightPivotMotor.getConfigurator().apply(rightTalonFXConfiguration);
@@ -233,6 +222,24 @@ public class ArmIOSim implements ArmIO {
         inputs.rightPivotVoltageVolts = _rightVoltage.getValue();
         inputs.rightPivotTorqueCurrentAmps = _rightTorqueCurrent.getValue();
         inputs.rightPivotTempCelsius = _rightDeviceTemp.getValue();
+    }
+
+    @Override
+    public void configureSoftLimits(
+            final Arm.PositionSetpoint pivotSoftLowerLimit,
+            final Arm.PositionSetpoint pivotSoftUpperLimit
+    ) {
+        Phoenix6Utils.configureTalonFXSoftLimits(
+                leftPivotMotor,
+                pivotSoftLowerLimit.pivotPositionRots,
+                pivotSoftUpperLimit.pivotPositionRots
+        );
+
+        Phoenix6Utils.configureTalonFXSoftLimits(
+                rightPivotMotor,
+                pivotSoftLowerLimit.pivotPositionRots,
+                pivotSoftUpperLimit.pivotPositionRots
+        );
     }
 
     @Override
