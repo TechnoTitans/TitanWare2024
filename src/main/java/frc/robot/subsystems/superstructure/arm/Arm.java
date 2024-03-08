@@ -33,10 +33,10 @@ public class Arm extends SubsystemBase {
     private final PositionSetpoint pivotSoftLowerLimit;
     private final PositionSetpoint pivotSoftUpperLimit;
 
-    public Trigger atPivotPositionTrigger = new Trigger(this::atPositionSetpoint);
-    public Trigger atPivotLowerLimitTrigger = new Trigger(this::atPivotLowerLimit);
-    public Trigger atPivotUpperLimitTrigger = new Trigger(this::atPivotUpperLimit);
-    public Trigger atPivotLimit = atPivotLowerLimitTrigger.or(atPivotUpperLimitTrigger);
+    public Trigger atPivotSetpoint = new Trigger(this::atPositionSetpoint);
+    public Trigger atPivotLowerLimit = new Trigger(this::atPivotLowerLimit);
+    public Trigger atPivotUpperLimit = new Trigger(this::atPivotUpperLimit);
+    public Trigger atPivotLimit = atPivotLowerLimit.or(atPivotUpperLimit);
 
     public static class PositionSetpoint {
         public double pivotPositionRots = 0;
@@ -136,7 +136,7 @@ public class Arm extends SubsystemBase {
     }
 
     public Command toGoal(final Goal goal) {
-        return runOnce(() -> this.goal = goal);
+        return startEnd(() -> this.goal = goal, () -> this.goal = Goal.STOW);
     }
 
     public Command toPivotPositionCommand(final DoubleSupplier pivotPositionRots) {
@@ -208,16 +208,16 @@ public class Arm extends SubsystemBase {
     private Command makeSysIdCommand(final SysIdRoutine sysIdRoutine) {
         return Commands.sequence(
                 sysIdRoutine.quasistatic(SysIdRoutine.Direction.kForward)
-                        .until(atPivotUpperLimitTrigger),
+                        .until(atPivotUpperLimit),
                 Commands.waitSeconds(4),
                 sysIdRoutine.quasistatic(SysIdRoutine.Direction.kReverse)
-                        .until(atPivotLowerLimitTrigger),
+                        .until(atPivotLowerLimit),
                 Commands.waitSeconds(6),
                 sysIdRoutine.dynamic(SysIdRoutine.Direction.kForward)
-                        .until(atPivotUpperLimitTrigger),
+                        .until(atPivotUpperLimit),
                 Commands.waitSeconds(4),
                 sysIdRoutine.dynamic(SysIdRoutine.Direction.kReverse)
-                        .until(atPivotLowerLimitTrigger)
+                        .until(atPivotLowerLimit)
         );
     }
 

@@ -18,7 +18,9 @@ public class Superstructure {
 
     public enum Goal {
         IDLE(Arm.Goal.STOW, Shooter.Goal.IDLE),
-        SUBWOOFER(Arm.Goal.SUBWOOFER, Shooter.Goal.SUBWOOFER);
+        SUBWOOFER(Arm.Goal.SUBWOOFER, Shooter.Goal.SUBWOOFER),
+        EJECT(Arm.Goal.STOW, Shooter.Goal.EJECT),
+        BACK_FEED(Arm.Goal.STOW, Shooter.Goal.BACK_FEED);
 
         private final Arm.Goal armGoal;
         private final Shooter.Goal shooterGoal;
@@ -32,7 +34,7 @@ public class Superstructure {
     public Superstructure(final Arm arm, final Shooter shooter) {
         this.arm = arm;
         this.shooter = shooter;
-        this.atGoalTrigger = arm.atPivotPositionTrigger.and(shooter.atVelocityTrigger);
+        this.atGoalTrigger = arm.atPivotSetpoint.and(shooter.atVelocitySetpoint);
     }
 
     public Command toGoal(final Goal goal) {

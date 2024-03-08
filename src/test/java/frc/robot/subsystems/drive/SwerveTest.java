@@ -416,7 +416,7 @@ public class SwerveTest {
 
     @Test
     void zero() {
-        swerve.zeroCommand().schedule();
+        swerve.zeroModulesCommand().schedule();
 
         assertEquals(new SwerveModuleState(), frontLeft.getLastDesiredState());
         assertEquals(new SwerveModuleState(), frontRight.getLastDesiredState());

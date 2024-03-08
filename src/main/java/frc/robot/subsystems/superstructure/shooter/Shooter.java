@@ -27,7 +27,7 @@ public class Shooter extends SubsystemBase {
     private final SysIdRoutine voltageSysIdRoutine;
     private final SysIdRoutine torqueCurrentSysIdRoutine;
 
-    public Trigger atVelocityTrigger = new Trigger(this::atVelocitySetpoint);
+    public Trigger atVelocitySetpoint = new Trigger(this::atVelocitySetpoint);
 
     private Goal goal = Goal.STOP;
     private final VelocitySetpoint setpoint;
@@ -40,9 +40,11 @@ public class Shooter extends SubsystemBase {
 
     public enum Goal {
         STOP(0, 0, 0),
-        IDLE(60, 40, 40),
+        IDLE(40, 40, 40),
+        EJECT(80, 80, 80),
+        BACK_FEED(-60, -60, -60),
         AMP(4, 4, 4),
-        SUBWOOFER(80, 80, 80);
+        SUBWOOFER(60, 60, 60);
 
         private final double ampVelocity;
         private final double leftFlywheelVelocity;
@@ -159,7 +161,7 @@ public class Shooter extends SubsystemBase {
             final DoubleSupplier leftFlywheelVelocityRotsPerSec,
             final DoubleSupplier rightFlywheelVelocityRotsPerSec
     ) {
-        return Commands.run(() -> {
+        return run(() -> {
                 setpoint.ampVelocityRotsPerSec = ampVelocityRotsPerSec.getAsDouble();
                 setpoint.leftFlywheelVelocityRotsPerSec = leftFlywheelVelocityRotsPerSec.getAsDouble();
                 setpoint.rightFlywheelVelocityRotsPerSec = rightFlywheelVelocityRotsPerSec.getAsDouble();

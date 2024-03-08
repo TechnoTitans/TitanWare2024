@@ -175,7 +175,6 @@ public class Swerve extends SubsystemBase {
 
         Swerve.configurePathPlannerAutoBuilder(
                 this,
-                HolonomicPathFollowerConfig,
                 () -> {
                     final Optional<DriverStation.Alliance> alliance = DriverStation.getAlliance();
                     return alliance.isPresent() && alliance.get() == DriverStation.Alliance.Red;
@@ -218,7 +217,6 @@ public class Swerve extends SubsystemBase {
 
     private static void configurePathPlannerAutoBuilder(
             final Swerve swerve,
-            final HolonomicPathFollowerConfig holonomicPathFollowerConfig,
             final BooleanSupplier flipPathSupplier,
             final Consumer<Pose2d> logCurrentPoseConsumer,
             final Consumer<Pose2d> logTargetPoseConsumer
@@ -230,110 +228,10 @@ public class Swerve extends SubsystemBase {
                 swerve::resetPose,
                 swerve::getRobotRelativeSpeeds,
                 swerve::drive,
-                holonomicPathFollowerConfig,
+                Swerve.HolonomicPathFollowerConfig,
                 flipPathSupplier,
                 swerve
         );
-    }
-
-    private SysIdRoutine makeLinearVoltageSysIdRoutine() {
-        return new SysIdRoutine(
-                new SysIdRoutine.Config(
-                        Volts.of(0.5).per(Second),
-                        Volts.of(4),
-                        Seconds.of(20),
-                        state -> SignalLogger.writeString("state", state.toString())
-                ),
-                new SysIdRoutine.Mechanism(
-                        voltageMeasure -> {
-                            final double volts = voltageMeasure.in(Volts);
-                            frontLeft.driveVoltageCharacterization(volts, 0);
-                            frontRight.driveVoltageCharacterization(volts, 0);
-                            backLeft.driveVoltageCharacterization(volts, 0);
-                            backRight.driveVoltageCharacterization(volts, 0);
-                        },
-                        null,
-                        this
-                )
-        );
-    }
-
-    public Command linearVoltageSysIdQuasistaticCommand(final SysIdRoutine.Direction direction) {
-        return linearVoltageSysIdRoutine.quasistatic(direction);
-    }
-
-    public Command linearVoltageSysIdDynamicCommand(final SysIdRoutine.Direction direction) {
-        return linearVoltageSysIdRoutine.dynamic(direction);
-    }
-
-    private SysIdRoutine makeLinearTorqueCurrentSysIdRoutine() {
-        return new SysIdRoutine(
-                new SysIdRoutine.Config(
-                        // this is actually amps/sec not volts/sec
-                        Volts.of(4).per(Second),
-                        // this is actually amps not volts
-                        Volts.of(12),
-                        Seconds.of(20),
-                        state -> SignalLogger.writeString("state", state.toString())
-                ),
-                new SysIdRoutine.Mechanism(
-                        voltageMeasure -> {
-                            // convert the voltage measure to an amperage measure by tricking it
-                            final Measure<Current> currentMeasure = Amps.of(voltageMeasure.magnitude());
-                            final double amps = currentMeasure.in(Amps);
-                            frontLeft.driveTorqueCurrentCharacterization(amps, 0);
-                            frontRight.driveTorqueCurrentCharacterization(amps, 0);
-                            backLeft.driveTorqueCurrentCharacterization(amps, 0);
-                            backRight.driveTorqueCurrentCharacterization(amps, 0);
-                        },
-                        null,
-                        this
-                )
-        );
-    }
-
-    @SuppressWarnings("unused")
-    public Command linearTorqueCurrentSysIdQuasistaticCommand(final SysIdRoutine.Direction direction) {
-        return linearTorqueCurrentSysIdRoutine.quasistatic(direction);
-    }
-
-    @SuppressWarnings("unused")
-    public Command linearTorqueCurrentSysIdDynamicCommand(final SysIdRoutine.Direction direction) {
-        return linearTorqueCurrentSysIdRoutine.dynamic(direction);
-    }
-
-    private SysIdRoutine makeAngularVoltageSysIdRoutine() {
-        return new SysIdRoutine(
-                new SysIdRoutine.Config(
-                        // this is actually amps/sec not volts/sec
-                        Volts.of(1).per(Second),
-                        Volts.of(10),
-                        Seconds.of(20),
-                        state -> SignalLogger.writeString("state", state.toString())
-                ),
-                new SysIdRoutine.Mechanism(
-                        voltageMeasure -> {
-                            // convert the voltage measure to an amperage measure by tricking it
-                            final double volts = voltageMeasure.in(Volts);
-                            frontLeft.driveVoltageCharacterization(volts, -0.125);
-                            frontRight.driveVoltageCharacterization(volts, 0.625);
-                            backLeft.driveVoltageCharacterization(volts, 0.125);
-                            backRight.driveVoltageCharacterization(volts, -0.625);
-                        },
-                        null,
-                        this
-                )
-        );
-    }
-
-    @SuppressWarnings("unused")
-    public Command angularVoltageSysIdQuasistaticCommand(final SysIdRoutine.Direction direction) {
-        return angularVoltageSysIdRoutine.quasistatic(direction);
-    }
-
-    @SuppressWarnings("unused")
-    public Command angularVoltageSysIdDynamicCommand(final SysIdRoutine.Direction direction) {
-        return angularVoltageSysIdRoutine.dynamic(direction);
     }
 
     @Override
@@ -674,7 +572,7 @@ public class Swerve extends SubsystemBase {
      * @see Swerve#rawSet(double, double, double, double, double, double, double, double)
      */
     @SuppressWarnings("unused")
-    public Command zeroCommand() {
+    public Command zeroModulesCommand() {
         return runOnce(() -> rawSet(0, 0, 0, 0, 0, 0, 0, 0));
     }
 

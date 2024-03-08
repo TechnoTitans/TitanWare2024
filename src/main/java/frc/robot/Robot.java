@@ -21,7 +21,8 @@ import java.nio.file.Files;
 import java.nio.file.Paths;
 
 public class Robot extends LoggedRobot {
-    private static final String HOOT_LOG_PATH = "/U/hoot";
+    private static final String AKitLogPath = "/U/logs";
+    private static final String HootLogPath = "/U/logs";
 
     private RobotContainer robotContainer;
     private Command autonomousCommand;
@@ -70,21 +71,21 @@ public class Robot extends LoggedRobot {
         switch (Constants.CURRENT_MODE) {
             case REAL -> {
                 try {
-                    Files.createDirectories(Paths.get(HOOT_LOG_PATH));
-                    SignalLogger.setPath(HOOT_LOG_PATH);
+                    Files.createDirectories(Paths.get(HootLogPath));
+                    SignalLogger.setPath(HootLogPath);
                 } catch (final IOException ioException) {
                     SignalLogger.setPath("/U");
                     DriverStation.reportError(
                             String.format(
                                     "Failed to create CTRE .hoot log path at \"%s\"! Falling back to default.\n%s",
-                                    HOOT_LOG_PATH,
+                                    HootLogPath,
                                     ioException
                             ),
                             false
                     );
                 }
 
-                Logger.addDataReceiver(new WPILOGWriter("/U/akit"));
+                Logger.addDataReceiver(new WPILOGWriter(AKitLogPath));
                 Logger.addDataReceiver(new NT4Publisher());
             }
             case SIM -> {
@@ -140,17 +141,6 @@ public class Robot extends LoggedRobot {
         if (autonomousCommand != null) {
             autonomousCommand.cancel();
         }
-
-        // No need to lint this here, X and Y are flipped for robot vs. controller joystick coordinate systems, so we
-        // pass the controller X into the robot Y, and vice versa
-        //noinspection SuspiciousNameCombination
-        robotContainer.swerve.setDefaultCommand(
-                robotContainer.swerve.teleopDriveCommand(
-                        robotContainer.driverController::getLeftY,
-                        robotContainer.driverController::getLeftX,
-                        robotContainer.driverController::getRightX
-                )
-        );
     }
 
     @Override
