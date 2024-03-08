@@ -25,7 +25,7 @@ public class SwerveModule {
             final Constants.RobotMode robotMode
     ) {
         this.name = constants.name();
-        this.logKey = String.format("%s/%s", Swerve.LogKey, name);
+        this.logKey = String.format("%s/%s", Swerve.logKey, name);
 
         this.moduleIO = switch (robotMode) {
             case REAL -> new SwerveModuleIOTalonFX(constants, odometryThreadRunner);
