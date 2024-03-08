@@ -3,13 +3,19 @@ package frc.robot.constants;
 import edu.wpi.first.math.util.Units;
 
 public interface Constants {
-    RobotMode CURRENT_MODE = RobotMode.REAL;
+    RobotMode CURRENT_MODE = RobotMode.SIM;
+    CompetitionType CURRENT_COMPETITION_TYPE = CompetitionType.COMPETITION;
     double LOOP_PERIOD_SECONDS = 0.02;
 
     enum RobotMode {
         REAL,
         SIM,
         REPLAY
+    }
+
+    enum CompetitionType {
+        TESTING,
+        COMPETITION
     }
 
     interface Swerve {
@@ -47,5 +53,11 @@ public interface Constants {
     interface Intake {
         double RollerRadiusMeters = Units.inchesToMeters(1);
         double RollerCircumferenceMeters = Math.PI * RollerRadiusMeters * 2;
+    }
+
+    interface NetworkTables {
+        String AUTO_TABLE = "AutoSelector";
+        String AUTO_PUBLISHER = "AutoOptions";
+        String AUTO_SELECTED_SUBSCRIBER = "SelectedAuto";
     }
 }

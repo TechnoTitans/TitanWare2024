@@ -1,9 +1,12 @@
 package frc.robot;
 
+import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.PowerDistribution;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
+import frc.robot.auto.AutoChooser;
+import frc.robot.auto.AutoOption;
 import frc.robot.auto.Autos;
 import frc.robot.constants.Constants;
 import frc.robot.constants.HardwareConstants;
@@ -24,7 +27,9 @@ public class RobotContainer {
     public final Shooter shooter;
 
     public final Superstructure superstructure;
+
     public final Autos autos;
+    private final AutoChooser<String, AutoOption> autoChooser;
 
     public final CommandXboxController driverController;
     public final CommandXboxController coDriverController;
@@ -51,7 +56,7 @@ public class RobotContainer {
                 swerve::getFieldRelativeSpeeds
         );
 
-        this.arm = new Arm(Constants.RobotMode.REPLAY, HardwareConstants.ARM);
+        this.arm = new Arm(Constants.CURRENT_MODE, HardwareConstants.ARM);
         this.shooter = new Shooter(Constants.CURRENT_MODE, HardwareConstants.SHOOTER);
 
         this.superstructure = new Superstructure(arm, shooter);
@@ -61,22 +66,36 @@ public class RobotContainer {
         this.driverController = new CommandXboxController(RobotMap.MainController);
         this.coDriverController = new CommandXboxController(RobotMap.CoController);
 
-        this.driverController.y().onTrue(
-                Commands.sequence(
-                        superstructure.toGoal(Superstructure.Goal.IDLE),
-//                        Commands.waitUntil(superstructure.atGoalTrigger),
-                        Commands.waitSeconds(6),
-                        superstructure.toGoal(Superstructure.Goal.SUBWOOFER),
-//                        Commands.waitUntil(superstructure.atGoalTrigger),
-                        Commands.waitUntil(superstructure.getShooter().atVelocityTrigger),
-                        Commands.waitSeconds(4),
-                        superstructure.toGoal(Superstructure.Goal.IDLE)
+        this.autoChooser = new AutoChooser<>(
+                new AutoOption(
+                        "DoNothing",
+                        Commands.waitUntil(() -> !DriverStation.isAutonomousEnabled()),
+                        Constants.CompetitionType.COMPETITION
                 )
         );
+        autoChooser.addAutoOption(new AutoOption(
+                "PreloadAndBack",
+                autos.sourceSpeaker0(),
+                Constants.CompetitionType.COMPETITION
+        ));
+        autoChooser.addAutoOption(new AutoOption(
+                "PreloadBackCenter1",
+                autos.sourceSpeaker0Center1(),
+                Constants.CompetitionType.COMPETITION
+        ));
+        autoChooser.addAutoOption(new AutoOption(
+                "PreloadBackCenter2",
+                autos.sourceSpeaker0Center1_2(),
+                Constants.CompetitionType.COMPETITION
+        ));
+        autoChooser.addAutoOption(new AutoOption(
+                "Walton",
+                autos.walton(),
+                Constants.CompetitionType.COMPETITION
+        ));
     }
 
     public Command getAutonomousCommand() {
-//        return Commands.waitUntil(() -> !RobotState.isAutonomous());
-        return autos.sourceBoth();
+        return autoChooser.getSelected().autoCommand();
     }
 }
