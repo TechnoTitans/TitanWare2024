@@ -12,10 +12,14 @@ import edu.wpi.first.math.kinematics.ChassisSpeeds;
 import edu.wpi.first.math.kinematics.SwerveDriveKinematics;
 import edu.wpi.first.math.kinematics.SwerveModulePosition;
 import edu.wpi.first.math.kinematics.SwerveModuleState;
+import edu.wpi.first.math.trajectory.TrapezoidProfile;
+import edu.wpi.first.math.util.Units;
 import edu.wpi.first.units.Current;
 import edu.wpi.first.units.Measure;
 import edu.wpi.first.wpilibj2.command.Command;
+import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
+import edu.wpi.first.wpilibj2.command.button.Trigger;
 import edu.wpi.first.wpilibj2.command.sysid.SysIdRoutine;
 import frc.robot.constants.Constants;
 import frc.robot.constants.HardwareConstants;
@@ -31,10 +35,11 @@ import java.util.function.DoubleSupplier;
 import java.util.function.Supplier;
 
 import static edu.wpi.first.units.Units.*;
+import static frc.robot.constants.Constants.Swerve.*;
 
 public class Swerve extends SubsystemBase {
-    protected static final String logKey = "Swerve";
-    protected static final String odometryLogKey = "Odometry";
+    protected static final String LogKey = "Swerve";
+    protected static final String OdometryLogKey = "Odometry";
 
     private Gyro gyro;
     private final HardwareConstants.GyroConstants gyroConstants;
@@ -46,6 +51,9 @@ public class Swerve extends SubsystemBase {
 
     private final OdometryThreadRunner odometryThreadRunner;
     private final ReentrantReadWriteLock signalQueueReadWriteLock = new ReentrantReadWriteLock();
+
+    public final Trigger atHeadingSetpoint;
+    private final ProfiledPIDController headingController;
 
     private final SysIdRoutine linearVoltageSysIdRoutine;
     private final SysIdRoutine linearTorqueCurrentSysIdRoutine;
@@ -75,6 +83,19 @@ public class Swerve extends SubsystemBase {
         this.gyroConstants = gyro.getGyroConstants();
 
         this.poseEstimator = poseEstimator;
+
+        this.headingController = new ProfiledPIDController(
+                5, 0, 0,
+                new TrapezoidProfile.Constraints(
+                        ROBOT_MAX_ANGULAR_SPEED_RAD_PER_SEC * 0.75,
+                        TELEOP_MAX_ANGULAR_SPEED_RAD_PER_SEC * 0.5
+                )
+        );
+        this.headingController.enableContinuousInput(-Math.PI, Math.PI);
+        this.headingController.setTolerance(Units.degreesToRadians(3), Units.degreesToRadians(6));
+
+        this.atHeadingSetpoint = new Trigger(headingController::atGoal);
+
         this.linearVoltageSysIdRoutine = makeLinearVoltageSysIdRoutine();
         this.linearTorqueCurrentSysIdRoutine = makeLinearTorqueCurrentSysIdRoutine();
         this.angularVoltageSysIdRoutine = makeAngularVoltageSysIdRoutine();
@@ -108,7 +129,6 @@ public class Swerve extends SubsystemBase {
 
         this.gyro = new Gyro(gyroConstants, odometryThreadRunner, kinematics, swerveModules, mode);
 
-        //TODO add vision
         this.poseEstimator = new SwerveDrivePoseEstimator(
                 kinematics,
                 getYaw(),
@@ -117,6 +137,18 @@ public class Swerve extends SubsystemBase {
                 Constants.Vision.STATE_STD_DEVS,
                 Constants.Vision.VISION_MEASUREMENT_STD_DEVS
         );
+
+        this.headingController = new ProfiledPIDController(
+                5, 0, 0,
+                new TrapezoidProfile.Constraints(
+                        ROBOT_MAX_ANGULAR_SPEED_RAD_PER_SEC * 0.75,
+                        TELEOP_MAX_ANGULAR_SPEED_RAD_PER_SEC * 0.5
+                )
+        );
+        this.headingController.enableContinuousInput(-Math.PI, Math.PI);
+        this.headingController.setTolerance(Units.degreesToRadians(3), Units.degreesToRadians(6));
+
+        this.atHeadingSetpoint = new Trigger(headingController::atGoal);
 
         this.linearVoltageSysIdRoutine = makeLinearVoltageSysIdRoutine();
         this.linearTorqueCurrentSysIdRoutine = makeLinearTorqueCurrentSysIdRoutine();
@@ -140,7 +172,7 @@ public class Swerve extends SubsystemBase {
      * @param swerveModuleStates raw SwerveModuleStates retrieved directly from the modules
      * @return modified SwerveModuleStates
      */
-    private SwerveModuleState[] modifyModuleStatesForDisplay(final SwerveModuleState[] swerveModuleStates) {
+    private static SwerveModuleState[] modifyModuleStatesForDisplay(final SwerveModuleState[] swerveModuleStates) {
         for (int i = 0; i < swerveModuleStates.length; i++) {
             final SwerveModuleState origLastState = swerveModuleStates[i];
             final double origRots = origLastState.angle.getRotations();
@@ -152,106 +184,6 @@ public class Swerve extends SubsystemBase {
         }
 
         return swerveModuleStates;
-    }
-
-    private SysIdRoutine makeLinearVoltageSysIdRoutine() {
-        return new SysIdRoutine(
-                new SysIdRoutine.Config(
-                        Volts.of(0.5).per(Second),
-                        Volts.of(4),
-                        Seconds.of(20),
-                        state -> SignalLogger.writeString("state", state.toString())
-                ),
-                new SysIdRoutine.Mechanism(
-                        voltageMeasure -> {
-                            final double volts = voltageMeasure.in(Volts);
-                            frontLeft.driveVoltageCharacterization(volts, 0);
-                            frontRight.driveVoltageCharacterization(volts, 0);
-                            backLeft.driveVoltageCharacterization(volts, 0);
-                            backRight.driveVoltageCharacterization(volts, 0);
-                        },
-                        null,
-                        this
-                )
-        );
-    }
-
-    public Command linearVoltageSysIdQuasistaticCommand(final SysIdRoutine.Direction direction) {
-        return linearVoltageSysIdRoutine.quasistatic(direction);
-    }
-
-    public Command linearVoltageSysIdDynamicCommand(final SysIdRoutine.Direction direction) {
-        return linearVoltageSysIdRoutine.dynamic(direction);
-    }
-
-    private SysIdRoutine makeLinearTorqueCurrentSysIdRoutine() {
-        return new SysIdRoutine(
-                new SysIdRoutine.Config(
-                        // this is actually amps/sec not volts/sec
-                        Volts.of(4).per(Second),
-                        // this is actually amps not volts
-                        Volts.of(12),
-                        Seconds.of(20),
-                        state -> SignalLogger.writeString("state", state.toString())
-                ),
-                new SysIdRoutine.Mechanism(
-                        voltageMeasure -> {
-                            // convert the voltage measure to an amperage measure by tricking it
-                            final Measure<Current> currentMeasure = Amps.of(voltageMeasure.magnitude());
-                            final double amps = currentMeasure.in(Amps);
-                            frontLeft.driveTorqueCurrentCharacterization(amps, 0);
-                            frontRight.driveTorqueCurrentCharacterization(amps, 0);
-                            backLeft.driveTorqueCurrentCharacterization(amps, 0);
-                            backRight.driveTorqueCurrentCharacterization(amps, 0);
-                        },
-                        null,
-                        this
-                )
-        );
-    }
-
-    @SuppressWarnings("unused")
-    public Command linearTorqueCurrentSysIdQuasistaticCommand(final SysIdRoutine.Direction direction) {
-        return linearTorqueCurrentSysIdRoutine.quasistatic(direction);
-    }
-
-    @SuppressWarnings("unused")
-    public Command linearTorqueCurrentSysIdDynamicCommand(final SysIdRoutine.Direction direction) {
-        return linearTorqueCurrentSysIdRoutine.dynamic(direction);
-    }
-
-    private SysIdRoutine makeAngularVoltageSysIdRoutine() {
-        return new SysIdRoutine(
-                new SysIdRoutine.Config(
-                        // this is actually amps/sec not volts/sec
-                        Volts.of(1).per(Second),
-                        Volts.of(10),
-                        Seconds.of(20),
-                        state -> SignalLogger.writeString("state", state.toString())
-                ),
-                new SysIdRoutine.Mechanism(
-                        voltageMeasure -> {
-                            // convert the voltage measure to an amperage measure by tricking it
-                            final double volts = voltageMeasure.in(Volts);
-                            frontLeft.driveVoltageCharacterization(volts, -0.125);
-                            frontRight.driveVoltageCharacterization(volts, 0.625);
-                            backLeft.driveVoltageCharacterization(volts, 0.125);
-                            backRight.driveVoltageCharacterization(volts, -0.625);
-                        },
-                        null,
-                        this
-                )
-        );
-    }
-
-    @SuppressWarnings("unused")
-    public Command angularVoltageSysIdQuasistaticCommand(final SysIdRoutine.Direction direction) {
-        return angularVoltageSysIdRoutine.quasistatic(direction);
-    }
-
-    @SuppressWarnings("unused")
-    public Command angularVoltageSysIdDynamicCommand(final SysIdRoutine.Direction direction) {
-        return angularVoltageSysIdRoutine.dynamic(direction);
     }
 
     @Override
@@ -268,6 +200,11 @@ public class Swerve extends SubsystemBase {
         } finally {
             signalQueueReadWriteLock.writeLock().unlock();
         }
+
+        Logger.recordOutput(
+                LogKey + "/PeriodicIOPeriodMs",
+                LogUtils.microsecondsToMilliseconds(Logger.getRealTimestamp() - swervePeriodicUpdateStart)
+        );
 
         // Update PoseEstimator and Odometry
         final double odometryUpdateStart = Logger.getRealTimestamp();
@@ -298,12 +235,7 @@ public class Swerve extends SubsystemBase {
         );
 
         Logger.recordOutput(
-                logKey + "/PeriodicIOPeriodMs",
-                LogUtils.microsecondsToMilliseconds(Logger.getRealTimestamp() - swervePeriodicUpdateStart)
-        );
-
-        Logger.recordOutput(
-                logKey + "/OdometryThreadState",
+                LogKey + "/OdometryThreadState",
                 OdometryThreadRunner.State.struct,
                 odometryThreadRunner.getState()
         );
@@ -311,18 +243,18 @@ public class Swerve extends SubsystemBase {
         //log current swerve chassis speeds
         final ChassisSpeeds robotRelativeSpeeds = getRobotRelativeSpeeds();
         Logger.recordOutput(
-                logKey + "/LinearSpeedMetersPerSecond",
+                LogKey + "/LinearSpeedMetersPerSecond",
                 Math.hypot(robotRelativeSpeeds.vxMetersPerSecond, robotRelativeSpeeds.vyMetersPerSecond)
         );
-        Logger.recordOutput(logKey + "/RobotRelativeChassisSpeeds", robotRelativeSpeeds);
-        Logger.recordOutput(logKey + "/FieldRelativeChassisSpeeds", getFieldRelativeSpeeds());
+        Logger.recordOutput(LogKey + "/RobotRelativeChassisSpeeds", robotRelativeSpeeds);
+        Logger.recordOutput(LogKey + "/FieldRelativeChassisSpeeds", getFieldRelativeSpeeds());
 
         //prep states for display
-        final SwerveModuleState[] lastDesiredStates = modifyModuleStatesForDisplay(getModuleLastDesiredStates());
-        final SwerveModuleState[] currentStates = modifyModuleStatesForDisplay(getModuleStates());
+        final SwerveModuleState[] lastDesiredStates = Swerve.modifyModuleStatesForDisplay(getModuleLastDesiredStates());
+        final SwerveModuleState[] currentStates = Swerve.modifyModuleStatesForDisplay(getModuleStates());
 
-        Logger.recordOutput(logKey + "/DesiredStates", lastDesiredStates);
-        Logger.recordOutput(logKey + "/CurrentStates", currentStates);
+        Logger.recordOutput(LogKey + "/DesiredStates", lastDesiredStates);
+        Logger.recordOutput(LogKey + "/CurrentStates", currentStates);
 
         // only update gyro from wheel odometry if we're not simulating and the gyro has failed
         if (Constants.CURRENT_MODE == Constants.RobotMode.REAL && gyro.hasHardwareFault() && gyro.isReal()) {
@@ -330,17 +262,16 @@ public class Swerve extends SubsystemBase {
         }
 
         Logger.recordOutput(
-               logKey + "/IsUsingFallbackSimGyro",
+               LogKey + "/IsUsingFallbackSimGyro",
                Constants.CURRENT_MODE == Constants.RobotMode.REAL && !gyro.isReal()
         );
 
-        final Pose2d estimatedPosition = poseEstimator.getEstimatedPosition();
         Logger.recordOutput(
-                odometryLogKey + "/OdometryUpdatePeriodMs", odometryUpdatePeriodMs
+                OdometryLogKey + "/OdometryUpdatePeriodMs", odometryUpdatePeriodMs
         );
-        Logger.recordOutput(odometryLogKey + "/Robot2d", estimatedPosition);
-        Logger.recordOutput(odometryLogKey + "/Robot3d", GyroUtils.robotPose2dToPose3dWithGyro(
-                estimatedPosition,
+        Logger.recordOutput(OdometryLogKey + "/Robot2d", getPose());
+        Logger.recordOutput(OdometryLogKey + "/Robot3d", GyroUtils.robotPose2dToPose3dWithGyro(
+                getPose(),
                 GyroUtils.rpyToRotation3d(getRoll(), getPitch(), getYaw())
         ));
     }
@@ -352,16 +283,16 @@ public class Swerve extends SubsystemBase {
         return poseEstimator;
     }
 
+    public ProfiledPIDController getHeadingController() {
+        return headingController;
+    }
+
     /**
      * Get the estimated {@link Pose2d} of the robot from the {@link SwerveDrivePoseEstimator}.
      * @return the estimated position of the robot, as a {@link Pose2d}
      */
-    public Pose2d getEstimatedPosition() {
+    public Pose2d getPose() {
         return poseEstimator.getEstimatedPosition();
-    }
-
-    public OdometryThreadRunner getOdometryThreadRunner() {
-        return odometryThreadRunner;
     }
 
     public Gyro getGyro() {
@@ -377,7 +308,7 @@ public class Swerve extends SubsystemBase {
     }
 
     public Rotation2d getYaw() {
-        return gyro.getYawRotation2d();
+        return getPose().getRotation();
     }
 
     /**
@@ -392,7 +323,7 @@ public class Swerve extends SubsystemBase {
         poseEstimator.resetPosition(
                 Rotation2d.fromRadians(0),
                 getModulePositions(),
-                getEstimatedPosition()
+                getPose()
         );
     }
 
@@ -411,12 +342,7 @@ public class Swerve extends SubsystemBase {
 
     public ChassisSpeeds getFieldRelativeSpeeds() {
         return ChassisSpeeds.fromRobotRelativeSpeeds(
-                kinematics.toChassisSpeeds(
-                        frontLeft.getState(),
-                        frontRight.getState(),
-                        backLeft.getState(),
-                        backRight.getState()
-                ),
+                getRobotRelativeSpeeds(),
                 getYaw()
         );
     }
@@ -478,34 +404,38 @@ public class Swerve extends SubsystemBase {
         drive(kinematics.toSwerveModuleStates(correctedSpeeds));
     }
 
-    public Command teleopDriveFacingAngleCommand(
-            final ProfiledPIDController rotationController,
+    public Command teleopFacingAngleCommand(
             final DoubleSupplier xSpeedSupplier,
             final DoubleSupplier ySpeedSupplier,
             final Supplier<Rotation2d> rotationSupplier
     ) {
-        rotationController.enableContinuousInput(-Math.PI, Math.PI);
-        return run(() -> {
-            final Profiler.DriverProfile driverProfile = Profiler.getDriverProfile();
-            final Profiler.SwerveSpeed swerveSpeed = Profiler.getSwerveSpeed();
+        return Commands.sequence(
+                runOnce(() -> headingController.reset(
+                        getYaw().getRadians(),
+                        getFieldRelativeSpeeds().omegaRadiansPerSecond)
+                ),
+                run(() -> {
+                    final Profiler.DriverProfile driverProfile = Profiler.getDriverProfile();
+                    final Profiler.SwerveSpeed swerveSpeed = Profiler.getSwerveSpeed();
 
-            final double throttleWeight = swerveSpeed.getThrottleWeight();
-            final Translation2d leftStickSpeeds = ControllerUtils.getStickXYSquaredInput(
-                    xSpeedSupplier.getAsDouble(),
-                    ySpeedSupplier.getAsDouble(),
-                    0.01,
-                    Constants.Swerve.TELEOP_MAX_SPEED_MPS,
-                    driverProfile.getThrottleSensitivity(),
-                    throttleWeight
-            );
+                    final double throttleWeight = swerveSpeed.getThrottleWeight();
+                    final Translation2d leftStickSpeeds = ControllerUtils.getStickXYSquaredInput(
+                            xSpeedSupplier.getAsDouble(),
+                            ySpeedSupplier.getAsDouble(),
+                            0.01,
+                            Constants.Swerve.TELEOP_MAX_SPEED_MPS,
+                            driverProfile.getThrottleSensitivity(),
+                            throttleWeight
+                    );
 
-            drive(
-                    leftStickSpeeds.getX(),
-                    leftStickSpeeds.getY(),
-                    rotationController.calculate(getYaw().getRadians(), rotationSupplier.get().getRadians()),
-                    true
-            );
-        });
+                    drive(
+                            leftStickSpeeds.getX(),
+                            leftStickSpeeds.getY(),
+                            headingController.calculate(getYaw().getRadians(), rotationSupplier.get().getRadians()),
+                            true
+                    );
+                })
+        );
     }
 
     public Command teleopDriveCommand(
@@ -612,5 +542,107 @@ public class Swerve extends SubsystemBase {
         frontRight.setNeutralMode(neutralMode);
         backLeft.setNeutralMode(neutralMode);
         backRight.setNeutralMode(neutralMode);
+    }
+
+    private SysIdRoutine makeLinearVoltageSysIdRoutine() {
+        return new SysIdRoutine(
+                new SysIdRoutine.Config(
+                        Volts.of(0.5).per(Second),
+                        Volts.of(4),
+                        Seconds.of(20),
+                        state -> SignalLogger.writeString("state", state.toString())
+                ),
+                new SysIdRoutine.Mechanism(
+                        voltageMeasure -> {
+                            final double volts = voltageMeasure.in(Volts);
+                            frontLeft.driveVoltageCharacterization(volts, 0);
+                            frontRight.driveVoltageCharacterization(volts, 0);
+                            backLeft.driveVoltageCharacterization(volts, 0);
+                            backRight.driveVoltageCharacterization(volts, 0);
+                        },
+                        null,
+                        this
+                )
+        );
+    }
+
+    @SuppressWarnings("unused")
+    public Command linearVoltageSysIdQuasistaticCommand(final SysIdRoutine.Direction direction) {
+        return linearVoltageSysIdRoutine.quasistatic(direction);
+    }
+
+    @SuppressWarnings("unused")
+    public Command linearVoltageSysIdDynamicCommand(final SysIdRoutine.Direction direction) {
+        return linearVoltageSysIdRoutine.dynamic(direction);
+    }
+
+    private SysIdRoutine makeLinearTorqueCurrentSysIdRoutine() {
+        return new SysIdRoutine(
+                new SysIdRoutine.Config(
+                        // this is actually amps/sec not volts/sec
+                        Volts.of(4).per(Second),
+                        // this is actually amps not volts
+                        Volts.of(12),
+                        Seconds.of(20),
+                        state -> SignalLogger.writeString("state", state.toString())
+                ),
+                new SysIdRoutine.Mechanism(
+                        voltageMeasure -> {
+                            // convert the voltage measure to an amperage measure by tricking it
+                            final Measure<Current> currentMeasure = Amps.of(voltageMeasure.magnitude());
+                            final double amps = currentMeasure.in(Amps);
+                            frontLeft.driveTorqueCurrentCharacterization(amps, 0);
+                            frontRight.driveTorqueCurrentCharacterization(amps, 0);
+                            backLeft.driveTorqueCurrentCharacterization(amps, 0);
+                            backRight.driveTorqueCurrentCharacterization(amps, 0);
+                        },
+                        null,
+                        this
+                )
+        );
+    }
+
+    @SuppressWarnings("unused")
+    public Command linearTorqueCurrentSysIdQuasistaticCommand(final SysIdRoutine.Direction direction) {
+        return linearTorqueCurrentSysIdRoutine.quasistatic(direction);
+    }
+
+    @SuppressWarnings("unused")
+    public Command linearTorqueCurrentSysIdDynamicCommand(final SysIdRoutine.Direction direction) {
+        return linearTorqueCurrentSysIdRoutine.dynamic(direction);
+    }
+
+    private SysIdRoutine makeAngularVoltageSysIdRoutine() {
+        return new SysIdRoutine(
+                new SysIdRoutine.Config(
+                        // this is actually amps/sec not volts/sec
+                        Volts.of(1).per(Second),
+                        Volts.of(10),
+                        Seconds.of(20),
+                        state -> SignalLogger.writeString("state", state.toString())
+                ),
+                new SysIdRoutine.Mechanism(
+                        voltageMeasure -> {
+                            // convert the voltage measure to an amperage measure by tricking it
+                            final double volts = voltageMeasure.in(Volts);
+                            frontLeft.driveVoltageCharacterization(volts, -0.125);
+                            frontRight.driveVoltageCharacterization(volts, 0.625);
+                            backLeft.driveVoltageCharacterization(volts, 0.125);
+                            backRight.driveVoltageCharacterization(volts, -0.625);
+                        },
+                        null,
+                        this
+                )
+        );
+    }
+
+    @SuppressWarnings("unused")
+    public Command angularVoltageSysIdQuasistaticCommand(final SysIdRoutine.Direction direction) {
+        return angularVoltageSysIdRoutine.quasistatic(direction);
+    }
+
+    @SuppressWarnings("unused")
+    public Command angularVoltageSysIdDynamicCommand(final SysIdRoutine.Direction direction) {
+        return angularVoltageSysIdRoutine.dynamic(direction);
     }
 }
