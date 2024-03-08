@@ -37,8 +37,6 @@ public class SwerveTest {
 
     @Mock
     private Gyro gyro;
-//    @Mock
-//    private PhotonVision photonVision;
 
     private final OdometryThreadRunner odometryThreadRunner =
             new OdometryThreadRunner(new ReentrantReadWriteLock());
@@ -183,14 +181,10 @@ public class SwerveTest {
 
     @Test
     void zeroRotation() {
-//        doNothing().when(photonVision).resetPosition(any(), any());
-//        when(photonVision.getEstimatedPosition()).thenReturn(new Pose2d());
         doNothing().when(gyro).zeroRotation();
 
         swerve.zeroRotation();
-//        swerve.zeroRotation(photonVision);
         verify(gyro).zeroRotation();
-//        verify(photonVision).resetPosition(new Pose2d(), Rotation2d.fromDegrees(0));
     }
 
     @Test
