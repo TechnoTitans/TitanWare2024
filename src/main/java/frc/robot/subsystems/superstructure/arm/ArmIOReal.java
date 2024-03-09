@@ -4,7 +4,10 @@ import com.ctre.phoenix6.BaseStatusSignal;
 import com.ctre.phoenix6.StatusSignal;
 import com.ctre.phoenix6.configs.Slot0Configs;
 import com.ctre.phoenix6.configs.TalonFXConfiguration;
-import com.ctre.phoenix6.controls.*;
+import com.ctre.phoenix6.controls.Follower;
+import com.ctre.phoenix6.controls.MotionMagicExpoVoltage;
+import com.ctre.phoenix6.controls.TorqueCurrentFOC;
+import com.ctre.phoenix6.controls.VoltageOut;
 import com.ctre.phoenix6.hardware.ParentDevice;
 import com.ctre.phoenix6.hardware.TalonFX;
 import com.ctre.phoenix6.signals.GravityTypeValue;
@@ -13,7 +16,6 @@ import com.ctre.phoenix6.signals.NeutralModeValue;
 import edu.wpi.first.wpilibj.DigitalInput;
 import frc.robot.constants.HardwareConstants;
 import frc.robot.utils.ctre.Phoenix6Utils;
-import org.littletonrobotics.junction.Logger;
 
 public class ArmIOReal implements ArmIO {
     private final HardwareConstants.ArmConstants armConstants;
@@ -28,7 +30,7 @@ public class ArmIOReal implements ArmIO {
 
     private final Follower leftPivotFollower;
 
-    private final DigitalInput pivotLowerLimitSwitch;
+    private final DigitalInput pivotUpperLimitSwitch;
 
     // Cached StatusSignals
     private final StatusSignal<Double> _leftPosition;
@@ -55,7 +57,7 @@ public class ArmIOReal implements ArmIO {
 
         this.leftPivotFollower = new Follower(leftPivotMotor.getDeviceID(), true);
 
-        this.pivotLowerLimitSwitch = new DigitalInput(armConstants.pivotZeroingSwitchDIOChannel());
+        this.pivotUpperLimitSwitch = new DigitalInput(armConstants.pivotUpperLimitSwitchDIOChannel());
 
         this._leftPosition = leftPivotMotor.getPosition();
         this._leftVelocity = leftPivotMotor.getVelocity();
@@ -156,7 +158,7 @@ public class ArmIOReal implements ArmIO {
                 _rightDeviceTemp
         );
 
-        inputs.pivotUpperLimitSwitch = !pivotLowerLimitSwitch.get();
+        inputs.pivotUpperLimitSwitch = !pivotUpperLimitSwitch.get();
 
         inputs.leftPivotPositionRots = _leftPosition.getValue();
         inputs.leftPivotVelocityRotsPerSec = _leftVelocity.getValue();
@@ -169,12 +171,6 @@ public class ArmIOReal implements ArmIO {
         inputs.rightPivotVoltageVolts = _rightVoltage.getValue();
         inputs.rightPivotTorqueCurrentAmps = _rightTorqueCurrent.getValue();
         inputs.rightPivotTempCelsius = _rightDeviceTemp.getValue();
-
-//        Logger.recordOutput("ClosedLoopReference", leftPivotMotor.getClosedLoopReference().refresh().getValue());
-//        Logger.recordOutput("ClosedLoopOutput", leftPivotMotor.getClosedLoopOutput().refresh().getValue());
-//        Logger.recordOutput("ClosedLoopKpOutput", leftPivotMotor.getClosedLoopProportionalOutput().refresh().getValue());
-//        Logger.recordOutput("ClosedLoopFF", leftPivotMotor.getClosedLoopFeedForward().refresh().getValue());
-//        Logger.recordOutput("ClosedLoopError", leftPivotMotor.getClosedLoopError().refresh().getValue());
     }
 
     @Override

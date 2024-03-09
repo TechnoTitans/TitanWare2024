@@ -15,7 +15,6 @@ import edu.wpi.first.wpilibj2.command.button.Trigger;
 import frc.robot.constants.FieldConstants;
 import frc.robot.subsystems.drive.Swerve;
 import frc.robot.subsystems.intake.Intake;
-import frc.robot.subsystems.superstructure.ShotParameters;
 import frc.robot.subsystems.superstructure.Superstructure;
 
 import java.util.List;
@@ -61,8 +60,9 @@ public class Autos {
             this.eventLoop = new EventLoop();
         }
 
-        public void poll() {
-            eventLoop.poll();
+        public Command poll() {
+            return Commands.run(eventLoop::poll)
+                    .until(() -> !DriverStation.isAutonomousEnabled());
         }
 
         public Trigger autoEnabled() {
@@ -118,19 +118,30 @@ public class Autos {
 
     private Command shoot() {
         return Commands.deadline(
-                intake
-                        .runStopCommand()
-                        .until(superstructure.atGoalTrigger)
-                        .andThen(intake.feedCommand()),
-                superstructure.toGoal(Superstructure.Goal.SUBWOOFER)
+                Commands.deadline(
+                        Commands.waitUntil(swerve.atHeadingSetpoint),
+                        intake
+                                .runStopCommand()
+                                .until(superstructure.atSetpoint)
+                                .andThen(intake.feedCommand()),
+                        superstructure.toGoal(Superstructure.Goal.SUBWOOFER)
+                ),
+                swerve.faceAngle(() ->
+                        swerve.getPose()
+                                .getTranslation()
+                                .minus(FieldConstants.getSpeakerPose().getTranslation())
+                                .getAngle()
+                )
         );
     }
 
-    private Command initAndPoll(final Command initCommand, final Runnable poll) {
-        return Commands.parallel(
-                initCommand,
-                Commands.run(poll)
-                        .until(() -> !DriverStation.isAutonomousEnabled())
+    private Command resetPose(final ChoreoTrajectoryState initialState) {
+        return Commands.defer(() -> swerve.resetPoseCommand(
+                        IsRedAlliance.getAsBoolean()
+                                ? initialState.flipped().getPose()
+                                : initialState.getPose()
+                ),
+                Set.of(swerve)
         );
     }
     
@@ -142,21 +153,14 @@ public class Autos {
         final Timer timer = new Timer();
         final AutoTriggers autoTriggers = new AutoTriggers(trajectory, swerve::getPose, timer::get);
 
-        final ChoreoTrajectoryState initialState = trajectory.getInitialState();
-        final Command autoInitCommand = Commands.sequence(
-                Commands.defer(() -> swerve.resetPoseCommand(
-                                IsRedAlliance.getAsBoolean()
-                                        ? initialState.flipped().getPose()
-                                        : initialState.getPose()
-                        ),
-                        Set.of(swerve)
-                ),
-                Commands.print("shoot preload"),
-//                shoot(),
-                followPath(trajectoryGroup.get(0), timer)
+        autoTriggers.autoEnabled().whileTrue(
+                Commands.sequence(
+                        resetPose(trajectory.getInitialState()),
+                        Commands.print("shoot preload"),
+                        shoot(),
+                        followPath(trajectoryGroup.get(0), timer)
+                )
         );
-
-        autoTriggers.autoEnabled().whileTrue(autoInitCommand);
 
         autoTriggers.atTime(0.1).onTrue(
                 Commands.sequence(
@@ -172,7 +176,7 @@ public class Autos {
                 )
         );
 
-        return initAndPoll(autoInitCommand, autoTriggers::poll);
+        return autoTriggers.poll();
     }
 
     public Command sourceSpeaker0Center1() {
@@ -183,21 +187,13 @@ public class Autos {
         final Timer timer = new Timer();
         final AutoTriggers autoTriggers = new AutoTriggers(trajectory, swerve::getPose, timer::get);
 
-        final ChoreoTrajectoryState initialState = trajectory.getInitialState();
         autoTriggers.autoEnabled().whileTrue(
                 Commands.sequence(
-                        Commands.defer(() -> swerve.resetPoseCommand(
-                                        IsRedAlliance.getAsBoolean()
-                                                ? initialState.flipped().getPose()
-                                                : initialState.getPose()
-                                ),
-                                Set.of(swerve)
-                        ),
+                        resetPose(trajectory.getInitialState()),
                         Commands.print("shoot preload"),
                         shoot(),
                         followPath(trajectoryGroup.get(0), timer)
                 )
-
         );
 
         autoTriggers.atTime(0.1).onTrue(
@@ -229,8 +225,7 @@ public class Autos {
                 )
         );
 
-        return Commands.run(autoTriggers::poll)
-                .until(() -> !DriverStation.isAutonomousEnabled());
+        return autoTriggers.poll();
     }
 
     public Command sourceSpeaker0Center1_2() {
@@ -241,17 +236,9 @@ public class Autos {
         final Timer timer = new Timer();
         final AutoTriggers autoTriggers = new AutoTriggers(trajectory, swerve::getPose, timer::get);
 
-        final ChoreoTrajectoryState initialState = trajectory.getInitialState();
-
         autoTriggers.autoEnabled().whileTrue(
                 Commands.sequence(
-                        Commands.defer(() -> swerve.resetPoseCommand(
-                                        IsRedAlliance.getAsBoolean()
-                                                ? initialState.flipped().getPose()
-                                                : initialState.getPose()
-                                ),
-                                Set.of(swerve)
-                        ),
+                        resetPose(trajectory.getInitialState()),
                         Commands.print("shoot preload"),
                         shoot(),
                         followPath(trajectoryGroup.get(0), timer)
@@ -315,16 +302,9 @@ public class Autos {
         final Timer timer = new Timer();
         final AutoTriggers autoTriggers = new AutoTriggers(trajectory, swerve::getPose, timer::get);
 
-        final ChoreoTrajectoryState initialState = trajectory.getInitialState();
         autoTriggers.autoEnabled().whileTrue(
                 Commands.sequence(
-                        Commands.defer(() -> swerve.resetPoseCommand(
-                                        IsRedAlliance.getAsBoolean()
-                                                ? initialState.flipped().getPose()
-                                                : initialState.getPose()
-                                ),
-                                Set.of(swerve)
-                        )  ,
+                        resetPose(trajectory.getInitialState()),
                         Commands.print("shoot preload"),
                         shoot(),
                         followPath(trajectoryGroup.get(0), timer)
@@ -343,16 +323,9 @@ public class Autos {
         final Timer timer = new Timer();
         final AutoTriggers autoTriggers = new AutoTriggers(trajectory, swerve::getPose, timer::get);
 
-        final ChoreoTrajectoryState initialState = trajectory.getInitialState();
         autoTriggers.autoEnabled().whileTrue(
                 Commands.sequence(
-                        Commands.defer(() -> swerve.resetPoseCommand(
-                                        IsRedAlliance.getAsBoolean()
-                                                ? initialState.flipped().getPose()
-                                                : initialState.getPose()
-                                ),
-                                Set.of(swerve)
-                        ),
+                        resetPose(trajectory.getInitialState()),
                         Commands.print("shoot preload"),
                         shoot(),
                         followPath(trajectoryGroup.get(0), timer)
@@ -416,16 +389,9 @@ public class Autos {
         final Timer timer = new Timer();
         final AutoTriggers autoTriggers = new AutoTriggers(trajectory, swerve::getPose, timer::get);
 
-        final ChoreoTrajectoryState initialState = trajectory.getInitialState();
         autoTriggers.autoEnabled().whileTrue(
                 Commands.sequence(
-                        Commands.defer(() -> swerve.resetPoseCommand(
-                                        IsRedAlliance.getAsBoolean()
-                                                ? initialState.flipped().getPose()
-                                                : initialState.getPose()
-                                ),
-                                Set.of(swerve)
-                        ),
+                        resetPose(trajectory.getInitialState()),
                         Commands.print("shoot preload"),
                         shoot(),
                         followPath(trajectoryGroup.get(0), timer)
@@ -462,8 +428,7 @@ public class Autos {
                 )
         );
 
-        return Commands.run(autoTriggers::poll)
-                .until(() -> !DriverStation.isAutonomousEnabled());
+        return autoTriggers.poll();
     }
 
     public Command shootAndMobility() {
@@ -474,24 +439,15 @@ public class Autos {
         final Timer timer = new Timer();
         final AutoTriggers autoTriggers = new AutoTriggers(trajectory, swerve::getPose, timer::get);
 
-        final ChoreoTrajectoryState initialState = trajectory.getInitialState();
-        final Command autoInitCommand = Commands.sequence(
-                Commands.defer(() -> swerve.resetPoseCommand(
-                                IsRedAlliance.getAsBoolean()
-                                        ? initialState.flipped().getPose()
-                                        : initialState.getPose()
-                        ),
-                        Set.of(swerve)
-                ),
-                Commands.print("shoot preload"),
-                shoot(),
-                followPath(trajectoryGroup.get(0), timer)
-        );
-
         autoTriggers.autoEnabled()
-                .whileTrue(autoInitCommand)
+                .whileTrue(Commands.sequence(
+                        resetPose(trajectory.getInitialState()),
+                        Commands.print("shoot preload"),
+                        shoot(),
+                        followPath(trajectoryGroup.get(0), timer)
+                ))
                 .onFalse(Commands.runOnce(swerve::stop));
 
-        return initAndPoll(autoInitCommand, autoTriggers::poll);
+        return autoTriggers.poll();
     }
 }

@@ -87,6 +87,10 @@ public class AutoChooser<I, V extends AutoOption> implements AutoCloseable, Logg
         return selectedAutoName != null ? autoMap.get(selectedAutoName) : defaultAuto;
     }
 
+    public V get(final String name) {
+        return autoMap.get(name);
+    }
+
     public void addOptionsIfNotPresent(
             final Function<V, String> nameFunction, final Function<I, V> objectFunction, final List<I> inputs
     ) {

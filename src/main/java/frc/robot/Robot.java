@@ -22,6 +22,7 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 
+@SuppressWarnings("RedundantMethodOverride")
 public class Robot extends LoggedRobot {
     private static final String AKitLogPath = "/U/logs";
     private static final String HootLogPath = "/U/logs";
@@ -120,12 +121,12 @@ public class Robot extends LoggedRobot {
         VirtualSubsystem.run();
 
         final ShotParameters.Parameters shotParameters = ShotParameters.get(
-//                robotContainer.swerve.getPose()
-//                        .minus(FieldConstants.getSpeakerPose())
-//                        .getTranslation()
-//                        .getNorm()
-                4
+                robotContainer.swerve.getPose()
+                        .minus(FieldConstants.getSpeakerPose())
+                        .getTranslation()
+                        .getNorm()
         );
+
         Logger.recordOutput("ShotParameters/ArmPivotAngle", shotParameters.armPivotAngle());
         Logger.recordOutput("ShotParameters/LeftVelocityRotsPerSec", shotParameters.leftVelocityRotsPerSec());
         Logger.recordOutput("ShotParameters/RightVelocityRotsPerSec", shotParameters.rightVelocityRotsPerSec());
@@ -156,7 +157,6 @@ public class Robot extends LoggedRobot {
             autonomousCommand.cancel();
         }
 
-
         //noinspection SuspiciousNameCombination
         robotContainer.swerve.setDefaultCommand(
                 robotContainer.swerve.teleopDriveCommand(
@@ -177,4 +177,10 @@ public class Robot extends LoggedRobot {
 
     @Override
     public void testPeriodic() {}
+
+    @Override
+    public void simulationInit() {}
+
+    @Override
+    public void simulationPeriodic() {}
 }

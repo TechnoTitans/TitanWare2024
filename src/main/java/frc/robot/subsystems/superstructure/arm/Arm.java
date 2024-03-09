@@ -22,6 +22,8 @@ public class Arm extends SubsystemBase {
     protected static final String LogKey = "Arm";
     private static final double PositionToleranceRots = 0.01;
 
+    private final HardwareConstants.ArmConstants armConstants;
+
     private final ArmIO armIO;
     private final ArmIOInputsAutoLogged inputs;
 
@@ -68,6 +70,7 @@ public class Arm extends SubsystemBase {
     }
 
     public Arm(final Constants.RobotMode mode, final HardwareConstants.ArmConstants armConstants) {
+        this.armConstants = armConstants;
         this.armIO = switch (mode) {
             case REAL -> new ArmIOReal(armConstants);
             case SIM -> new ArmIOSim(armConstants);
@@ -159,14 +162,10 @@ public class Arm extends SubsystemBase {
                         () -> armIO.toPivotVoltage(0)
                 ).until(() -> inputs.pivotUpperLimitSwitch),
                 runOnce(() -> {
-                    armIO.setPivotPosition(0.237);
+                    armIO.setPivotPosition(armConstants.pivotUpperLimitSwitchPositionRots());
                     armIO.configureSoftLimits(pivotSoftLowerLimit, pivotSoftUpperLimit);
                 })
         );
-    }
-
-    public void setPivotPosition(final double pivotPositionRots) {
-        armIO.setPivotPosition(pivotPositionRots);
     }
 
     private SysIdRoutine makeVoltageSysIdRoutine(

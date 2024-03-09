@@ -10,6 +10,7 @@ import com.pathplanner.lib.util.PIDConstants;
 import com.pathplanner.lib.util.PathPlannerLogging;
 import com.pathplanner.lib.util.ReplanningConfig;
 import edu.wpi.first.math.MathUtil;
+import edu.wpi.first.math.controller.HolonomicDriveController;
 import edu.wpi.first.math.controller.PIDController;
 import edu.wpi.first.math.controller.ProfiledPIDController;
 import edu.wpi.first.math.estimator.SwerveDrivePoseEstimator;
@@ -74,6 +75,8 @@ public class Swerve extends SubsystemBase {
 
     public final Trigger atHeadingSetpoint;
     private final ProfiledPIDController headingController;
+    public final Trigger atHolonomicDrivePose;
+    private final HolonomicDriveController holonomicDriveController;
 
     private final SysIdRoutine linearVoltageSysIdRoutine;
     private final SysIdRoutine linearTorqueCurrentSysIdRoutine;
@@ -113,8 +116,18 @@ public class Swerve extends SubsystemBase {
         );
         this.headingController.enableContinuousInput(-Math.PI, Math.PI);
         this.headingController.setTolerance(Units.degreesToRadians(3), Units.degreesToRadians(6));
-
         this.atHeadingSetpoint = new Trigger(headingController::atGoal);
+
+        this.holonomicDriveController = new HolonomicDriveController(
+                new PIDController(5, 0, 0),
+                new PIDController(5, 0, 0),
+                new ProfiledPIDController(
+                        headingController.getP(), headingController.getI(), headingController.getD(),
+                        headingController.getConstraints()
+                )
+        );
+        this.holonomicDriveController.setTolerance(new Pose2d(0.15, 0.15, Rotation2d.fromDegrees(2)));
+        this.atHolonomicDrivePose = new Trigger(holonomicDriveController::atReference);
 
         this.linearVoltageSysIdRoutine = makeLinearVoltageSysIdRoutine();
         this.linearTorqueCurrentSysIdRoutine = makeLinearTorqueCurrentSysIdRoutine();
@@ -166,8 +179,18 @@ public class Swerve extends SubsystemBase {
         );
         this.headingController.enableContinuousInput(-Math.PI, Math.PI);
         this.headingController.setTolerance(Units.degreesToRadians(3), Units.degreesToRadians(6));
-
         this.atHeadingSetpoint = new Trigger(headingController::atGoal);
+
+        this.holonomicDriveController = new HolonomicDriveController(
+                new PIDController(5, 0, 0),
+                new PIDController(5, 0, 0),
+                new ProfiledPIDController(
+                        headingController.getP(), headingController.getI(), headingController.getD(),
+                        headingController.getConstraints()
+                )
+        );
+        this.holonomicDriveController.setTolerance(new Pose2d(0.15, 0.15, Rotation2d.fromDegrees(2)));
+        this.atHolonomicDrivePose = new Trigger(holonomicDriveController::atReference);
 
         this.linearVoltageSysIdRoutine = makeLinearVoltageSysIdRoutine();
         this.linearTorqueCurrentSysIdRoutine = makeLinearTorqueCurrentSysIdRoutine();
@@ -331,10 +354,6 @@ public class Swerve extends SubsystemBase {
         return poseEstimator;
     }
 
-    public ProfiledPIDController getHeadingController() {
-        return headingController;
-    }
-
     /**
      * Get the estimated {@link Pose2d} of the robot from the {@link SwerveDrivePoseEstimator}.
      * @return the estimated position of the robot, as a {@link Pose2d}
@@ -465,7 +484,7 @@ public class Swerve extends SubsystemBase {
     public Command teleopFacingAngleCommand(
             final DoubleSupplier xSpeedSupplier,
             final DoubleSupplier ySpeedSupplier,
-            final Supplier<Rotation2d> rotationSupplier
+            final Supplier<Rotation2d> rotationTargetSupplier
     ) {
         return Commands.sequence(
                 runOnce(() -> headingController.reset(
@@ -489,7 +508,7 @@ public class Swerve extends SubsystemBase {
                     drive(
                             leftStickSpeeds.getX(),
                             leftStickSpeeds.getY(),
-                            headingController.calculate(getYaw().getRadians(), rotationSupplier.get().getRadians()),
+                            headingController.calculate(getYaw().getRadians(), rotationTargetSupplier.get().getRadians()),
                             true
                     );
                 })
@@ -532,6 +551,28 @@ public class Swerve extends SubsystemBase {
                     true
             );
         });
+    }
+
+    public Command faceAngle(final Supplier<Rotation2d> rotationTargetSupplier) {
+        return Commands.sequence(
+                runOnce(() -> headingController.reset(
+                        getYaw().getRadians(),
+                        getFieldRelativeSpeeds().omegaRadiansPerSecond)
+                ),
+                run(() -> drive(
+                        0,
+                        0,
+                        headingController.calculate(getYaw().getRadians(), rotationTargetSupplier.get().getRadians()),
+                        true
+                ))
+        );
+    }
+
+    public Command driveToPose(final Supplier<Pose2d> poseSupplier) {
+        return Commands.run(() -> {
+            final Pose2d pose = poseSupplier.get();
+            drive(holonomicDriveController.calculate(getPose(), pose, ROBOT_MAX_SPEED_MPS, pose.getRotation()));
+        }).until(holonomicDriveController::atReference);
     }
 
     public void stop() {

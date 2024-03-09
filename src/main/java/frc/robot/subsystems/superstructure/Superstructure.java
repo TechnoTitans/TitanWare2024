@@ -14,7 +14,7 @@ public class Superstructure {
     private final Arm arm;
     private final Shooter shooter;
 
-    public final Trigger atGoalTrigger;
+    public final Trigger atSetpoint;
 
     public enum Goal {
         IDLE(Arm.Goal.STOW, Shooter.Goal.IDLE),
@@ -35,7 +35,7 @@ public class Superstructure {
     public Superstructure(final Arm arm, final Shooter shooter) {
         this.arm = arm;
         this.shooter = shooter;
-        this.atGoalTrigger = arm.atPivotSetpoint.and(shooter.atVelocitySetpoint);
+        this.atSetpoint = arm.atPivotSetpoint.and(shooter.atVelocitySetpoint);
     }
 
     public Command toGoal(final Goal goal) {
