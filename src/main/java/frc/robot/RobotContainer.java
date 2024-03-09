@@ -1,10 +1,14 @@
 package frc.robot;
 
+import com.ctre.phoenix6.SignalLogger;
 import edu.wpi.first.wpilibj.DriverStation;
+import edu.wpi.first.wpilibj.GenericHID;
 import edu.wpi.first.wpilibj.PowerDistribution;
+import edu.wpi.first.wpilibj.XboxController;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
+import edu.wpi.first.wpilibj2.command.sysid.SysIdRoutine;
 import frc.robot.auto.AutoChooser;
 import frc.robot.auto.AutoOption;
 import frc.robot.auto.Autos;
@@ -67,7 +71,7 @@ public class RobotContainer {
         this.superstructure = new Superstructure(arm, shooter);
 
         this.photonVision = new PhotonVision(Constants.CURRENT_MODE, swerve, swerve.getPoseEstimator());
-        this.autos = new Autos(swerve);
+        this.autos = new Autos(swerve, superstructure, intake);
 
         this.driverController = new CommandXboxController(RobotMap.MainController);
         this.coDriverController = new CommandXboxController(RobotMap.CoController);
@@ -85,61 +89,68 @@ public class RobotContainer {
     }
 
     public Command runEjectShooter() {
-        return Commands.parallel(
-                superstructure.toGoal(Superstructure.Goal.EJECT),
+        return Commands.deadline(
                 intake
                         .runStopCommand()
                         .until(superstructure.atGoalTrigger)
                         .withTimeout(6)
                         .andThen(intake.runEjectInCommand()
-                                .withTimeout(4))
+                                .withTimeout(4)),
+                superstructure.toGoal(Superstructure.Goal.EJECT)
         );
     }
 
     public Command runEjectIntake() {
-        return Commands.parallel(
-                superstructure.toGoal(Superstructure.Goal.BACK_FEED),
+        return Commands.deadline(
                 intake
                         .runStopCommand()
                         .until(superstructure.atGoalTrigger)
                         .withTimeout(6)
-                        .andThen(intake.runEjectOutCommand())
+                        .andThen(intake.runEjectOutCommand()),
+                superstructure.toGoal(Superstructure.Goal.BACK_FEED)
         );
     }
 
     public Command amp() {
         return Commands.sequence(
-                arm.toGoal(Arm.Goal.AMP)
-                        .until(arm.atPivotSetpoint),
-                shooter.toGoal(Shooter.Goal.AMP)
-                        .until(shooter.atVelocitySetpoint)
-                        .withTimeout(4),
-                intake.feedCommand()
+                intake.feedHalfCommand(),
+                Commands.deadline(
+//                        Commands.waitUntil(superstructure.atGoalTrigger)
+                        Commands.waitSeconds(2)
+                                .andThen(intake.feedCommand())
+                                .andThen(Commands.waitSeconds(0.5)),
+                        superstructure.toGoal(Superstructure.Goal.AMP)
+                )
         );
     }
 
     public Command stopAndShoot() {
         return Commands.deadline(
                 Commands.parallel(
-                        superstructure.toState(() -> ShotParameters.get(
-                                swerve.getPose()
-                                        .minus(FieldConstants.getSpeakerPose())
-                                        .getTranslation()
-                                        .getNorm())
-                        ),
+                        superstructure.runState(() -> ShotParameters.get(
+//                                swerve.getPose()
+//                                        .minus(FieldConstants.getSpeakerPose())
+//                                        .getTranslation()
+//                                        .getNorm()
+                                4
+                        )),
                         intake
                                 .runStopCommand()
-                                .until(superstructure.atGoalTrigger.and(swerve.atHeadingSetpoint))
+//                                .until(superstructure.atGoalTrigger.and(swerve.atHeadingSetpoint))
+                                .until(superstructure.atGoalTrigger)
+                                .withTimeout(4)
                                 .andThen(intake.feedCommand())
+
                 ),
-                swerve.teleopFacingAngleCommand(
-                        () -> 0,
-                        () -> 0,
-                        () -> swerve.getPose()
-                                .getTranslation()
-                                .minus(FieldConstants.getSpeakerPose().getTranslation())
-                                .getAngle()
-                )
+                Commands.idle()
+//                swerve.teleopFacingAngleCommand(
+//                        () -> 0,
+//                        () -> 0,
+//                        () -> swerve.getPose()
+//                                .getTranslation()
+//                                .minus(FieldConstants.getSpeakerPose().getTranslation())
+//                                .getAngle()
+//                )
         );
     }
 
@@ -147,7 +158,7 @@ public class RobotContainer {
         //noinspection SuspiciousNameCombination
         return Commands.deadline(
                 Commands.parallel(
-                        superstructure.toState(() -> ShotParameters.get(
+                        superstructure.runState(() -> ShotParameters.get(
                                 swerve.getPose()
                                         .minus(FieldConstants.getSpeakerPose())
                                         .getTranslation()
@@ -170,45 +181,57 @@ public class RobotContainer {
     }
 
     public void configureAutos() {
-        autoChooser.addAutoOption(new AutoOption(
-                "SourceSpeaker0",
-                autos.sourceSpeaker0(),
-                Constants.CompetitionType.COMPETITION
-        ));
-        autoChooser.addAutoOption(new AutoOption(
-                "SourceSpeaker0Center1",
-                autos.sourceSpeaker0Center1(),
-                Constants.CompetitionType.COMPETITION
-        ));
-        autoChooser.addAutoOption(new AutoOption(
-                "SourceSpeaker0Center1_2",
-                autos.sourceSpeaker0Center1_2(),
-                Constants.CompetitionType.COMPETITION
-        ));
-        autoChooser.addAutoOption(new AutoOption(
-                "Walton",
-                autos.walton(),
-                Constants.CompetitionType.COMPETITION
-        ));
-        autoChooser.addAutoOption(new AutoOption(
-                "Speaker0_1_2",
-                autos.speaker_0_1_2(),
-                Constants.CompetitionType.COMPETITION
-        ));
-        autoChooser.addAutoOption(new AutoOption(
-                "AmpSpeaker2Center3",
-                autos.ampSpeaker2Center3(),
-                Constants.CompetitionType.COMPETITION
-        ));
+//        autoChooser.addAutoOption(new AutoOption(
+//                "SourceSpeaker0",
+//                autos.sourceSpeaker0(),
+//                Constants.CompetitionType.COMPETITION
+//        ));
+//        autoChooser.addAutoOption(new AutoOption(
+//                "SourceSpeaker0Center1",
+//                autos.sourceSpeaker0Center1(),
+//                Constants.CompetitionType.COMPETITION
+//        ));
+//        autoChooser.addAutoOption(new AutoOption(
+//                "SourceSpeaker0Center1_2",
+//                autos.sourceSpeaker0Center1_2(),
+//                Constants.CompetitionType.COMPETITION
+//        ));
+//        autoChooser.addAutoOption(new AutoOption(
+//                "Walton",
+//                autos.walton(),
+//                Constants.CompetitionType.COMPETITION
+//        ));
+//        autoChooser.addAutoOption(new AutoOption(
+//                "Speaker0_1_2",
+//                autos.speaker0_1_2(),
+//                Constants.CompetitionType.COMPETITION
+//        ));
+//        autoChooser.addAutoOption(new AutoOption(
+//                "AmpSpeaker2Center3",
+//                autos.ampSpeaker2Center3(),
+//                Constants.CompetitionType.COMPETITION
+//        ));
+//        autoChooser.addAutoOption(new AutoOption(
+//                "ShootAndMobility",
+//                autos.shootAndMobility(),
+//                Constants.CompetitionType.COMPETITION
+//        ));
     }
 
     public void configureButtonBindings() {
-        this.driverController.leftTrigger().whileTrue(intake.intakeCommand());
+        this.driverController.leftTrigger().whileTrue(amp());
         this.driverController.rightTrigger().whileTrue(stopAndShoot());
 
-        this.driverController.a().whileTrue(amp());
-
-        this.driverController.y().onTrue(swerve.zeroRotationCommand());
+        final XboxController driverHID = driverController.getHID();
+        this.driverController.a().whileTrue(
+                intake.intakeCommand(
+                        Commands.startEnd(
+                                () -> driverHID.setRumble(GenericHID.RumbleType.kBothRumble, 0.5),
+                                () -> driverHID.setRumble(GenericHID.RumbleType.kBothRumble, 0)
+                        ).withTimeout(0.5)
+                )
+        );
+        this.driverController.y().onTrue(Commands.runOnce(swerve::zeroRotation));
 
         this.driverController.leftBumper().whileTrue(
                 Commands.startEnd(
@@ -226,9 +249,20 @@ public class RobotContainer {
 
         this.coDriverController.y().whileTrue(runEjectShooter());
         this.coDriverController.a().whileTrue(runEjectIntake());
+//        this.coDriverController.leftBumper().onTrue(Commands.runOnce(SignalLogger::stop));
+
+//        this.coDriverController.y().whileTrue(swerve.linearTorqueCurrentSysIdQuasistaticCommand(SysIdRoutine.Direction.kForward));
+//        this.coDriverController.a().whileTrue(swerve.linearTorqueCurrentSysIdQuasistaticCommand(SysIdRoutine.Direction.kReverse));
+//        this.coDriverController.b().whileTrue(swerve.linearTorqueCurrentSysIdDynamicCommand(SysIdRoutine.Direction.kForward));
+//        this.coDriverController.x().whileTrue(swerve.linearTorqueCurrentSysIdDynamicCommand(SysIdRoutine.Direction.kReverse));
     }
 
     public Command getAutonomousCommand() {
-        return autoChooser.getSelected().autoCommand();
+//        return autoChooser.getSelected().autoCommand();
+        return Commands.sequence(
+                arm.homePivotCommand()
+//                autos.shootAndMobility()
+        );
+//        return autos.shootAndMobility();
     }
 }

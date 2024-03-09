@@ -122,8 +122,8 @@ public class HardwareConstants {
             15,
             0,
             112.5,
-            Units.degreesToRotations(0),
-            Units.degreesToRotations(100)
+            0.05,
+            0.265
     );
 
     public record ShooterConstants(

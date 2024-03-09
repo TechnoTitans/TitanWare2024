@@ -54,7 +54,7 @@ public class Arm extends SubsystemBase {
     public enum Goal {
         ZERO(0),
         STOW(Units.degreesToRotations(10)),
-        AMP(Units.degreesToRotations(90)),
+        AMP(Units.degreesToRotations(96)),
         SUBWOOFER(Units.degreesToRotations(55));
 
         private final double pivotPositionGoal;
@@ -76,7 +76,7 @@ public class Arm extends SubsystemBase {
 
         this.inputs = new ArmIOInputsAutoLogged();
         this.voltageSysIdRoutine = makeVoltageSysIdRoutine(
-                Volts.of(2).per(Second),
+                Volts.of(4).per(Second),
                 Volts.of(10),
                 Seconds.of(6)
         );
@@ -125,18 +125,18 @@ public class Arm extends SubsystemBase {
     }
 
     private boolean atPivotLowerLimit() {
-        return inputs.pivotLowerLimitSwitch
-                || inputs.leftPivotPositionRots <= pivotSoftLowerLimit.pivotPositionRots
+        return inputs.leftPivotPositionRots <= pivotSoftLowerLimit.pivotPositionRots
                 || inputs.rightPivotPositionRots <= pivotSoftLowerLimit.pivotPositionRots;
     }
 
     private boolean atPivotUpperLimit() {
-        return inputs.leftPivotPositionRots >= pivotSoftUpperLimit.pivotPositionRots
+        return inputs.pivotUpperLimitSwitch
+                || inputs.leftPivotPositionRots >= pivotSoftUpperLimit.pivotPositionRots
                 || inputs.rightPivotPositionRots >= pivotSoftUpperLimit.pivotPositionRots;
     }
 
     public Command toGoal(final Goal goal) {
-        return startEnd(() -> this.goal = goal, () -> this.goal = Goal.STOW);
+        return runEnd(() -> this.goal = goal, () -> this.goal = Goal.STOW);
     }
 
     public Command toPivotPositionCommand(final DoubleSupplier pivotPositionRots) {
@@ -146,8 +146,8 @@ public class Arm extends SubsystemBase {
         });
     }
 
-    public Command toPivotVoltageCommand(final DoubleSupplier pivotVoltageVolts) {
-        return run(() -> armIO.toPivotVoltage(pivotVoltageVolts.getAsDouble()));
+    public Command runPivotVoltageCommand(final double pivotVoltageVolts) {
+        return run(() -> armIO.toPivotVoltage(pivotVoltageVolts));
     }
 
     public Command homePivotCommand() {
@@ -155,14 +155,18 @@ public class Arm extends SubsystemBase {
         //  and potentially do a 2nd, slower, pass to be more accurate
         return Commands.sequence(
                 startEnd(
-                        () -> armIO.toPivotVoltage(-3),
+                        () -> armIO.toPivotVoltage(2),
                         () -> armIO.toPivotVoltage(0)
-                ).until(() -> inputs.pivotLowerLimitSwitch),
+                ).until(() -> inputs.pivotUpperLimitSwitch),
                 runOnce(() -> {
-                    armIO.setPivotPosition(0);
+                    armIO.setPivotPosition(0.237);
                     armIO.configureSoftLimits(pivotSoftLowerLimit, pivotSoftUpperLimit);
                 })
         );
+    }
+
+    public void setPivotPosition(final double pivotPositionRots) {
+        armIO.setPivotPosition(pivotPositionRots);
     }
 
     private SysIdRoutine makeVoltageSysIdRoutine(
@@ -212,7 +216,7 @@ public class Arm extends SubsystemBase {
                 Commands.waitSeconds(4),
                 sysIdRoutine.quasistatic(SysIdRoutine.Direction.kReverse)
                         .until(atPivotLowerLimit),
-                Commands.waitSeconds(6),
+                Commands.waitSeconds(4),
                 sysIdRoutine.dynamic(SysIdRoutine.Direction.kForward)
                         .until(atPivotUpperLimit),
                 Commands.waitSeconds(4),

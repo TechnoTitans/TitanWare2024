@@ -125,7 +125,7 @@ public class IntakeIOReal implements IntakeIO {
     public void config() {
         final TalonFXConfiguration rightRollerConfig = new TalonFXConfiguration();
         rightRollerConfig.Slot0 = new Slot0Configs()
-                .withKP(0)
+                .withKP(12)
                 .withKA(0)
                 .withKV(0)
                 .withKS(0);
@@ -145,7 +145,7 @@ public class IntakeIOReal implements IntakeIO {
 
         final TalonFXConfiguration leftRollerConfig = new TalonFXConfiguration();
         leftRollerConfig.Slot0 = new Slot0Configs()
-                .withKP(0)
+                .withKP(12)
                 .withKA(0)
                 .withKV(0)
                 .withKS(0);
@@ -165,7 +165,7 @@ public class IntakeIOReal implements IntakeIO {
 
         final TalonFXConfiguration shooterFeederConfig = new TalonFXConfiguration();
         shooterFeederConfig.Slot0 = new Slot0Configs()
-                .withKP(0)
+                .withKP(12)
                 .withKA(0)
                 .withKV(0)
                 .withKS(0);

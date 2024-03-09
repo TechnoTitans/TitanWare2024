@@ -10,7 +10,7 @@ import edu.wpi.first.math.util.Units;
 import org.photonvision.PhotonPoseEstimator;
 
 public interface Constants {
-    RobotMode CURRENT_MODE = RobotMode.SIM;
+    RobotMode CURRENT_MODE = RobotMode.REAL;
     CompetitionType CURRENT_COMPETITION_TYPE = CompetitionType.COMPETITION;
     double LOOP_PERIOD_SECONDS = 0.02;
 
@@ -82,15 +82,15 @@ public interface Constants {
         //L = Left, R = Right, F = Forward, B = Backward (Facing)
         Transform3d ROBOT_TO_FL_APRILTAG_CAM = new Transform3d( // X Z Y
                 new Translation3d(Units.inchesToMeters(11.862), Units.inchesToMeters(12.681), Units.inchesToMeters(8.947)),
-                new Rotation3d(Units.degreesToRadians(172.57530061265695), Units.degreesToRadians(-25), Units.degreesToRadians(25))
+                new Rotation3d(Units.degreesToRadians(-7.44802852475369), Units.degreesToRadians(-25), Units.degreesToRadians(25))
         );
 
         /**
          * Standard deviations of the supplied pose estimate (before vision, likely to be solely wheel odometry)
          */
-        Vector<N3> STATE_STD_DEVS = VecBuilder.fill(0.1, 0.1, Units.degreesToRadians(5));
-        Vector<N3> VISION_MEASUREMENT_STD_DEVS = VecBuilder.fill(0.9, 0.9, Units.degreesToRadians(80));
-        double MULTI_TAG_MAX_AMBIGUITY = 0.3;
+        Vector<N3> STATE_STD_DEVS = VecBuilder.fill(0.1, 0.1, Units.degreesToRadians(0.5));
+        Vector<N3> VISION_MEASUREMENT_STD_DEVS = VecBuilder.fill(0.9, 0.9, Units.degreesToRadians(90));
+        double MULTI_TAG_MAX_AMBIGUITY = 0.5;
         double SINGLE_TAG_MAX_AMBIGUITY = 0.2;
     }
 }

@@ -13,6 +13,7 @@ import frc.robot.constants.HardwareConstants;
 import frc.robot.utils.logging.LogUtils;
 import org.littletonrobotics.junction.Logger;
 
+import java.util.function.BooleanSupplier;
 import java.util.function.DoubleSupplier;
 
 import static edu.wpi.first.units.Units.*;
@@ -43,8 +44,8 @@ public class Shooter extends SubsystemBase {
         IDLE(40, 40, 40),
         EJECT(80, 80, 80),
         BACK_FEED(-60, -60, -60),
-        AMP(4, 4, 4),
-        SUBWOOFER(60, 60, 60);
+        AMP(60, -60, -60),
+        SUBWOOFER(80, 80, 80);
 
         private final double ampVelocity;
         private final double leftFlywheelVelocity;
@@ -153,7 +154,7 @@ public class Shooter extends SubsystemBase {
     }
 
     public Command toGoal(final Goal goal) {
-        return runOnce(() -> this.goal = goal);
+        return runEnd(() -> this.goal = goal, () -> this.goal = Goal.IDLE);
     }
 
     public Command toVelocityCommand(
@@ -174,15 +175,15 @@ public class Shooter extends SubsystemBase {
         });
     }
 
-    public Command toVoltageCommand(
-            final DoubleSupplier ampVoltage,
-            final DoubleSupplier leftFlywheelVoltage,
-            final DoubleSupplier rightFlywheelVoltage
+    public Command runVoltageCommand(
+            final double ampVoltage,
+            final double leftFlywheelVoltage,
+            final double rightFlywheelVoltage
     ) {
         return run(() -> shooterIO.toVoltage(
-                ampVoltage.getAsDouble(),
-                leftFlywheelVoltage.getAsDouble(),
-                rightFlywheelVoltage.getAsDouble()
+                ampVoltage,
+                leftFlywheelVoltage,
+                rightFlywheelVoltage
         ));
     }
 
@@ -237,16 +238,21 @@ public class Shooter extends SubsystemBase {
     }
 
     private Command makeSysIdCommand(final SysIdRoutine sysIdRoutine) {
+        final BooleanSupplier isStopped = () ->
+                MathUtil.isNear(0, inputs.ampVelocityRotsPerSec, 1e-2)
+                        && MathUtil.isNear(0, inputs.leftVelocityRotsPerSec, 1e-2)
+                        && MathUtil.isNear(0, inputs.rightVelocityRotsPerSec, 1e-2);
+
         return Commands.sequence(
                 sysIdRoutine.quasistatic(SysIdRoutine.Direction.kForward)
                         .withTimeout(10),
-                Commands.waitSeconds(4),
+                Commands.waitUntil(isStopped),
                 sysIdRoutine.quasistatic(SysIdRoutine.Direction.kReverse)
                         .withTimeout(10),
-                Commands.waitSeconds(6),
+                Commands.waitUntil(isStopped),
                 sysIdRoutine.dynamic(SysIdRoutine.Direction.kForward)
                         .withTimeout(6),
-                Commands.waitSeconds(4),
+                Commands.waitUntil(isStopped),
                 sysIdRoutine.dynamic(SysIdRoutine.Direction.kReverse)
                         .withTimeout(6)
         );

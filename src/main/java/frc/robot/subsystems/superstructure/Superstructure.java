@@ -19,6 +19,7 @@ public class Superstructure {
     public enum Goal {
         IDLE(Arm.Goal.STOW, Shooter.Goal.IDLE),
         SUBWOOFER(Arm.Goal.SUBWOOFER, Shooter.Goal.SUBWOOFER),
+        AMP(Arm.Goal.AMP, Shooter.Goal.AMP),
         EJECT(Arm.Goal.STOW, Shooter.Goal.EJECT),
         BACK_FEED(Arm.Goal.STOW, Shooter.Goal.BACK_FEED);
 
@@ -44,8 +45,8 @@ public class Superstructure {
         );
     }
 
-    public Command toState(final Supplier<ShotParameters.Parameters> parametersSupplier) {
-        return toState(
+    public Command runState(final Supplier<ShotParameters.Parameters> parametersSupplier) {
+        return runState(
                 () -> parametersSupplier.get().armPivotAngle(),
                 () -> parametersSupplier.get().ampVelocityRotsPerSec(),
                 () -> parametersSupplier.get().leftVelocityRotsPerSec(),
@@ -53,7 +54,7 @@ public class Superstructure {
         );
     }
 
-    public Command toState(
+    public Command runState(
             final Supplier<Rotation2d> armPivotPosition,
             final DoubleSupplier ampVelocityRotsPerSec,
             final DoubleSupplier leftVelocityRotsPerSec,
@@ -65,15 +66,15 @@ public class Superstructure {
         );
     }
 
-    public Command toVoltage(
-            final DoubleSupplier armPivotVolts,
-            final DoubleSupplier ampVolts,
-            final DoubleSupplier leftVolts,
-            final DoubleSupplier rightVolts
+    public Command runVoltageCommand(
+            final double armPivotVolts,
+            final double ampVolts,
+            final double leftVolts,
+            final double rightVolts
     ) {
         return Commands.parallel(
-                arm.toPivotVoltageCommand(armPivotVolts),
-                shooter.toVoltageCommand(
+                arm.runPivotVoltageCommand(armPivotVolts),
+                shooter.runVoltageCommand(
                         ampVolts,
                         leftVolts,
                         rightVolts

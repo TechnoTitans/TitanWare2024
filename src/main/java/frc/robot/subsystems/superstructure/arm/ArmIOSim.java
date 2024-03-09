@@ -209,7 +209,7 @@ public class ArmIOSim implements ArmIO {
                 _rightDeviceTemp
         );
 
-        inputs.pivotLowerLimitSwitch = pivotLowerLimitSwitch.get();
+        inputs.pivotUpperLimitSwitch = pivotLowerLimitSwitch.get();
 
         inputs.leftPivotPositionRots = _leftPosition.getValue();
         inputs.leftPivotVelocityRotsPerSec = _leftVelocity.getValue();

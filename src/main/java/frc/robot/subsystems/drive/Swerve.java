@@ -150,7 +150,7 @@ public class Swerve extends SubsystemBase {
 
         this.poseEstimator = new SwerveDrivePoseEstimator(
                 kinematics,
-                getYaw(),
+                getGyro().getYawRotation2d(),
                 getModulePositions(),
                 new Pose2d(),
                 Constants.Vision.STATE_STD_DEVS,
@@ -356,7 +356,9 @@ public class Swerve extends SubsystemBase {
     }
 
     public Rotation2d getYaw() {
-        return getPose().getRotation();
+        //TODO Figure out why these don't match
+//        return getPose().getRotation();
+        return gyro.getYawRotation2d();
     }
 
     /**
