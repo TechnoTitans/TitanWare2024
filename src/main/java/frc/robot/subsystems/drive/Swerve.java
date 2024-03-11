@@ -544,25 +544,32 @@ public class Swerve extends SubsystemBase {
                     rotWeight
             );
 
-            drive(
-                    leftStickSpeeds.getX(),
-                    leftStickSpeeds.getY(),
-                    rot,
-                    true
-            );
+            if (Math.abs(leftStickSpeeds.getNorm()) <= 0.01 && Math.abs(rot) <= 0.01) {
+                wheelX();
+            } else {
+                drive(
+                        leftStickSpeeds.getX(),
+                        leftStickSpeeds.getY(),
+                        rot,
+                        true
+                );
+            }
         });
     }
 
     public Command faceAngle(final Supplier<Rotation2d> rotationTargetSupplier) {
         return Commands.sequence(
                 runOnce(() -> headingController.reset(
-                        getYaw().getRadians(),
+                        getPose().getRotation().getRadians(),
                         getFieldRelativeSpeeds().omegaRadiansPerSecond)
                 ),
                 run(() -> drive(
                         0,
                         0,
-                        headingController.calculate(getYaw().getRadians(), rotationTargetSupplier.get().getRadians()),
+                        headingController.calculate(
+                                getPose().getRotation().getRadians(),
+                                rotationTargetSupplier.get().getRadians()
+                        ),
                         true
                 ))
         );
@@ -647,9 +654,9 @@ public class Swerve extends SubsystemBase {
         return Choreo.choreoSwerveCommand(
                 choreoTrajectory,
                 this::getPose,
-                new PIDController(5, 0, 0),
-                new PIDController(5, 0, 0),
-                new PIDController(5, 0, 0),
+                new PIDController(10, 0, 0),
+                new PIDController(10, 0, 0),
+                new PIDController(10, 0, 0),
                 this::drive,
                 () -> {
                     final Optional<DriverStation.Alliance> alliance = DriverStation.getAlliance();

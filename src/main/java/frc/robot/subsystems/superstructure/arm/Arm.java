@@ -56,8 +56,8 @@ public class Arm extends SubsystemBase {
     public enum Goal {
         ZERO(0),
         STOW(Units.degreesToRotations(10)),
-        AMP(Units.degreesToRotations(96)),
-        SUBWOOFER(Units.degreesToRotations(55));
+        AMP(Units.degreesToRotations(94)),
+        SUBWOOFER(Units.degreesToRotations(56.5));
 
         private final double pivotPositionGoal;
         Goal(final double pivotPositionGoal) {

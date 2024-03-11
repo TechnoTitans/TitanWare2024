@@ -4,9 +4,11 @@ import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.GenericHID;
 import edu.wpi.first.wpilibj.PowerDistribution;
 import edu.wpi.first.wpilibj.XboxController;
+import edu.wpi.first.wpilibj.event.EventLoop;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
+import edu.wpi.first.wpilibj2.command.button.Trigger;
 import frc.robot.auto.AutoChooser;
 import frc.robot.auto.AutoOption;
 import frc.robot.auto.Autos;
@@ -77,7 +79,7 @@ public class RobotContainer {
         this.autoChooser = new AutoChooser<>(
                 new AutoOption(
                         "DoNothing",
-                        Commands.waitUntil(() -> !DriverStation.isAutonomousEnabled()),
+                        autos.doNothing(),
                         Constants.CompetitionType.COMPETITION
                 )
         );
@@ -109,7 +111,7 @@ public class RobotContainer {
         );
     }
 
-    public Command amp() {
+    public Command driveAndAmp() {
         return Commands.deadline(
                 Commands.sequence(
                         Commands.waitUntil(swerve.atHolonomicDrivePose)
@@ -124,6 +126,19 @@ public class RobotContainer {
                         )
                 ),
                 swerve.driveToPose(FieldConstants::getAmpScoringPose)
+        );
+    }
+
+    public Command amp() {
+        return Commands.sequence(
+                intake.feedHalfCommand(),
+                Commands.deadline(
+                        Commands.waitUntil(superstructure.atSetpoint)
+                                .andThen(Commands.waitSeconds(0.5))
+                                .andThen(intake.feedCommand())
+                                .andThen(Commands.waitSeconds(0.5)),
+                        superstructure.toGoal(Superstructure.Goal.AMP)
+                )
         );
     }
 
@@ -196,19 +211,24 @@ public class RobotContainer {
                 Constants.CompetitionType.COMPETITION
         ));
         autoChooser.addAutoOption(new AutoOption(
+                "AmpSpeaker0",
+                autos.ampSpeaker0(),
+                Constants.CompetitionType.COMPETITION
+        ));
+        autoChooser.addAutoOption(new AutoOption(
                 "SourceSpeaker0Center1",
                 autos.sourceSpeaker0Center1(),
-                Constants.CompetitionType.COMPETITION
+                Constants.CompetitionType.TESTING
         ));
         autoChooser.addAutoOption(new AutoOption(
                 "SourceSpeaker0Center1_2",
                 autos.sourceSpeaker0Center1_2(),
-                Constants.CompetitionType.COMPETITION
+                Constants.CompetitionType.TESTING
         ));
         autoChooser.addAutoOption(new AutoOption(
                 "Walton",
                 autos.walton(),
-                Constants.CompetitionType.COMPETITION
+                Constants.CompetitionType.TESTING
         ));
         autoChooser.addAutoOption(new AutoOption(
                 "Speaker0_1_2",
@@ -218,7 +238,7 @@ public class RobotContainer {
         autoChooser.addAutoOption(new AutoOption(
                 "AmpSpeaker2Center3",
                 autos.ampSpeaker2Center3(),
-                Constants.CompetitionType.COMPETITION
+                Constants.CompetitionType.TESTING
         ));
         autoChooser.addAutoOption(new AutoOption(
                 "ShootAndMobility",
@@ -230,6 +250,15 @@ public class RobotContainer {
     public void configureButtonBindings() {
         this.driverController.leftTrigger().whileTrue(amp());
         this.driverController.rightTrigger().whileTrue(shootSubwoofer());
+
+//        this.driverController.x().whileTrue(driveAndAmp());
+
+//        this.coDriverController.b().whileTrue(swerve.faceAngle(() ->
+//                swerve.getPose()
+//                        .getTranslation()
+//                        .minus(FieldConstants.getSpeakerPose().getTranslation())
+//                        .getAngle()
+//        ));
 
         final XboxController driverHID = driverController.getHID();
         this.driverController.a().whileTrue(
@@ -266,12 +295,8 @@ public class RobotContainer {
 //        this.coDriverController.x().whileTrue(swerve.linearTorqueCurrentSysIdDynamicCommand(SysIdRoutine.Direction.kReverse));
     }
 
-    public Command getAutonomousCommand() {
-//        return autoChooser.getSelected().autoCommand();
-        return Commands.sequence(
-                arm.homePivotCommand(),
-                autoChooser.getSelected().autoCommand()
-        );
+    public EventLoop getAutonomousEventLoop() {
+        return autoChooser.getSelected().autoEventLoop();
 //        return autos.shootAndMobility();
     }
 }

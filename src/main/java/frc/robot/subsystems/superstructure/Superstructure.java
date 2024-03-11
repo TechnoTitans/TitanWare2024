@@ -38,6 +38,12 @@ public class Superstructure {
         this.atSetpoint = arm.atPivotSetpoint.and(shooter.atVelocitySetpoint);
     }
 
+    public Command home() {
+        return Commands.sequence(
+                arm.homePivotCommand()
+        );
+    }
+
     public Command toGoal(final Goal goal) {
         return Commands.parallel(
                 arm.toGoal(goal.armGoal),

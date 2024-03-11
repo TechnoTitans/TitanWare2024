@@ -10,7 +10,7 @@ import edu.wpi.first.math.util.Units;
 import org.photonvision.PhotonPoseEstimator;
 
 public interface Constants {
-    RobotMode CURRENT_MODE = RobotMode.SIM;
+    RobotMode CURRENT_MODE = RobotMode.REAL;
     CompetitionType CURRENT_COMPETITION_TYPE = CompetitionType.COMPETITION;
     double LOOP_PERIOD_SECONDS = 0.02;
 
@@ -88,8 +88,8 @@ public interface Constants {
         /**
          * Standard deviations of the supplied pose estimate (before vision, likely to be solely wheel odometry)
          */
-        Vector<N3> STATE_STD_DEVS = VecBuilder.fill(0.1, 0.1, Units.degreesToRadians(0.5));
-        Vector<N3> VISION_MEASUREMENT_STD_DEVS = VecBuilder.fill(0.9, 0.9, Units.degreesToRadians(90));
+        Vector<N3> STATE_STD_DEVS = VecBuilder.fill(0.1, 0.1, Units.degreesToRadians(1));
+        Vector<N3> VISION_MEASUREMENT_STD_DEVS = VecBuilder.fill(0.6, 0.6, Units.degreesToRadians(30));
         double MULTI_TAG_MAX_AMBIGUITY = 0.5;
         double SINGLE_TAG_MAX_AMBIGUITY = 0.2;
     }

@@ -99,7 +99,7 @@ public class Intake extends SubsystemBase {
     }
 
     public Command intakeCommand() {
-        return intakeCommand(Commands.runOnce(() -> {}));
+        return intakeCommand(Commands.none());
     }
 
     public Command feedHalfCommand() {

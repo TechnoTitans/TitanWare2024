@@ -3,8 +3,8 @@ package frc.robot;
 import com.ctre.phoenix6.SignalLogger;
 import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.RobotBase;
+import edu.wpi.first.wpilibj.event.EventLoop;
 import edu.wpi.first.wpilibj.livewindow.LiveWindow;
-import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.CommandScheduler;
 import frc.robot.constants.Constants;
 import frc.robot.constants.FieldConstants;
@@ -28,7 +28,7 @@ public class Robot extends LoggedRobot {
     private static final String HootLogPath = "/U/logs";
 
     private RobotContainer robotContainer;
-    private Command autonomousCommand;
+    private EventLoop autonomousEventLoop;
 
     @Override
     public void robotInit() {
@@ -141,20 +141,20 @@ public class Robot extends LoggedRobot {
 
     @Override
     public void autonomousInit() {
-        autonomousCommand = robotContainer.getAutonomousCommand();
+        autonomousEventLoop = robotContainer.getAutonomousEventLoop();
+    }
 
-        if (autonomousCommand != null) {
-            autonomousCommand.schedule();
+    @Override
+    public void autonomousPeriodic() {
+        if (autonomousEventLoop != null) {
+            autonomousEventLoop.poll();
         }
     }
 
     @Override
-    public void autonomousPeriodic() {}
-
-    @Override
     public void teleopInit() {
-        if (autonomousCommand != null) {
-            autonomousCommand.cancel();
+        if (autonomousEventLoop != null) {
+            autonomousEventLoop.clear();
         }
 
         //noinspection SuspiciousNameCombination
