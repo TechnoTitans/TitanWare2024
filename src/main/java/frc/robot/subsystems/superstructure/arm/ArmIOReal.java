@@ -122,7 +122,7 @@ public class ArmIOReal implements ArmIO {
         rightPivotMotor.getConfigurator().apply(rightTalonFXConfiguration);
 
         BaseStatusSignal.setUpdateFrequencyForAll(
-                250,
+                100,
                 _leftPosition,
                 _leftVelocity,
                 _leftVoltage,
