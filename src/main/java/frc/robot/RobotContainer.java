@@ -1,6 +1,5 @@
 package frc.robot;
 
-import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.GenericHID;
 import edu.wpi.first.wpilibj.PowerDistribution;
 import edu.wpi.first.wpilibj.XboxController;
@@ -8,7 +7,6 @@ import edu.wpi.first.wpilibj.event.EventLoop;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
-import edu.wpi.first.wpilibj2.command.button.Trigger;
 import frc.robot.auto.AutoChooser;
 import frc.robot.auto.AutoOption;
 import frc.robot.auto.Autos;
@@ -37,7 +35,7 @@ public class RobotContainer {
     public final Superstructure superstructure;
 
     public final Autos autos;
-    private final AutoChooser<String, AutoOption> autoChooser;
+    public final AutoChooser<String, AutoOption> autoChooser;
 
     public final PhotonVision photonVision;
 
@@ -83,9 +81,6 @@ public class RobotContainer {
                         Constants.CompetitionType.COMPETITION
                 )
         );
-
-        configureAutos();
-        configureButtonBindings();
     }
 
     public Command runEjectShooter() {
@@ -232,7 +227,7 @@ public class RobotContainer {
         ));
         autoChooser.addAutoOption(new AutoOption(
                 "Speaker0_1_2",
-                autos.speaker0_1_2(),
+                autos.speaker0_1_2_path(),
                 Constants.CompetitionType.COMPETITION
         ));
         autoChooser.addAutoOption(new AutoOption(
@@ -247,9 +242,9 @@ public class RobotContainer {
         ));
     }
 
-    public void configureButtonBindings() {
-        this.driverController.leftTrigger().whileTrue(amp());
-        this.driverController.rightTrigger().whileTrue(shootSubwoofer());
+    public void configureButtonBindings(final EventLoop teleopEventLoop) {
+        this.driverController.leftTrigger(0.5, teleopEventLoop).whileTrue(amp());
+        this.driverController.rightTrigger(0.5, teleopEventLoop).whileTrue(shootSubwoofer());
 
 //        this.driverController.x().whileTrue(driveAndAmp());
 
@@ -261,7 +256,7 @@ public class RobotContainer {
 //        ));
 
         final XboxController driverHID = driverController.getHID();
-        this.driverController.a().whileTrue(
+        this.driverController.a(teleopEventLoop).whileTrue(
                 intake.intakeCommand(
                         Commands.startEnd(
                                 () -> driverHID.setRumble(GenericHID.RumbleType.kBothRumble, 0.5),
@@ -269,30 +264,24 @@ public class RobotContainer {
                         ).withTimeout(0.5)
                 )
         );
-        this.driverController.y().onTrue(swerve.zeroRotationCommand());
+        this.driverController.y(teleopEventLoop).onTrue(swerve.zeroRotationCommand());
 
-        this.driverController.leftBumper().whileTrue(
+        this.driverController.leftBumper(teleopEventLoop).whileTrue(
                 Commands.startEnd(
                         () -> Profiler.setSwerveSpeed(Profiler.SwerveSpeed.FAST),
                         () -> Profiler.setSwerveSpeed(Profiler.SwerveSpeed.NORMAL)
                 )
         );
 
-        this.driverController.rightBumper().whileTrue(
+        this.driverController.rightBumper(teleopEventLoop).whileTrue(
                 Commands.startEnd(
                         () -> Profiler.setSwerveSpeed(Profiler.SwerveSpeed.SLOW),
                         () -> Profiler.setSwerveSpeed(Profiler.SwerveSpeed.NORMAL)
                 )
         );
 
-        this.coDriverController.y().whileTrue(runEjectShooter());
-        this.coDriverController.a().whileTrue(runEjectIntake());
-//        this.coDriverController.leftBumper().onTrue(Commands.runOnce(SignalLogger::stop));
-
-//        this.coDriverController.y().whileTrue(swerve.linearTorqueCurrentSysIdQuasistaticCommand(SysIdRoutine.Direction.kForward));
-//        this.coDriverController.a().whileTrue(swerve.linearTorqueCurrentSysIdQuasistaticCommand(SysIdRoutine.Direction.kReverse));
-//        this.coDriverController.b().whileTrue(swerve.linearTorqueCurrentSysIdDynamicCommand(SysIdRoutine.Direction.kForward));
-//        this.coDriverController.x().whileTrue(swerve.linearTorqueCurrentSysIdDynamicCommand(SysIdRoutine.Direction.kReverse));
+        this.coDriverController.y(teleopEventLoop).whileTrue(runEjectShooter());
+        this.coDriverController.a(teleopEventLoop).whileTrue(runEjectIntake());
     }
 
     public EventLoop getAutonomousEventLoop() {

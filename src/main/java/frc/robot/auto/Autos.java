@@ -27,7 +27,7 @@ import java.util.function.DoubleSupplier;
 import java.util.function.Supplier;
 
 public class Autos {
-    private static final double TranslationToleranceMeters = 0.1;
+    private static final double TranslationToleranceMeters = 0.5;
     private static final double TimeToleranceSeconds = 0.1;
 
     private static final BooleanSupplier IsRedAlliance = () -> {
@@ -120,7 +120,8 @@ public class Autos {
                 intake
                         .runStopCommand()
                         .until(superstructure.atSetpoint)
-                        .andThen(intake.feedCommand()),
+                        .andThen(intake.feedCommand())
+                        .andThen(Commands.waitSeconds(0.2)),
                 superstructure.toGoal(Superstructure.Goal.SUBWOOFER)
         );
     }
@@ -131,7 +132,7 @@ public class Autos {
                                 ? initialState.flipped().getPose()
                                 : initialState.getPose()
                 ),
-                Set.of(swerve)
+                Set.of()
         );
     }
 
@@ -162,22 +163,22 @@ public class Autos {
                         superstructure.home(),
                         Commands.print("shoot preload"),
                         shoot(),
-                        followPath(trajectoryGroup.get(0), timer).asProxy()
-                )
+                        followPath(trajectoryGroup.get(0), timer)
+                ).withName("PreloadAndFollow0")
         );
 
         autoTriggers.atTime(0.1).onTrue(
                 Commands.sequence(
                         Commands.print("run intake"),
                         intake.intakeCommand()
-                )
+                ).withName("Intake0")
         );
 
         autoTriggers.atTime(1.6).onTrue(
                 Commands.sequence(
                         Commands.print("Shoot"),
                         shoot()
-                )
+                ).withName("Shoot0")
         );
 
         return autoTriggers.eventLoop;
@@ -191,27 +192,13 @@ public class Autos {
         final Timer timer = new Timer();
         final AutoTriggers autoTriggers = new AutoTriggers(trajectory, swerve::getPose, timer::get);
 
+        // Kraken X60 FOC - 1.163975155279503 Nm @ 60A
         autoTriggers.autoEnabled().whileTrue(
                 Commands.sequence(
                         resetPose(trajectory.getInitialState()),
-                        superstructure.home(),
-                        Commands.print("shoot preload"),
-                        shoot(),
-                        followPath(trajectoryGroup.get(0), timer)
-                )
-        );
-
-        autoTriggers.atTime(0.1).onTrue(
-                Commands.sequence(
-                        Commands.print("run intake"),
-                        intake.intakeCommand()
-                )
-        );
-
-        autoTriggers.atTime(1.61).onTrue(
-                Commands.sequence(
-                        Commands.print("Shoot"),
-                        shoot()
+                        superstructure.home().asProxy(),
+                        shoot().withName("ShootPreload").asProxy(),
+                        followPath(trajectory, timer)
                 )
         );
 
@@ -355,6 +342,25 @@ public class Autos {
         return autoTriggers.eventLoop;
     }
 
+    public EventLoop speaker0_1_2_path() {
+        final String trajectoryName = "Speaker0_1_2";
+        final ChoreoTrajectory trajectory = Choreo.getTrajectory(trajectoryName);
+
+        final Timer timer = new Timer();
+        final AutoTriggers autoTriggers = new AutoTriggers(trajectory, swerve::getPose, timer::get);
+
+        autoTriggers.autoEnabled().whileTrue(
+                Commands.sequence(
+                        resetPose(trajectory.getInitialState()),
+                        superstructure.home().asProxy(),
+                        shoot().withName("ShootPreload").asProxy(),
+                        followPath(trajectory, timer)
+                ).withName("Follow0_1_2")
+        );
+
+        return autoTriggers.eventLoop;
+    }
+
     public EventLoop speaker0_1_2() {
         final String trajectoryName = "Speaker0_1_2";
         final ChoreoTrajectory trajectory = Choreo.getTrajectory(trajectoryName);
@@ -366,56 +372,48 @@ public class Autos {
         autoTriggers.autoEnabled().whileTrue(
                 Commands.sequence(
                         resetPose(trajectory.getInitialState()),
-                        superstructure.home(),
-                        Commands.print("shoot preload"),
-                        shoot().asProxy(),
-                        followPath(trajectoryGroup.get(0), timer).asProxy()
-                )
-
+                        superstructure.home().asProxy(),
+                        shoot().withName("ShootPreload").asProxy(),
+                        followPath(trajectoryGroup.get(0), timer)
+                ).withName("PreloadAndFollow0")
         );
 
-        autoTriggers.atTime(0.1).onTrue(
+        autoTriggers.atTime(0.3).onTrue(
                 Commands.sequence(
-                        Commands.print("run intake"),
-                        intake.intakeCommand().asProxy()
-                )
+                        intake.intakeCommand()
+                ).withName("Intake0")
         );
 
         autoTriggers.atTime(1.785).onTrue(
                 Commands.sequence(
-                        Commands.print("Shoot"),
-                        shoot().asProxy(),
-                        followPath(trajectoryGroup.get(1), timer).asProxy()
-                )
+                        shoot().withName("Shoot0").asProxy(),
+                        followPath(trajectoryGroup.get(1), timer)
+                ).withName("Shoot0AndFollow1")
         );
 
         autoTriggers.atTime(2).onTrue(
                 Commands.sequence(
-                        Commands.print("run intake"),
-                        intake.intakeCommand().asProxy()
-                )
+                        intake.intakeCommand()
+                ).withName("Intake1")
         );
 
         autoTriggers.atTime(3.165).onTrue(
                 Commands.sequence(
-                        Commands.print("shoot"),
-                        shoot().asProxy(),
-                        followPath(trajectoryGroup.get(2), timer).asProxy()
-                )
+                        shoot().withName("Shoot1").asProxy(),
+                        followPath(trajectoryGroup.get(2), timer)
+                ).withName("Shoot1AndFollow2")
         );
 
         autoTriggers.atTime(3.5).onTrue(
                 Commands.sequence(
-                        Commands.print("run intake"),
-                        intake.intakeCommand().asProxy()
-                )
+                        intake.intakeCommand()
+                ).withName("Intake2")
         );
 
         autoTriggers.atTime(5.28).onTrue(
                 Commands.sequence(
-                        Commands.print("shoot"),
-                        shoot().asProxy()
-                )
+                        shoot().withName("Shoot2").asProxy()
+                ).withName("Shoot2")
         );
 
         return autoTriggers.eventLoop;

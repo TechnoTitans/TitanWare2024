@@ -547,16 +547,16 @@ public class Swerve extends SubsystemBase {
             );
 
             // TODO: do we keep the wheelX stuff?
-            if (Math.abs(leftStickSpeeds.getNorm()) <= 0.01 && Math.abs(rot) <= 0.01) {
-                wheelX();
-            } else {
+//            if (Math.abs(leftStickSpeeds.getNorm()) <= 0.01 && Math.abs(rot) <= 0.01) {
+//                wheelX();
+//            } else {
                 drive(
                         leftStickSpeeds.getX(),
                         leftStickSpeeds.getY(),
                         rot,
                         true
                 );
-            }
+//            }
         });
     }
 
@@ -657,9 +657,9 @@ public class Swerve extends SubsystemBase {
         return Choreo.choreoSwerveCommand(
                 choreoTrajectory,
                 this::getPose,
-                new PIDController(10, 0, 0),
-                new PIDController(10, 0, 0),
-                new PIDController(10, 0, 0),
+                new PIDController(20, 0, 0),
+                new PIDController(20, 0, 0),
+                new PIDController(20, 0, 0),
                 this::drive,
                 () -> {
                     final Optional<DriverStation.Alliance> alliance = DriverStation.getAlliance();
@@ -672,9 +672,9 @@ public class Swerve extends SubsystemBase {
     private SysIdRoutine makeLinearVoltageSysIdRoutine() {
         return new SysIdRoutine(
                 new SysIdRoutine.Config(
-                        Volts.of(0.5).per(Second),
-                        Volts.of(4),
-                        Seconds.of(20),
+                        Volts.of(2).per(Second),
+                        Volts.of(6),
+                        Seconds.of(12),
                         state -> SignalLogger.writeString("state", state.toString())
                 ),
                 new SysIdRoutine.Mechanism(
