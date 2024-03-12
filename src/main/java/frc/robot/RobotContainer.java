@@ -1,10 +1,5 @@
 package frc.robot;
 
-import edu.wpi.first.math.MathUtil;
-import edu.wpi.first.math.controller.ProfiledPIDController;
-import edu.wpi.first.math.geometry.Rotation2d;
-import edu.wpi.first.math.trajectory.TrapezoidProfile;
-import edu.wpi.first.math.util.Units;
 import edu.wpi.first.wpilibj.PowerDistribution;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
@@ -20,8 +15,6 @@ import frc.robot.subsystems.superstructure.Superstructure;
 import frc.robot.subsystems.superstructure.arm.Arm;
 import frc.robot.subsystems.superstructure.shooter.Shooter;
 import frc.robot.subsystems.vision.PhotonVision;
-
-import java.util.function.Supplier;
 
 public class RobotContainer {
     public final PowerDistribution powerDistribution;
@@ -84,50 +77,53 @@ public class RobotContainer {
         );
     }
 
-    public Command teleopDriveAimAndShoot() {
-        final double rotationToleranceRadians = Units.degreesToRadians(3);
-        final ProfiledPIDController rotationController = new ProfiledPIDController(
-                5, 0, 0,
-                new TrapezoidProfile.Constraints(
-                        Constants.Swerve.ROBOT_MAX_ANGULAR_SPEED_RAD_PER_SEC * 0.75,
-                        Constants.Swerve.TELEOP_MAX_ANGULAR_SPEED_RAD_PER_SEC * 0.5
-                )
-        );
-
-        final Supplier<Rotation2d> pointAtSpeakerRotationSupplier =
-                () -> swerve.getEstimatedPosition()
-                        .getTranslation()
-                        .minus(FieldConstants.getSpeakerPose().getTranslation())
-                        .getAngle();
-
-        //noinspection SuspiciousNameCombination
-        return Commands.sequence(
-                Commands.runOnce(() -> rotationController.reset(
-                        swerve.getYaw().getRadians(),
-                        swerve.getFieldRelativeSpeeds().omegaRadiansPerSecond)
-                ),
+    public Command stopAndShoot() {
+        return Commands.deadline(
                 Commands.parallel(
-                        swerve.teleopDriveFacingAngleCommand(
-                                rotationController,
-                                driverController::getLeftY,
-                                driverController::getLeftX,
-                                pointAtSpeakerRotationSupplier
-                        ),
                         superstructure.toState(() -> ShotParameters.get(
-                                swerve.getEstimatedPosition()
+                                swerve.getPose()
                                         .minus(FieldConstants.getSpeakerPose())
                                         .getTranslation()
                                         .getNorm())
                         ),
                         intake
                                 .stopCommand()
-                                .until(superstructure.atGoalTrigger.and(
-                                        () -> MathUtil.isNear(
-                                                pointAtSpeakerRotationSupplier.get().getRadians(),
-                                                swerve.getEstimatedPosition().getRotation().getRadians(),
-                                                rotationToleranceRadians
-                                )))
+                                .until(superstructure.atGoalTrigger.and(swerve.atHeadingSetpoint))
                                 .andThen(intake.feedCommand())
+                ),
+                swerve.teleopFacingAngleCommand(
+                        () -> 0,
+                        () -> 0,
+                        () -> swerve.getPose()
+                                .getTranslation()
+                                .minus(FieldConstants.getSpeakerPose().getTranslation())
+                                .getAngle()
+                )
+        );
+    }
+
+    public Command teleopDriveAimAndShoot() {
+        //noinspection SuspiciousNameCombination
+        return Commands.deadline(
+                Commands.parallel(
+                        superstructure.toState(() -> ShotParameters.get(
+                                swerve.getPose()
+                                        .minus(FieldConstants.getSpeakerPose())
+                                        .getTranslation()
+                                        .getNorm())
+                        ).until(superstructure.atGoalTrigger),
+                        intake
+                                .stopCommand()
+                                .until(superstructure.atGoalTrigger.and(swerve.atHeadingSetpoint))
+                                .andThen(intake.feedCommand())
+                ),
+                swerve.teleopFacingAngleCommand(
+                        driverController::getLeftY,
+                        driverController::getLeftX,
+                        () -> swerve.getPose()
+                                .getTranslation()
+                                .minus(FieldConstants.getSpeakerPose().getTranslation())
+                                .getAngle()
                 )
         );
     }
