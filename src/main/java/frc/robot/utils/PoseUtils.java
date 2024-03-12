@@ -15,7 +15,7 @@ public class PoseUtils {
     public static Pose2d flip(final Pose2d pose2d) {
         final Rotation2d rotation = pose2d.getRotation();
         return new Pose2d(
-                FieldConstants.FIELD_LENGTH_X_METERS- pose2d.getX(),
+                FieldConstants.FIELD_LENGTH_X_METERS - pose2d.getX(),
                 pose2d.getY(),
                 new Rotation2d(-rotation.getCos(), rotation.getSin())
         );
