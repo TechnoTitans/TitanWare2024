@@ -23,6 +23,7 @@ public class ArmIOReal implements ArmIO {
     private final TalonFX leftPivotMotor;
     private final TalonFX rightPivotMotor;
 
+    // TODO: use MotionMagicExpoTorqueCurrentFOC
 //    private final MotionMagicExpoTorqueCurrentFOC motionMagicExpoTorqueCurrentFOC;
     private final MotionMagicExpoVoltage motionMagicExpoVoltage;
     private final TorqueCurrentFOC torqueCurrentFOC;

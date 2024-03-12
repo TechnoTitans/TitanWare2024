@@ -11,11 +11,15 @@ public class FieldConstants {
     public static final double FIELD_LENGTH_X_METERS = Units.inchesToMeters(651.223);
     public static final double FIELD_WIDTH_Y_METERS = Units.inchesToMeters(323.277);
 
+    // TODO: verify this pose
     public static final Pose2d BLUE_SPEAKER_POSE =
             new Pose2d(new Translation2d(-0.0381, 5.547868), Rotation2d.fromDegrees(0));
+
+    // TODO: verify this pose
     public static final Pose2d RED_SPEAKER_POSE =
             new Pose2d(new Translation2d(16.579342, 5.547868), Rotation2d.fromDegrees(180));
 
+    // TODO: verify this pose
     public static final Pose2d BLUE_AMP_POSE =
             new Pose2d(
                     Units.inchesToMeters(72.455),
@@ -23,14 +27,18 @@ public class FieldConstants {
                     Rotation2d.fromRadians(-Math.PI / 2)
             );
 
+    // TODO: verify this pose
     public static final Pose2d RED_AMP_POSE = PoseUtils.flip(BLUE_AMP_POSE);
 
+    // TODO: is doing this weird filter and then map stuff better than just using an if statement? I think
+    //  IntelliJ wanted me to convert it after I made the original an if statement
     public static Pose2d getAmpScoringPose() {
         return DriverStation.getAlliance()
                 .filter(value -> value == DriverStation.Alliance.Red)
                 .map(value -> RED_AMP_POSE).orElse(BLUE_AMP_POSE);
     }
 
+    // TODO: "
     public static Pose2d getSpeakerPose() {
         return DriverStation.getAlliance()
                 .filter(value -> value == DriverStation.Alliance.Red)

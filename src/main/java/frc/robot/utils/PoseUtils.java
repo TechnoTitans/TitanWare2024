@@ -11,6 +11,7 @@ public class PoseUtils {
 
     private PoseUtils() {}
 
+    // TODO: verify that this actually works how we think it works
     public static Pose2d flip(final Pose2d pose2d) {
         final Rotation2d rotation = pose2d.getRotation();
         return new Pose2d(

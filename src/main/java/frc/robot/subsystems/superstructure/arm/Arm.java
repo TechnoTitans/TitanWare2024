@@ -139,6 +139,8 @@ public class Arm extends SubsystemBase {
     }
 
     public Command toGoal(final Goal goal) {
+        // TODO: need to standardize on using runOnce vs. runEnd, i.e. whether this command,
+        //  on end/interrupt should schedule the default/idle goal (in this case, STOW)
         return runEnd(() -> this.goal = goal, () -> this.goal = Goal.STOW);
     }
 

@@ -374,8 +374,10 @@ public class Swerve extends SubsystemBase {
         return gyro.getRollRotation2d();
     }
 
+    //TODO: usage of this is a mess, standardize on using gyro or using the pose estimator (I think latter is preferred)
     public Rotation2d getYaw() {
-        //TODO Figure out why these don't match
+        // TODO: check that using the pose estimator is not an issue anymore now that the camera angles have
+        //  been audited/fixed
 //        return getPose().getRotation();
         return gyro.getYawRotation2d();
     }
@@ -544,6 +546,7 @@ public class Swerve extends SubsystemBase {
                     rotWeight
             );
 
+            // TODO: do we keep the wheelX stuff?
             if (Math.abs(leftStickSpeeds.getNorm()) <= 0.01 && Math.abs(rot) <= 0.01) {
                 wheelX();
             } else {
