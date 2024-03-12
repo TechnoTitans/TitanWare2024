@@ -1,10 +1,23 @@
 {
   "NTProvider": {
     "types": {
-      "/FMSInfo": "FMSInfo"
+      "/FMSInfo": "FMSInfo",
+      "/SmartDashboard/VisionSystemSim-PhotonVision/Sim Field": "Field2d"
     }
   },
   "NetworkTables Info": {
+    "AdvantageScope@1": {
+      "open": true
+    },
+    "Clients": {
+      "open": true
+    },
+    "Connections": {
+      "open": true
+    },
+    "Server": {
+      "open": true
+    },
     "visible": true
   }
 }

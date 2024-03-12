@@ -76,7 +76,6 @@ public class SwerveTest {
             HardwareConstants.BACK_RIGHT_MODULE.translationOffset()
     );
 
-    @Spy
     private final SwerveDrivePoseEstimator poseEstimator = new SwerveDrivePoseEstimator(
             kinematics,
             Rotation2d.fromDegrees(0),
@@ -112,6 +111,7 @@ public class SwerveTest {
 
     @Test
     void periodic() {
+        when(gyro.getYawRotation2d()).thenReturn(Rotation2d.fromDegrees(0));
         when(gyro.getPitchRotation2d()).thenReturn(Rotation2d.fromDegrees(0));
         when(gyro.getRollRotation2d()).thenReturn(Rotation2d.fromDegrees(0));
 
@@ -152,10 +152,10 @@ public class SwerveTest {
     @ParameterizedTest
     @MethodSource("angleArgsProvider")
     void getYaw(final double angleDeg) {
-        when(poseEstimator.getEstimatedPosition()).thenReturn(new Pose2d(0, 0, Rotation2d.fromDegrees(angleDeg)));
+        when(gyro.getYawRotation2d()).thenReturn(Rotation2d.fromDegrees(angleDeg));
 
         assertEquals(Rotation2d.fromDegrees(angleDeg), swerve.getYaw());
-        verify(poseEstimator).getEstimatedPosition();
+        verify(gyro).getYawRotation2d();
     }
 
     @ParameterizedTest
@@ -198,6 +198,7 @@ public class SwerveTest {
 
     @Test
     void getFieldRelativeSpeeds() {
+        when(gyro.getYawRotation2d()).thenReturn(Rotation2d.fromDegrees(0));
         final ChassisSpeeds chassisSpeeds = swerve.getFieldRelativeSpeeds();
         final ChassisSpeeds zero = new ChassisSpeeds();
 
@@ -338,7 +339,7 @@ public class SwerveTest {
 
     @Test
     void driveWithJoystick() {
-        when(poseEstimator.getEstimatedPosition()).thenReturn(new Pose2d(0, 0, Rotation2d.fromDegrees(0)));
+        when(gyro.getYawRotation2d()).thenReturn(Rotation2d.fromDegrees(0));
 
         swerve.drive(0, 0, 0, true);
         assertEquals(new SwerveModuleState(), frontLeft.getLastDesiredState());
@@ -416,7 +417,7 @@ public class SwerveTest {
 
     @Test
     void zero() {
-        swerve.zeroCommand().schedule();
+        swerve.zeroModulesCommand().schedule();
 
         assertEquals(new SwerveModuleState(), frontLeft.getLastDesiredState());
         assertEquals(new SwerveModuleState(), frontRight.getLastDesiredState());

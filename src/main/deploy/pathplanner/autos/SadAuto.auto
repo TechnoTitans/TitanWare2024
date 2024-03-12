@@ -1,0 +1,37 @@
+{
+  "version": 1.0,
+  "startingPose": {
+    "position": {
+      "x": 0.7433484792709351,
+      "y": 6.773359298706055
+    },
+    "rotation": -121.86598355679548
+  },
+  "command": {
+    "type": "sequential",
+    "data": {
+      "commands": [
+        {
+          "type": "named",
+          "data": {
+            "name": "shoot"
+          }
+        },
+        {
+          "type": "path",
+          "data": {
+            "pathName": "SadAuto.1"
+          }
+        },
+        {
+          "type": "named",
+          "data": {
+            "name": "shoot"
+          }
+        }
+      ]
+    }
+  },
+  "folder": null,
+  "choreoAuto": true
+}

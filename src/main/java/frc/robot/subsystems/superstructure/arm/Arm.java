@@ -22,6 +22,8 @@ public class Arm extends SubsystemBase {
     protected static final String LogKey = "Arm";
     private static final double PositionToleranceRots = 0.01;
 
+    private final HardwareConstants.ArmConstants armConstants;
+
     private final ArmIO armIO;
     private final ArmIOInputsAutoLogged inputs;
 
@@ -33,10 +35,10 @@ public class Arm extends SubsystemBase {
     private final PositionSetpoint pivotSoftLowerLimit;
     private final PositionSetpoint pivotSoftUpperLimit;
 
-    public Trigger atPivotPositionTrigger = new Trigger(this::atPositionSetpoint);
-    public Trigger atPivotLowerLimitTrigger = new Trigger(this::atPivotLowerLimit);
-    public Trigger atPivotUpperLimitTrigger = new Trigger(this::atPivotUpperLimit);
-    public Trigger atPivotLimit = atPivotLowerLimitTrigger.or(atPivotUpperLimitTrigger);
+    public Trigger atPivotSetpoint = new Trigger(this::atPositionSetpoint);
+    public Trigger atPivotLowerLimit = new Trigger(this::atPivotLowerLimit);
+    public Trigger atPivotUpperLimit = new Trigger(this::atPivotUpperLimit);
+    public Trigger atPivotLimit = atPivotLowerLimit.or(atPivotUpperLimit);
 
     public static class PositionSetpoint {
         public double pivotPositionRots = 0;
@@ -54,8 +56,8 @@ public class Arm extends SubsystemBase {
     public enum Goal {
         ZERO(0),
         STOW(Units.degreesToRotations(10)),
-        AMP(Units.degreesToRotations(90)),
-        SUBWOOFER(Units.degreesToRotations(55));
+        AMP(Units.degreesToRotations(94)),
+        SUBWOOFER(Units.degreesToRotations(56.5));
 
         private final double pivotPositionGoal;
         Goal(final double pivotPositionGoal) {
@@ -68,6 +70,7 @@ public class Arm extends SubsystemBase {
     }
 
     public Arm(final Constants.RobotMode mode, final HardwareConstants.ArmConstants armConstants) {
+        this.armConstants = armConstants;
         this.armIO = switch (mode) {
             case REAL -> new ArmIOReal(armConstants);
             case SIM -> new ArmIOSim(armConstants);
@@ -76,7 +79,7 @@ public class Arm extends SubsystemBase {
 
         this.inputs = new ArmIOInputsAutoLogged();
         this.voltageSysIdRoutine = makeVoltageSysIdRoutine(
-                Volts.of(2).per(Second),
+                Volts.of(4).per(Second),
                 Volts.of(10),
                 Seconds.of(6)
         );
@@ -125,18 +128,20 @@ public class Arm extends SubsystemBase {
     }
 
     private boolean atPivotLowerLimit() {
-        return inputs.pivotLowerLimitSwitch
-                || inputs.leftPivotPositionRots <= pivotSoftLowerLimit.pivotPositionRots
+        return inputs.leftPivotPositionRots <= pivotSoftLowerLimit.pivotPositionRots
                 || inputs.rightPivotPositionRots <= pivotSoftLowerLimit.pivotPositionRots;
     }
 
     private boolean atPivotUpperLimit() {
-        return inputs.leftPivotPositionRots >= pivotSoftUpperLimit.pivotPositionRots
+        return inputs.pivotUpperLimitSwitch
+                || inputs.leftPivotPositionRots >= pivotSoftUpperLimit.pivotPositionRots
                 || inputs.rightPivotPositionRots >= pivotSoftUpperLimit.pivotPositionRots;
     }
 
     public Command toGoal(final Goal goal) {
-        return runOnce(() -> this.goal = goal);
+        // TODO: need to standardize on using runOnce vs. runEnd, i.e. whether this command,
+        //  on end/interrupt should schedule the default/idle goal (in this case, STOW)
+        return runEnd(() -> this.goal = goal, () -> this.goal = Goal.STOW);
     }
 
     public Command toPivotPositionCommand(final DoubleSupplier pivotPositionRots) {
@@ -146,8 +151,8 @@ public class Arm extends SubsystemBase {
         });
     }
 
-    public Command toPivotVoltageCommand(final DoubleSupplier pivotVoltageVolts) {
-        return run(() -> armIO.toPivotVoltage(pivotVoltageVolts.getAsDouble()));
+    public Command runPivotVoltageCommand(final double pivotVoltageVolts) {
+        return run(() -> armIO.toPivotVoltage(pivotVoltageVolts));
     }
 
     public Command homePivotCommand() {
@@ -155,11 +160,11 @@ public class Arm extends SubsystemBase {
         //  and potentially do a 2nd, slower, pass to be more accurate
         return Commands.sequence(
                 startEnd(
-                        () -> armIO.toPivotVoltage(-3),
+                        () -> armIO.toPivotVoltage(2),
                         () -> armIO.toPivotVoltage(0)
-                ).until(() -> inputs.pivotLowerLimitSwitch),
+                ).until(() -> inputs.pivotUpperLimitSwitch),
                 runOnce(() -> {
-                    armIO.setPivotPosition(0);
+                    armIO.setPivotPosition(armConstants.pivotUpperLimitSwitchPositionRots());
                     armIO.configureSoftLimits(pivotSoftLowerLimit, pivotSoftUpperLimit);
                 })
         );
@@ -208,16 +213,16 @@ public class Arm extends SubsystemBase {
     private Command makeSysIdCommand(final SysIdRoutine sysIdRoutine) {
         return Commands.sequence(
                 sysIdRoutine.quasistatic(SysIdRoutine.Direction.kForward)
-                        .until(atPivotUpperLimitTrigger),
+                        .until(atPivotUpperLimit),
                 Commands.waitSeconds(4),
                 sysIdRoutine.quasistatic(SysIdRoutine.Direction.kReverse)
-                        .until(atPivotLowerLimitTrigger),
-                Commands.waitSeconds(6),
+                        .until(atPivotLowerLimit),
+                Commands.waitSeconds(4),
                 sysIdRoutine.dynamic(SysIdRoutine.Direction.kForward)
-                        .until(atPivotUpperLimitTrigger),
+                        .until(atPivotUpperLimit),
                 Commands.waitSeconds(4),
                 sysIdRoutine.dynamic(SysIdRoutine.Direction.kReverse)
-                        .until(atPivotLowerLimitTrigger)
+                        .until(atPivotLowerLimit)
         );
     }
 

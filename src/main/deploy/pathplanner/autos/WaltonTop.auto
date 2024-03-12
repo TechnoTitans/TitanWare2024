@@ -1,0 +1,31 @@
+{
+  "version": 1.0,
+  "startingPose": {
+    "position": {
+      "x": 1.932825207710266,
+      "y": 6.271913051605225
+    },
+    "rotation": 179.90874767107852
+  },
+  "command": {
+    "type": "sequential",
+    "data": {
+      "commands": [
+        {
+          "type": "named",
+          "data": {
+            "name": "shoot"
+          }
+        },
+        {
+          "type": "path",
+          "data": {
+            "pathName": "StealAllNotesTop.1"
+          }
+        }
+      ]
+    }
+  },
+  "folder": null,
+  "choreoAuto": true
+}

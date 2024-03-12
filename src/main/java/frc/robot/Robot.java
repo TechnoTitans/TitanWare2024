@@ -3,10 +3,12 @@ package frc.robot;
 import com.ctre.phoenix6.SignalLogger;
 import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.RobotBase;
+import edu.wpi.first.wpilibj.event.EventLoop;
 import edu.wpi.first.wpilibj.livewindow.LiveWindow;
-import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.CommandScheduler;
 import frc.robot.constants.Constants;
+import frc.robot.constants.FieldConstants;
+import frc.robot.subsystems.superstructure.ShotParameters;
 import frc.robot.utils.closeables.ToClose;
 import frc.robot.utils.subsystems.VirtualSubsystem;
 import org.littletonrobotics.junction.LogFileUtil;
@@ -20,11 +22,13 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 
+@SuppressWarnings("RedundantMethodOverride")
 public class Robot extends LoggedRobot {
-    private static final String HOOT_LOG_PATH = "/U/hoot";
+    private static final String AKitLogPath = "/U/logs";
+    private static final String HootLogPath = "/U/logs";
 
     private RobotContainer robotContainer;
-    private Command autonomousCommand;
+    private EventLoop autonomousEventLoop;
 
     @Override
     public void robotInit() {
@@ -70,21 +74,21 @@ public class Robot extends LoggedRobot {
         switch (Constants.CURRENT_MODE) {
             case REAL -> {
                 try {
-                    Files.createDirectories(Paths.get(HOOT_LOG_PATH));
-                    SignalLogger.setPath(HOOT_LOG_PATH);
+                    Files.createDirectories(Paths.get(HootLogPath));
+                    SignalLogger.setPath(HootLogPath);
                 } catch (final IOException ioException) {
                     SignalLogger.setPath("/U");
                     DriverStation.reportError(
                             String.format(
                                     "Failed to create CTRE .hoot log path at \"%s\"! Falling back to default.\n%s",
-                                    HOOT_LOG_PATH,
+                                    HootLogPath,
                                     ioException
                             ),
                             false
                     );
                 }
 
-                Logger.addDataReceiver(new WPILOGWriter("/U/akit"));
+                Logger.addDataReceiver(new WPILOGWriter(AKitLogPath));
                 Logger.addDataReceiver(new NT4Publisher());
             }
             case SIM -> {
@@ -115,6 +119,18 @@ public class Robot extends LoggedRobot {
     public void robotPeriodic() {
         CommandScheduler.getInstance().run();
         VirtualSubsystem.run();
+
+        final ShotParameters.Parameters shotParameters = ShotParameters.get(
+                robotContainer.swerve.getPose()
+                        .minus(FieldConstants.getSpeakerPose())
+                        .getTranslation()
+                        .getNorm()
+        );
+
+        Logger.recordOutput("ShotParameters/ArmPivotAngle", shotParameters.armPivotAngle());
+        Logger.recordOutput("ShotParameters/LeftVelocityRotsPerSec", shotParameters.leftVelocityRotsPerSec());
+        Logger.recordOutput("ShotParameters/RightVelocityRotsPerSec", shotParameters.rightVelocityRotsPerSec());
+        Logger.recordOutput("ShotParameters/AmpVelocityRotsPerSec", shotParameters.ampVelocityRotsPerSec());
     }
 
     @Override
@@ -125,24 +141,22 @@ public class Robot extends LoggedRobot {
 
     @Override
     public void autonomousInit() {
-        autonomousCommand = robotContainer.getAutonomousCommand();
+        autonomousEventLoop = robotContainer.getAutonomousEventLoop();
+    }
 
-        if (autonomousCommand != null) {
-            autonomousCommand.schedule();
+    @Override
+    public void autonomousPeriodic() {
+        if (autonomousEventLoop != null) {
+            autonomousEventLoop.poll();
         }
     }
 
     @Override
-    public void autonomousPeriodic() {}
-
-    @Override
     public void teleopInit() {
-        if (autonomousCommand != null) {
-            autonomousCommand.cancel();
+        if (autonomousEventLoop != null) {
+            autonomousEventLoop.clear();
         }
 
-        // No need to lint this here, X and Y are flipped for robot vs. controller joystick coordinate systems, so we
-        // pass the controller X into the robot Y, and vice versa
         //noinspection SuspiciousNameCombination
         robotContainer.swerve.setDefaultCommand(
                 robotContainer.swerve.teleopDriveCommand(
@@ -163,4 +177,10 @@ public class Robot extends LoggedRobot {
 
     @Override
     public void testPeriodic() {}
+
+    @Override
+    public void simulationInit() {}
+
+    @Override
+    public void simulationPeriodic() {}
 }

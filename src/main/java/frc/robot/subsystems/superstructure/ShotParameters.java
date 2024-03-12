@@ -33,11 +33,11 @@ public class ShotParameters {
     );
 
     static {
-        shotDataMap.put(0d, new Parameters(
-                Rotation2d.fromDegrees(0),
-                0,
-                0,
-                0)
+        shotDataMap.put(4d, new Parameters(
+                Rotation2d.fromDegrees(55),
+                80,
+                60,
+                70)
         );
     }
 

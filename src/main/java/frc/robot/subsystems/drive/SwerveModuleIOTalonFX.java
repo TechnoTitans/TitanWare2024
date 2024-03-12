@@ -100,11 +100,12 @@ public class SwerveModuleIOTalonFX implements SwerveModuleIO {
         canCoderConfiguration.MagnetSensor.AbsoluteSensorRange = AbsoluteSensorRangeValue.Signed_PlusMinusHalf;
         turnEncoder.getConfigurator().apply(canCoderConfiguration);
 
+        // TODO: check these gains, or just re-tune
         driveTalonFXConfiguration.Slot0 = new Slot0Configs()
-                .withKS(3.16)
-                .withKV(0.16023)
-                .withKA(3.5602)
-                .withKP(12.193);
+                .withKS(5.8432)
+                .withKV(0)
+                .withKA(2.4446)
+                .withKP(23.506);
         driveTalonFXConfiguration.TorqueCurrent.PeakForwardTorqueCurrent = Modules.SLIP_CURRENT_A;
         driveTalonFXConfiguration.TorqueCurrent.PeakReverseTorqueCurrent = -Modules.SLIP_CURRENT_A;
         driveTalonFXConfiguration.CurrentLimits.StatorCurrentLimit = Modules.SLIP_CURRENT_A;
