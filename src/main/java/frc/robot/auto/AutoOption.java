@@ -1,7 +1,6 @@
 package frc.robot.auto;
 
 import edu.wpi.first.wpilibj.event.EventLoop;
-import edu.wpi.first.wpilibj2.command.Command;
 import frc.robot.constants.Constants;
 
 import java.util.Arrays;

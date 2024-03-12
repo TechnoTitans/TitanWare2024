@@ -20,8 +20,6 @@ import org.littletonrobotics.junction.Logger;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
-import java.util.concurrent.ThreadLocalRandom;
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.BooleanSupplier;
 import java.util.function.DoubleSupplier;
 import java.util.function.Supplier;
@@ -183,13 +181,16 @@ public class Autos {
         return autoTriggers.eventLoop;
     }
 
-    public EventLoop ampSpeaker0() {
+    public EventLoop ampSource0() {
         final String trajectoryName = "AmpSource0";
-        final ChoreoTrajectory trajectory = Choreo.getTrajectory(trajectoryName);
-        final List<ChoreoTrajectory> trajectoryGroup = Choreo.getTrajectoryGroup(trajectoryName);
+        //This has all the markers with the global time of each marker
+        final TitanTrajectory trajectory = AutoLoader.getTrajectory(trajectoryName);
+        //These marker's time is the offset from the waypoint that it's relative to
+        final List<TitanTrajectory> trajectoryGroup = AutoLoader.getTrajectoryGroup(trajectoryName);
 
         final Timer timer = new Timer();
         final AutoTriggers autoTriggers = new AutoTriggers(trajectory, swerve::getPose, timer::get);
+        final List<TitanTrajectory.TitanMarker> markers = trajectory.getMarkers();
 
         autoTriggers.autoEnabled().whileTrue(
                 Commands.sequence(
@@ -201,14 +202,16 @@ public class Autos {
                 )
         );
 
-        autoTriggers.atTime(0.1).onTrue(
+        autoTriggers.atTime(markers.get(0).timestamp()).onTrue(
+//        autoTriggers.atTime(0.1).onTrue(
                 Commands.sequence(
                         Commands.print("run intake"),
                         intake.intakeCommand()
                 )
         );
 
-        autoTriggers.atTime(1.61).onTrue(
+        autoTriggers.atTime(markers.get(1).timestamp()).onTrue(
+//        autoTriggers.atTime(1.61).onTrue(
                 Commands.sequence(
                         Commands.print("Shoot"),
                         shoot()
