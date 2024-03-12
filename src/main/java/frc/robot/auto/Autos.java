@@ -181,8 +181,8 @@ public class Autos {
         return autoTriggers.eventLoop;
     }
 
-    public EventLoop ampSource0() {
-        final String trajectoryName = "AmpSource0";
+    public EventLoop ampSpeaker0() {
+        final String trajectoryName = "AmpSpeaker0";
         //This has all the markers with the global time of each marker
         final TitanTrajectory trajectory = AutoLoader.getTrajectory(trajectoryName);
         //These marker's time is the offset from the waypoint that it's relative to
