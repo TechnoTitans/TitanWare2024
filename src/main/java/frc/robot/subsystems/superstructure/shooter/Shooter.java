@@ -31,6 +31,8 @@ public class Shooter extends SubsystemBase {
     public Trigger atVelocitySetpoint = new Trigger(this::atVelocitySetpoint);
 
     private Goal goal = Goal.STOP;
+    private Goal previousGoal = goal;
+
     private final VelocitySetpoint setpoint;
 
     private static class VelocitySetpoint {
@@ -40,6 +42,7 @@ public class Shooter extends SubsystemBase {
     }
 
     public enum Goal {
+        NONE(0, 0, 0),
         STOP(0, 0, 0),
         IDLE(40, 40, 40),
         EJECT(80, 80, 80),
@@ -109,23 +112,24 @@ public class Shooter extends SubsystemBase {
                 LogUtils.microsecondsToMilliseconds(Logger.getRealTimestamp() - shooterPeriodicUpdateStart)
         );
 
-        final double previousAmpVelocity = setpoint.ampVelocityRotsPerSec;
-        final double previousLeftFlywheelVelocity = setpoint.leftFlywheelVelocityRotsPerSec;
-        final double previousRightFlywheelVelocity = setpoint.rightFlywheelVelocityRotsPerSec;
-
-        setpoint.ampVelocityRotsPerSec = goal.getAmpVelocity();
-        setpoint.leftFlywheelVelocityRotsPerSec = goal.getLeftFlywheelVelocity();
-        setpoint.rightFlywheelVelocityRotsPerSec = goal.getRightFlywheelVelocity();
-
-        if (setpoint.ampVelocityRotsPerSec != previousAmpVelocity
-                || setpoint.leftFlywheelVelocityRotsPerSec != previousLeftFlywheelVelocity
-                || setpoint.rightFlywheelVelocityRotsPerSec != previousRightFlywheelVelocity
-        ) {
+        if (goal != Goal.NONE && previousGoal != goal) {
+            setpoint.ampVelocityRotsPerSec = goal.getAmpVelocity();
+            setpoint.leftFlywheelVelocityRotsPerSec = goal.getLeftFlywheelVelocity();
+            setpoint.rightFlywheelVelocityRotsPerSec = goal.getRightFlywheelVelocity();
             shooterIO.toVelocity(
                     setpoint.ampVelocityRotsPerSec,
                     setpoint.leftFlywheelVelocityRotsPerSec,
                     setpoint.rightFlywheelVelocityRotsPerSec
             );
+
+            this.previousGoal = goal;
+        } else if (goal == Goal.NONE) {
+            shooterIO.toVelocity(
+                    setpoint.ampVelocityRotsPerSec,
+                    setpoint.leftFlywheelVelocityRotsPerSec,
+                    setpoint.rightFlywheelVelocityRotsPerSec
+            );
+            this.previousGoal = Goal.NONE;
         }
 
         Logger.recordOutput(LogKey + "/Goal", goal.toString());
@@ -162,17 +166,20 @@ public class Shooter extends SubsystemBase {
             final DoubleSupplier leftFlywheelVelocityRotsPerSec,
             final DoubleSupplier rightFlywheelVelocityRotsPerSec
     ) {
-        return run(() -> {
-                setpoint.ampVelocityRotsPerSec = ampVelocityRotsPerSec.getAsDouble();
-                setpoint.leftFlywheelVelocityRotsPerSec = leftFlywheelVelocityRotsPerSec.getAsDouble();
-                setpoint.rightFlywheelVelocityRotsPerSec = rightFlywheelVelocityRotsPerSec.getAsDouble();
+        return Commands.sequence(
+                Commands.runOnce(() -> this.goal = Goal.NONE),
+                run(() -> {
+                    setpoint.ampVelocityRotsPerSec = ampVelocityRotsPerSec.getAsDouble();
+                    setpoint.leftFlywheelVelocityRotsPerSec = leftFlywheelVelocityRotsPerSec.getAsDouble();
+                    setpoint.rightFlywheelVelocityRotsPerSec = rightFlywheelVelocityRotsPerSec.getAsDouble();
 
-                shooterIO.toVelocity(
-                        setpoint.ampVelocityRotsPerSec,
-                        setpoint.leftFlywheelVelocityRotsPerSec,
-                        setpoint.rightFlywheelVelocityRotsPerSec
-                );
-        });
+//                    shooterIO.toVelocity(
+//                            setpoint.ampVelocityRotsPerSec,
+//                            setpoint.leftFlywheelVelocityRotsPerSec,
+//                            setpoint.rightFlywheelVelocityRotsPerSec
+//                    );
+                })
+        );
     }
 
     public Command runVoltageCommand(

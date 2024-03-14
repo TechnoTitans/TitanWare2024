@@ -8,6 +8,7 @@ import org.photonvision.EstimatedRobotPose;
 
 public interface PhotonVisionIO {
     class PhotonVisionIOInputs implements LoggableInputs {
+        public String name = "";
         public double[] pipelineResultTargets = new double[] {};
         public String primaryStrategy = Constants.Vision.MULTI_TAG_POSE_STRATEGY.toString();
         public EstimatedRobotPose estimatedRobotPose;
@@ -15,6 +16,7 @@ public interface PhotonVisionIO {
 
         @Override
         public void toLog(final LogTable table) {
+            table.put("Name", name);
             table.put("PipelineResultTargets", pipelineResultTargets);
             table.put("PrimaryStrategy", primaryStrategy);
 
@@ -28,6 +30,7 @@ public interface PhotonVisionIO {
 
         @Override
         public void fromLog(LogTable table) {
+            this.name = table.get("Name", "unknown");
             this.pipelineResultTargets = table.get("PipelineResultTargets", new double[] {});
             this.primaryStrategy = table.get(
                     "PrimaryStrategy", Constants.Vision.MULTI_TAG_POSE_STRATEGY.toString()

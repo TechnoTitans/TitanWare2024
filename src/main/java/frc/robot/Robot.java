@@ -163,14 +163,14 @@ public class Robot extends LoggedRobot {
         CommandScheduler.getInstance().run();
         VirtualSubsystem.run();
 
-        final ShotParameters.Parameters shotParameters = ShotParameters.get(
-                robotContainer.swerve.getPose()
-                        .minus(FieldConstants.getSpeakerPose())
-                        .getTranslation()
-                        .getNorm()
-        );
+        final double distanceToSpeaker = robotContainer.swerve.getPose()
+                .minus(FieldConstants.getSpeakerPose())
+                .getTranslation()
+                .getNorm();
+        final ShotParameters.Parameters shotParameters = ShotParameters.get(distanceToSpeaker);
 
-        Logger.recordOutput("ShotParameters/ArmPivotAngle", shotParameters.armPivotAngle());
+        Logger.recordOutput("ShotParameters/SpeakerDistance", distanceToSpeaker);
+        Logger.recordOutput("ShotParameters/ArmPivotAngle", shotParameters.armPivotAngle().getRotations());
         Logger.recordOutput("ShotParameters/LeftVelocityRotsPerSec", shotParameters.leftVelocityRotsPerSec());
         Logger.recordOutput("ShotParameters/RightVelocityRotsPerSec", shotParameters.rightVelocityRotsPerSec());
         Logger.recordOutput("ShotParameters/AmpVelocityRotsPerSec", shotParameters.ampVelocityRotsPerSec());

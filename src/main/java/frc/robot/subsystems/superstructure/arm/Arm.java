@@ -20,7 +20,7 @@ import static edu.wpi.first.units.Units.*;
 
 public class Arm extends SubsystemBase {
     protected static final String LogKey = "Arm";
-    private static final double PositionToleranceRots = 0.01;
+    private static final double PositionToleranceRots = 0.005;
 
     private final HardwareConstants.ArmConstants armConstants;
 
@@ -31,6 +31,8 @@ public class Arm extends SubsystemBase {
     private final SysIdRoutine torqueCurrentSysIdRoutine;
 
     private Goal goal = Goal.STOW;
+    private Goal previousGoal = goal;
+
     private final PositionSetpoint setpoint;
     private final PositionSetpoint pivotSoftLowerLimit;
     private final PositionSetpoint pivotSoftUpperLimit;
@@ -54,6 +56,7 @@ public class Arm extends SubsystemBase {
     }
 
     public enum Goal {
+        NONE(0),
         ZERO(0),
         STOW(Units.degreesToRotations(10)),
         AMP(Units.degreesToRotations(94)),
@@ -109,10 +112,14 @@ public class Arm extends SubsystemBase {
                 LogUtils.microsecondsToMilliseconds(Logger.getRealTimestamp() - armPeriodicUpdateStart)
         );
 
-        final double previousPivotPosition = setpoint.pivotPositionRots;
-        setpoint.pivotPositionRots = goal.getPivotPositionGoal();
-        if (setpoint.pivotPositionRots != previousPivotPosition) {
+        if (goal != Goal.NONE && previousGoal != goal) {
+            setpoint.pivotPositionRots = goal.getPivotPositionGoal();
             armIO.toPivotPosition(setpoint.pivotPositionRots);
+
+            this.previousGoal = goal;
+        } else if (goal == Goal.NONE) {
+            armIO.toPivotPosition(setpoint.pivotPositionRots);
+            this.previousGoal = Goal.NONE;
         }
 
         Logger.recordOutput(LogKey + "/Goal", goal.toString());
@@ -145,10 +152,13 @@ public class Arm extends SubsystemBase {
     }
 
     public Command toPivotPositionCommand(final DoubleSupplier pivotPositionRots) {
-        return run(() -> {
-            setpoint.pivotPositionRots = pivotPositionRots.getAsDouble();
-            armIO.toPivotPosition(setpoint.pivotPositionRots);
-        });
+        return Commands.sequence(
+                Commands.runOnce(() -> this.goal = Goal.NONE),
+                run(() -> {
+                    setpoint.pivotPositionRots = pivotPositionRots.getAsDouble();
+//                    armIO.toPivotPosition(setpoint.pivotPositionRots);
+                })
+        );
     }
 
     public Command runPivotVoltageCommand(final double pivotVoltageVolts) {

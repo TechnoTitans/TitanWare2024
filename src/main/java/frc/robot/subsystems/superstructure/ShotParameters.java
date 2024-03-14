@@ -33,12 +33,40 @@ public class ShotParameters {
     );
 
     static {
-        shotDataMap.put(4d, new Parameters(
-                Rotation2d.fromDegrees(55),
+        shotDataMap.put(1.5d, new Parameters(
+                Rotation2d.fromDegrees(56.5),
                 80,
-                60,
-                70)
-        );
+                70,
+                80
+        ));
+
+        shotDataMap.put(2.15d, new Parameters(
+                Rotation2d.fromDegrees(45),
+                80,
+                70,
+                80
+        ));
+
+        shotDataMap.put(3d, new Parameters(
+                Rotation2d.fromDegrees(37),
+                85,
+                80,
+                85
+        ));
+
+        shotDataMap.put(3.5d, new Parameters(
+                Rotation2d.fromDegrees(36),
+                90,
+                80,
+                90
+        ));
+
+        shotDataMap.put(4d, new Parameters(
+                Rotation2d.fromDegrees(34.5),
+                100,
+                80,
+                95
+        ));
     }
 
     public static Parameters get(final double distanceMeters) {

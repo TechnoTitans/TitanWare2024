@@ -161,10 +161,9 @@ public class RobotContainer {
                                         .getTranslation()
                                         .getNorm()
                         ))
+//                        superstructure.toGoal(Superstructure.Goal.SUBWOOFER)
                 ),
-                swerve.teleopFacingAngleCommand(
-                        () -> 0,
-                        () -> 0,
+                swerve.faceAngle(
                         () -> swerve.getPose()
                                 .getTranslation()
                                 .minus(FieldConstants.getSpeakerPose().getTranslation())
@@ -227,7 +226,7 @@ public class RobotContainer {
         ));
         autoChooser.addAutoOption(new AutoOption(
                 "Speaker0_1_2",
-                autos.speaker0_1_2_path(),
+                autos.speaker0_1_2(),
                 Constants.CompetitionType.COMPETITION
         ));
         autoChooser.addAutoOption(new AutoOption(
@@ -243,8 +242,10 @@ public class RobotContainer {
     }
 
     public void configureButtonBindings(final EventLoop teleopEventLoop) {
-        this.driverController.leftTrigger(0.5, teleopEventLoop).whileTrue(amp());
-        this.driverController.rightTrigger(0.5, teleopEventLoop).whileTrue(shootSubwoofer());
+        this.driverController.a(teleopEventLoop).whileTrue(amp());
+        this.driverController.rightTrigger(0.5, teleopEventLoop)
+                .whileTrue(stopAndShoot())
+                .onFalse(superstructure.toGoal(Superstructure.Goal.IDLE));
 
 //        this.driverController.x().whileTrue(driveAndAmp());
 
@@ -256,7 +257,7 @@ public class RobotContainer {
 //        ));
 
         final XboxController driverHID = driverController.getHID();
-        this.driverController.a(teleopEventLoop).whileTrue(
+        this.driverController.leftTrigger(0.5, teleopEventLoop).whileTrue(
                 intake.intakeCommand(
                         Commands.startEnd(
                                 () -> driverHID.setRumble(GenericHID.RumbleType.kBothRumble, 0.5),

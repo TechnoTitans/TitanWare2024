@@ -33,6 +33,7 @@ public interface Constants {
         double TELEOP_MAX_SPEED_MPS = ROBOT_MAX_SPEED_MPS;
         double TELEOP_MAX_ANGULAR_SPEED_RAD_PER_SEC = ROBOT_MAX_ANGULAR_SPEED_RAD_PER_SEC;
 
+        // MOI 1.793
         interface Modules {
             double WHEEL_RADIUS_M = 0.0508; //2 in
             double WHEEL_MASS_KG = 0.2313321; //0.51 lbs
@@ -42,7 +43,7 @@ public interface Constants {
             double TURNER_GEAR_RATIO = 150.0 / 7.0;
 
             //TODO: TUNE AT DE
-            double SLIP_CURRENT_A = 80;
+            double SLIP_CURRENT_A = 60;
             double COUPLING_GEAR_RATIO = 50d / 14;
 
             double WHEEL_CIRCUMFERENCE_M = 2 * Math.PI * WHEEL_RADIUS_M;
@@ -91,7 +92,7 @@ public interface Constants {
         Vector<N3> STATE_STD_DEVS = VecBuilder.fill(0.1, 0.1, Units.degreesToRadians(1));
         // TODO: use information from collected vision estimation data to scale standard deviations
         Vector<N3> VISION_MEASUREMENT_STD_DEVS = VecBuilder.fill(0.6, 0.6, Units.degreesToRadians(30));
-        double MULTI_TAG_MAX_AMBIGUITY = 0.5;
+        double MULTI_TAG_MAX_AMBIGUITY = 0.4;
         double SINGLE_TAG_MAX_AMBIGUITY = 0.2;
     }
 }

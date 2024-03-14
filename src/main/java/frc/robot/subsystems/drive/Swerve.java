@@ -1,7 +1,9 @@
 package frc.robot.subsystems.drive;
 
 import com.choreo.lib.Choreo;
+import com.choreo.lib.ChoreoControlFunction;
 import com.choreo.lib.ChoreoTrajectory;
+import com.choreo.lib.ChoreoTrajectoryState;
 import com.ctre.phoenix6.SignalLogger;
 import com.ctre.phoenix6.signals.NeutralModeValue;
 import com.pathplanner.lib.auto.AutoBuilder;
@@ -26,6 +28,7 @@ import edu.wpi.first.math.util.Units;
 import edu.wpi.first.units.Current;
 import edu.wpi.first.units.Measure;
 import edu.wpi.first.wpilibj.DriverStation;
+import edu.wpi.first.wpilibj.Timer;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
@@ -53,6 +56,7 @@ import static frc.robot.constants.Constants.Swerve.*;
 public class Swerve extends SubsystemBase {
     protected static final String LogKey = "Swerve";
     protected static final String OdometryLogKey = "Odometry";
+    protected static final String AutoLogKey = "Auto";
 
     private static final HolonomicPathFollowerConfig HolonomicPathFollowerConfig = new HolonomicPathFollowerConfig(
             new PIDConstants(5, 0, 0),
@@ -563,14 +567,14 @@ public class Swerve extends SubsystemBase {
     public Command faceAngle(final Supplier<Rotation2d> rotationTargetSupplier) {
         return Commands.sequence(
                 runOnce(() -> headingController.reset(
-                        getPose().getRotation().getRadians(),
+                        getYaw().getRadians(),
                         getFieldRelativeSpeeds().omegaRadiansPerSecond)
                 ),
                 run(() -> drive(
                         0,
                         0,
                         headingController.calculate(
-                                getPose().getRotation().getRadians(),
+                                getYaw().getRadians(),
                                 rotationTargetSupplier.get().getRadians()
                         ),
                         true
@@ -653,19 +657,62 @@ public class Swerve extends SubsystemBase {
         backRight.setNeutralMode(neutralMode);
     }
 
-    public Command followChoreoPathCommand(final ChoreoTrajectory choreoTrajectory) {
-        return Choreo.choreoSwerveCommand(
-                choreoTrajectory,
-                this::getPose,
-                new PIDController(20, 0, 0),
-                new PIDController(20, 0, 0),
-                new PIDController(20, 0, 0),
-                this::drive,
-                () -> {
-                    final Optional<DriverStation.Alliance> alliance = DriverStation.getAlliance();
-                    return alliance.isPresent() && alliance.get() == DriverStation.Alliance.Red;
-                },
-                this
+    public Command followChoreoPathCommand(
+            final ChoreoTrajectory choreoTrajectory,
+            final BooleanSupplier mirrorTrajectory
+    ) {
+        final Timer timer = new Timer();
+        final ChoreoControlFunction controller = Choreo.choreoSwerveController(
+                new PIDController(4, 0, 0),
+                new PIDController(4, 0, 0),
+                new PIDController(2, 0, 0)
+        );
+
+        return Commands.sequence(
+                runOnce(() -> {
+                    Logger.recordOutput(
+                            AutoLogKey + "/Trajectory",
+                            choreoTrajectory.flipped().getPoses()
+                    );
+
+                    timer.restart();
+                }),
+                run(() -> {
+                    final Pose2d currentState = getPose();
+                    final ChoreoTrajectoryState targetState = choreoTrajectory.sample(
+                            timer.get(),
+                            mirrorTrajectory.getAsBoolean()
+                    );
+
+                    Logger.recordOutput(AutoLogKey + "/CurrentState", currentState);
+                    Logger.recordOutput(AutoLogKey + "/TargetSpeeds", targetState.getChassisSpeeds());
+                    Logger.recordOutput(AutoLogKey + "/TargetState", targetState.getPose());
+
+                    Logger.recordOutput(AutoLogKey + "/TargetX", targetState.getPose().getX());
+                    Logger.recordOutput(AutoLogKey + "/TargetY", targetState.getPose().getY());
+                    Logger.recordOutput(
+                            AutoLogKey + "/TargetRotation",
+                            MathUtil.angleModulus(targetState.getPose().getRotation().getRadians())
+                    );
+
+                    Logger.recordOutput(AutoLogKey + "/CurrentX", currentState.getX());
+                    Logger.recordOutput(AutoLogKey + "/CurrentY", currentState.getY());
+                    Logger.recordOutput(
+                            AutoLogKey + "/CurrentRotation",
+                            MathUtil.angleModulus(currentState.getRotation().getRadians())
+                    );
+
+                    drive(controller.apply(currentState, targetState));
+                })
+                        .until(() -> timer.hasElapsed(choreoTrajectory.getTotalTime()))
+                        .finallyDo((interrupted) -> {
+                            timer.stop();
+                            if (interrupted) {
+                                drive(new ChassisSpeeds());
+                            } else {
+                                drive(choreoTrajectory.getFinalState().getChassisSpeeds());
+                            }
+                        })
         );
     }
 
