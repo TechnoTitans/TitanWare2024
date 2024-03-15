@@ -150,9 +150,13 @@ public class Shooter extends SubsystemBase {
                 setpoint.leftFlywheelVelocityRotsPerSec,
                 inputs.leftVelocityRotsPerSec,
                 VelocityToleranceRotsPerSec
-        ) || MathUtil.isNear(
+        ) && MathUtil.isNear(
                 setpoint.rightFlywheelVelocityRotsPerSec,
                 inputs.rightVelocityRotsPerSec,
+                VelocityToleranceRotsPerSec
+        ) && MathUtil.isNear(
+                setpoint.ampVelocityRotsPerSec,
+                inputs.ampVelocityRotsPerSec,
                 VelocityToleranceRotsPerSec
         );
     }
@@ -172,12 +176,6 @@ public class Shooter extends SubsystemBase {
                     setpoint.ampVelocityRotsPerSec = ampVelocityRotsPerSec.getAsDouble();
                     setpoint.leftFlywheelVelocityRotsPerSec = leftFlywheelVelocityRotsPerSec.getAsDouble();
                     setpoint.rightFlywheelVelocityRotsPerSec = rightFlywheelVelocityRotsPerSec.getAsDouble();
-
-//                    shooterIO.toVelocity(
-//                            setpoint.ampVelocityRotsPerSec,
-//                            setpoint.leftFlywheelVelocityRotsPerSec,
-//                            setpoint.rightFlywheelVelocityRotsPerSec
-//                    );
                 })
         );
     }

@@ -21,6 +21,7 @@ import static edu.wpi.first.units.Units.*;
 public class Arm extends SubsystemBase {
     protected static final String LogKey = "Arm";
     private static final double PositionToleranceRots = 0.005;
+    private static final double VelocityToleranceRotsPerSec = 0.01;
 
     private final HardwareConstants.ArmConstants armConstants;
 
@@ -50,8 +51,9 @@ public class Arm extends SubsystemBase {
             return this;
         }
 
-        public boolean atSetpoint(final double pivotPositionRots) {
-            return MathUtil.isNear(this.pivotPositionRots, pivotPositionRots, PositionToleranceRots);
+        public boolean atSetpoint(final double pivotPositionRots, final double pivotVelocityRotsPerSec) {
+            return MathUtil.isNear(this.pivotPositionRots, pivotPositionRots, PositionToleranceRots)
+                    && MathUtil.isNear(0, pivotVelocityRotsPerSec, VelocityToleranceRotsPerSec);
         }
     }
 
@@ -130,8 +132,8 @@ public class Arm extends SubsystemBase {
     }
 
     private boolean atPositionSetpoint() {
-        return setpoint.atSetpoint(inputs.leftPivotPositionRots)
-                && setpoint.atSetpoint(inputs.rightPivotPositionRots);
+        return setpoint.atSetpoint(inputs.leftPivotPositionRots, inputs.leftPivotVelocityRotsPerSec)
+                && setpoint.atSetpoint(inputs.rightPivotPositionRots, inputs.rightPivotVelocityRotsPerSec);
     }
 
     private boolean atPivotLowerLimit() {
@@ -154,10 +156,7 @@ public class Arm extends SubsystemBase {
     public Command toPivotPositionCommand(final DoubleSupplier pivotPositionRots) {
         return Commands.sequence(
                 Commands.runOnce(() -> this.goal = Goal.NONE),
-                run(() -> {
-                    setpoint.pivotPositionRots = pivotPositionRots.getAsDouble();
-//                    armIO.toPivotPosition(setpoint.pivotPositionRots);
-                })
+                run(() -> setpoint.pivotPositionRots = pivotPositionRots.getAsDouble())
         );
     }
 
@@ -166,8 +165,9 @@ public class Arm extends SubsystemBase {
     }
 
     public Command homePivotCommand() {
-        // TODO: this could probably be improved to be more robust,
-        //  and potentially do a 2nd, slower, pass to be more accurate
+        // TODO: this could probably be improved to be more robust, and potentially do a 2nd,
+        //  slower, pass to be more accurate
+        // TODO: this probably should un-configure the soft limit, in case we want to zero twice for some reason, lol
         return Commands.sequence(
                 startEnd(
                         () -> armIO.toPivotVoltage(2),

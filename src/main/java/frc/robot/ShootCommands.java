@@ -32,7 +32,9 @@ public class ShootCommands {
                 .minus(Rotation2d.fromRadians(Math.PI));
     }
 
-    public static Supplier<ShotParameters.Parameters> parametersSupplier(final Supplier<Pose2d> currentPoseSupplier) {
+    public static Supplier<ShotParameters.Parameters> shotParametersSupplier(
+            final Supplier<Pose2d> currentPoseSupplier
+    ) {
         return () -> ShotParameters.get(
                 currentPoseSupplier.get()
                         .minus(FieldConstants.getSpeakerPose())
@@ -83,7 +85,7 @@ public class ShootCommands {
                                 .until(superstructure.atSetpoint.and(swerve.atHeadingSetpoint))
                                 .andThen(intake.feedCommand())
                                 .andThen(Commands.waitSeconds(0.1)),
-                        superstructure.runState(ShootCommands.parametersSupplier(swerve::getPose))
+                        superstructure.runState(ShootCommands.shotParametersSupplier(swerve::getPose))
                 ),
                 swerve.faceAngle(ShootCommands.angleToSpeakerSupplier(swerve::getPose))
         );
@@ -99,20 +101,12 @@ public class ShootCommands {
                                 .runStopCommand()
                                 .until(superstructure.atSetpoint.and(swerve.atHeadingSetpoint))
                                 .andThen(intake.feedCommand()),
-                        superstructure.runState(() -> ShotParameters.get(
-                                swerve.getPose()
-                                        .minus(FieldConstants.getSpeakerPose())
-                                        .getTranslation()
-                                        .getNorm())
-                        )
+                        superstructure.runState(ShootCommands.shotParametersSupplier(swerve::getPose))
                 ),
                 swerve.teleopFacingAngleCommand(
                         xStickInput,
                         yStickInput,
-                        () -> swerve.getPose()
-                                .getTranslation()
-                                .minus(FieldConstants.getSpeakerPose().getTranslation())
-                                .getAngle()
+                        ShootCommands.angleToSpeakerSupplier(swerve::getPose)
                 )
         );
     }

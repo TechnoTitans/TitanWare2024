@@ -160,19 +160,13 @@ public class RobotContainer {
                 )
         );
         this.driverController.rightTrigger(0.5, teleopEventLoop)
-                .whileTrue(shootCommands.stopAimAndShoot())
+                .whileTrue(shootCommands.teleopDriveAimAndShoot(
+                        driverController::getLeftY,
+                        driverController::getLeftX
+                ))
                 .onFalse(superstructure.toGoal(Superstructure.Goal.IDLE));
 
-//        this.driverController.x().whileTrue(driveAndAmp());
-
-//        this.coDriverController.b().whileTrue(swerve.faceAngle(() ->
-//                swerve.getPose()
-//                        .getTranslation()
-//                        .minus(FieldConstants.getSpeakerPose().getTranslation())
-//                        .getAngle()
-//        ));
-
-        this.driverController.a(teleopEventLoop).whileTrue(shootCommands.amp());
+        this.driverController.a(teleopEventLoop).whileTrue(shootCommands.lineupAndAmp());
         this.driverController.y(teleopEventLoop).onTrue(swerve.zeroRotationCommand());
 
         this.driverController.leftBumper(teleopEventLoop).whileTrue(
