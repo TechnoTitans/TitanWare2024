@@ -34,6 +34,7 @@ import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import edu.wpi.first.wpilibj2.command.button.Trigger;
 import edu.wpi.first.wpilibj2.command.sysid.SysIdRoutine;
+import frc.robot.Robot;
 import frc.robot.constants.Constants;
 import frc.robot.constants.HardwareConstants;
 import frc.robot.subsystems.gyro.Gyro;
@@ -382,8 +383,7 @@ public class Swerve extends SubsystemBase {
     public Rotation2d getYaw() {
         // TODO: check that using the pose estimator is not an issue anymore now that the camera angles have
         //  been audited/fixed
-//        return getPose().getRotation();
-        return gyro.getYawRotation2d();
+        return getPose().getRotation();
     }
 
     /**
@@ -394,11 +394,16 @@ public class Swerve extends SubsystemBase {
     }
 
     public void zeroRotation() {
-        gyro.zeroRotation();
+//        gyro.zeroRotation();
         poseEstimator.resetPosition(
-                Rotation2d.fromRadians(0),
+                gyro.getYawRotation2d(),
                 getModulePositions(),
-                getPose()
+                new Pose2d(
+                        getPose().getTranslation(),
+                        Robot.IsRedAlliance.getAsBoolean()
+                                ? Rotation2d.fromDegrees(180)
+                                : Rotation2d.fromDegrees(0)
+                )
         );
     }
 
@@ -469,11 +474,23 @@ public class Swerve extends SubsystemBase {
             final double xSpeed,
             final double ySpeed,
             final double rot,
-            final boolean fieldRelative
+            final boolean fieldRelative,
+            final boolean invertYaw
     ) {
-        final ChassisSpeeds speeds = fieldRelative
-                ? ChassisSpeeds.fromFieldRelativeSpeeds(xSpeed, ySpeed, rot, getYaw())
-                : new ChassisSpeeds(xSpeed, ySpeed, rot);
+        final ChassisSpeeds speeds;
+        if (fieldRelative) {
+            final Rotation2d poseYaw = getYaw();
+            speeds = ChassisSpeeds.fromFieldRelativeSpeeds(
+                    xSpeed,
+                    ySpeed,
+                    rot,
+                    invertYaw
+                            ? poseYaw.plus(Rotation2d.fromRadians(Math.PI))
+                            : poseYaw
+            );
+        } else {
+            speeds = new ChassisSpeeds(xSpeed, ySpeed, rot);
+        }
 
         drive(speeds);
     }
@@ -515,7 +532,8 @@ public class Swerve extends SubsystemBase {
                             leftStickSpeeds.getX(),
                             leftStickSpeeds.getY(),
                             headingController.calculate(getYaw().getRadians(), rotationTargetSupplier.get().getRadians()),
-                            true
+                            true,
+                            Robot.IsRedAlliance.getAsBoolean()
                     );
                 })
         );
@@ -550,17 +568,14 @@ public class Swerve extends SubsystemBase {
                     rotWeight
             );
 
-            // TODO: do we keep the wheelX stuff?
-//            if (Math.abs(leftStickSpeeds.getNorm()) <= 0.01 && Math.abs(rot) <= 0.01) {
-//                wheelX();
-//            } else {
-                drive(
-                        leftStickSpeeds.getX(),
-                        leftStickSpeeds.getY(),
-                        rot,
-                        true
-                );
-//            }
+            // TODO: do we need to add back the wheelX stuff?
+            drive(
+                    leftStickSpeeds.getX(),
+                    leftStickSpeeds.getY(),
+                    rot,
+                    true,
+                    Robot.IsRedAlliance.getAsBoolean()
+            );
         });
     }
 
@@ -570,15 +585,17 @@ public class Swerve extends SubsystemBase {
                         getYaw().getRadians(),
                         getFieldRelativeSpeeds().omegaRadiansPerSecond)
                 ),
-                run(() -> drive(
+                run(() ->{ drive(
                         0,
                         0,
                         headingController.calculate(
                                 getYaw().getRadians(),
                                 rotationTargetSupplier.get().getRadians()
                         ),
-                        true
-                ))
+                        true,
+                        false
+                );
+                Logger.recordOutput("RotationTarget", rotationTargetSupplier.get());})
         );
     }
 

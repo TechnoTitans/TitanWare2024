@@ -73,6 +73,9 @@ public class Intake extends SubsystemBase {
                 LogKey + "/PeriodicIOPeriodMs",
                 LogUtils.microsecondsToMilliseconds(Logger.getRealTimestamp() - intakeIOPeriodicStart)
         );
+
+        Logger.recordOutput(LogKey + "/HasStoredNote", hasStoredNote.getAsBoolean());
+
         Logger.recordOutput(LogKey + "/Setpoint/RightRollerVelocityRotsPerSec", setpoint.rightRollerVelocityRotsPerSec);
         Logger.recordOutput(LogKey + "/Setpoint/LeftRollerVelocityRotsPerSec", setpoint.leftRollerVelocityRotsPerSec);
         Logger.recordOutput(LogKey + "/Setpoint/ShooterFeederRotsPerSec", setpoint.shooterFeederRotsPerSec);

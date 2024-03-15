@@ -24,11 +24,18 @@ import org.littletonrobotics.junction.wpilog.WPILOGWriter;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
+import java.util.Optional;
+import java.util.function.BooleanSupplier;
 
 @SuppressWarnings("RedundantMethodOverride")
 public class Robot extends LoggedRobot {
     private static final String AKitLogPath = "/U/logs";
     private static final String HootLogPath = "/U/logs";
+
+    public static final BooleanSupplier IsRedAlliance = () -> {
+        final Optional<DriverStation.Alliance> alliance = DriverStation.getAlliance();
+        return alliance.isPresent() && alliance.get() == DriverStation.Alliance.Red;
+    };
 
     private RobotContainer robotContainer;
 

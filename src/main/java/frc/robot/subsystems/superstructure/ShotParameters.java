@@ -57,15 +57,22 @@ public class ShotParameters {
         shotDataMap.put(3.5d, new Parameters(
                 Rotation2d.fromDegrees(36),
                 90,
-                80,
-                90
+                85,
+                85
+        ));
+
+        shotDataMap.put(3.6d, new Parameters(
+                Rotation2d.fromDegrees(34.25),
+                95,
+                90,
+                95
         ));
 
         shotDataMap.put(4d, new Parameters(
-                Rotation2d.fromDegrees(34.5),
+                Rotation2d.fromDegrees(33.5),
                 100,
-                80,
-                95
+                95,
+                100
         ));
     }
 
