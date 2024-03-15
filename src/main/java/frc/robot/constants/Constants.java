@@ -10,7 +10,7 @@ import edu.wpi.first.math.util.Units;
 import org.photonvision.PhotonPoseEstimator;
 
 public interface Constants {
-    RobotMode CURRENT_MODE = RobotMode.SIM;
+    RobotMode CURRENT_MODE = RobotMode.REAL;
     CompetitionType CURRENT_COMPETITION_TYPE = CompetitionType.COMPETITION;
     double LOOP_PERIOD_SECONDS = 0.02;
 
@@ -33,7 +33,6 @@ public interface Constants {
         double TELEOP_MAX_SPEED_MPS = ROBOT_MAX_SPEED_MPS;
         double TELEOP_MAX_ANGULAR_SPEED_RAD_PER_SEC = ROBOT_MAX_ANGULAR_SPEED_RAD_PER_SEC;
 
-        // MOI 1.793
         interface Modules {
             double WHEEL_RADIUS_M = 0.0508; //2 in
             double WHEEL_MASS_KG = 0.2313321; //0.51 lbs
@@ -43,7 +42,7 @@ public interface Constants {
             double TURNER_GEAR_RATIO = 150.0 / 7.0;
 
             //TODO: TUNE AT DE
-            double SLIP_CURRENT_A = 60;
+            double SLIP_CURRENT_A = 80;
             double COUPLING_GEAR_RATIO = 50d / 14;
 
             double WHEEL_CIRCUMFERENCE_M = 2 * Math.PI * WHEEL_RADIUS_M;
@@ -56,11 +55,6 @@ public interface Constants {
             /** Simulated steer voltage required to overcome friction. */
             double STEER_KS_VOLTS = 0.25;
         }
-    }
-
-    interface Intake {
-        double RollerRadiusMeters = Units.inchesToMeters(1);
-        double RollerCircumferenceMeters = Math.PI * RollerRadiusMeters * 2;
     }
 
     interface NetworkTables {
@@ -77,13 +71,15 @@ public interface Constants {
 
         Transform3d ROBOT_TO_FR_APRILTAG_CAM = new Transform3d(
                 new Translation3d(Units.inchesToMeters(11.838), Units.inchesToMeters(-12.861), Units.inchesToMeters(8.947)),
-                new Rotation3d(Units.degreesToRadians(7.44802852475369), Units.degreesToRadians(-25), Units.degreesToRadians(-25))
+                new Rotation3d(0, Units.degreesToRadians(-25), 0)
+                        .rotateBy(new Rotation3d(0, 0, Units.degreesToRadians(-20)))
         );
 
         //L = Left, R = Right, F = Forward, B = Backward (Facing)
         Transform3d ROBOT_TO_FL_APRILTAG_CAM = new Transform3d( // X Z Y
                 new Translation3d(Units.inchesToMeters(11.862), Units.inchesToMeters(12.681), Units.inchesToMeters(8.947)),
-                new Rotation3d(Units.degreesToRadians(-7.44802852475369), Units.degreesToRadians(-25), Units.degreesToRadians(25))
+                new Rotation3d(0, Units.degreesToRadians(-25), 0)
+                        .rotateBy(new Rotation3d(0, 0     , Units.degreesToRadians(20)))
         );
 
         /**

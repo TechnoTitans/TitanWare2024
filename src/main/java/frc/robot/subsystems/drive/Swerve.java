@@ -177,14 +177,14 @@ public class Swerve extends SubsystemBase {
         );
 
         this.headingController = new ProfiledPIDController(
-                8, 0, 0,
+                6, 0, 0,
                 new TrapezoidProfile.Constraints(
-                        ROBOT_MAX_ANGULAR_SPEED_RAD_PER_SEC * 0.75,
-                        ROBOT_MAX_ANGULAR_SPEED_RAD_PER_SEC * 0.5
+                        ROBOT_MAX_ANGULAR_SPEED_RAD_PER_SEC * 0.5,
+                        ROBOT_MAX_ANGULAR_SPEED_RAD_PER_SEC * 0.25
                 )
         );
         this.headingController.enableContinuousInput(-Math.PI, Math.PI);
-        this.headingController.setTolerance(Units.degreesToRadians(3), Units.degreesToRadians(6));
+        this.headingController.setTolerance(Units.degreesToRadians(6), Units.degreesToRadians(8));
         this.atHeadingSetpoint = new Trigger(headingController::atGoal);
 
         this.holonomicDriveWithPIDController = new HolonomicDriveWithPIDController(
@@ -194,7 +194,7 @@ public class Swerve extends SubsystemBase {
                         headingController.getP(), headingController.getI(), headingController.getD(),
                         headingController.getConstraints()
                 ),
-                new Pose2d(0.01, 0.01, Rotation2d.fromDegrees(3))
+                new Pose2d(0.05, 0.05, Rotation2d.fromDegrees(3))
         );
         this.atHolonomicDrivePose = new Trigger(holonomicDriveWithPIDController::atReference);
 
@@ -608,13 +608,14 @@ public class Swerve extends SubsystemBase {
                     );
                 }),
                 run(() -> {
-                    Logger.recordOutput(LogKey + "/HeadingController/TargetHeading", rotationTargetSupplier.get());
+                    final Rotation2d targetHeading = rotationTargetSupplier.get();
+                    Logger.recordOutput(LogKey + "/HeadingController/TargetHeading", targetHeading);
                     drive(
                             0,
                             0,
                             headingController.calculate(
                                     getYaw().getRadians(),
-                                    rotationTargetSupplier.get().getRadians()
+                                    targetHeading.getRadians()
                             ),
                             true,
                             false
@@ -626,16 +627,18 @@ public class Swerve extends SubsystemBase {
     }
 
     public Command driveToPose(final Supplier<Pose2d> poseSupplier) {
-        return runOnce(() -> {
-            Logger.recordOutput(LogKey + "/HolonomicController/Active", true);
-            holonomicDriveWithPIDController.reset(getPose(), getRobotRelativeSpeeds());
-        }).andThen(
+        return Commands.sequence(
+                runOnce(() -> {
+                    Logger.recordOutput(LogKey + "/HolonomicController/Active", true);
+                    holonomicDriveWithPIDController.reset(getPose(), getRobotRelativeSpeeds());
+                }),
                 run(() -> {
                     final Pose2d targetPose = poseSupplier.get();
                     Logger.recordOutput(LogKey + "/HolonomicController/TargetPose", targetPose);
 
                     drive(holonomicDriveWithPIDController.calculate(getPose(), poseSupplier.get()));
-                }).until(holonomicDriveWithPIDController::atReference)
+                }).until(holonomicDriveWithPIDController::atReference),
+                runOnce(this::stop)
         ).finallyDo(
                 () -> Logger.recordOutput(LogKey + "/HolonomicController/Active", false)
         );

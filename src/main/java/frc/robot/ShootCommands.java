@@ -83,8 +83,7 @@ public class ShootCommands {
                         intake
                                 .runStopCommand()
                                 .until(superstructure.atSetpoint.and(swerve.atHeadingSetpoint))
-                                .andThen(intake.feedCommand())
-                                .andThen(Commands.waitSeconds(0.1)),
+                                .andThen(intake.feedCommand()),
                         superstructure.runState(ShootCommands.shotParametersSupplier(swerve::getPose))
                 ),
                 swerve.faceAngle(ShootCommands.angleToSpeakerSupplier(swerve::getPose))

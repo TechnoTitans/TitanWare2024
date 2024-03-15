@@ -4,17 +4,12 @@ import edu.wpi.first.math.controller.PIDController;
 import edu.wpi.first.math.controller.ProfiledPIDController;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
-import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.math.kinematics.ChassisSpeeds;
 
 public class HolonomicDriveWithPIDController {
     private final PIDController xController;
     private final PIDController yController;
     private final ProfiledPIDController rotationController;
-
-    private final Pose2d poseTolerance;
-    private Pose2d poseError = new Pose2d();
-    private Rotation2d rotationError = new Rotation2d();
 
     /**
      * Constructs a {@link HolonomicDriveWithPIDController}
@@ -30,11 +25,18 @@ public class HolonomicDriveWithPIDController {
             final Pose2d poseTolerance
     ) {
         this.xController = xController;
-        this.yController = yController;
-        this.rotationController = rotationController;
-        this.rotationController.enableContinuousInput(-Math.PI, Math.PI);
+        this.xController.setTolerance(poseTolerance.getX(), poseTolerance.getX() * 1.5);
 
-        this.poseTolerance = poseTolerance;
+        this.yController = yController;
+        this.yController.setTolerance(poseTolerance.getY(), poseTolerance.getX() * 1.5);
+
+        final Rotation2d rotationTolerance = poseTolerance.getRotation();
+        this.rotationController = rotationController;
+        this.rotationController.setTolerance(
+                rotationTolerance.getRadians(),
+                rotationTolerance.getRadians() * 1.5
+        );
+        this.rotationController.enableContinuousInput(-Math.PI, Math.PI);
     }
 
     /**
@@ -54,13 +56,9 @@ public class HolonomicDriveWithPIDController {
      * @return True if the pose error is within tolerance of the reference.
      */
     public boolean atReference() {
-        final Translation2d translationError = poseError.getTranslation();
-        final Translation2d translationTolerance = poseTolerance.getTranslation();
-        final Rotation2d rotationTolerance = poseTolerance.getRotation();
-
-        return Math.abs(translationError.getX()) < translationTolerance.getX()
-                && Math.abs(translationError.getY()) < translationTolerance.getY()
-                && Math.abs(rotationError.getRadians()) < rotationTolerance.getRadians();
+        return xController.atSetpoint()
+                && yController.atSetpoint()
+                && rotationController.atGoal();
     }
 
     /**
@@ -77,9 +75,6 @@ public class HolonomicDriveWithPIDController {
                 currentPose.getRotation().getRadians(),
                 targetPose.getRotation().getRadians()
         );
-
-        this.poseError = targetPose.relativeTo(currentPose);
-        this.rotationError = targetPose.getRotation().minus(currentPose.getRotation());
 
         return ChassisSpeeds.fromFieldRelativeSpeeds(
                 xFeedback,
