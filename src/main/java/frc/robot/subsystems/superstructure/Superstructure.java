@@ -3,10 +3,12 @@ package frc.robot.subsystems.superstructure;
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
+import edu.wpi.first.wpilibj2.command.Subsystem;
 import edu.wpi.first.wpilibj2.command.button.Trigger;
 import frc.robot.subsystems.superstructure.arm.Arm;
 import frc.robot.subsystems.superstructure.shooter.Shooter;
 
+import java.util.Set;
 import java.util.function.DoubleSupplier;
 import java.util.function.Supplier;
 
@@ -86,6 +88,10 @@ public class Superstructure {
                         rightVolts
                 )
         );
+    }
+
+    public Set<Subsystem> getRequirements() {
+        return Set.of(arm, shooter);
     }
 
     @SuppressWarnings("unused")

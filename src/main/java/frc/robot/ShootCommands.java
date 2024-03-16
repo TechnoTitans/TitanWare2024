@@ -4,12 +4,14 @@ import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
+import edu.wpi.first.wpilibj2.command.Subsystem;
 import frc.robot.constants.FieldConstants;
 import frc.robot.subsystems.drive.Swerve;
 import frc.robot.subsystems.intake.Intake;
 import frc.robot.subsystems.superstructure.ShotParameters;
 import frc.robot.subsystems.superstructure.Superstructure;
 
+import java.util.HashSet;
 import java.util.function.DoubleSupplier;
 import java.util.function.Supplier;
 
@@ -96,6 +98,27 @@ public class ShootCommands {
                         superstructure.runState(ShootCommands.shotParametersSupplier(swerve::getPose))
                 ),
                 swerve.faceAngle(ShootCommands.angleToSpeakerSupplier(swerve::getPose))
+        );
+    }
+
+    public Command deferredStopAimAndShoot() {
+        final HashSet<Subsystem> requirements = new HashSet<>();
+        requirements.add(swerve);
+        requirements.addAll(superstructure.getRequirements());
+
+        return Commands.defer(() ->
+                Commands.deadline(
+                        Commands.deadline(
+                                intake
+                                        .runStopCommand()
+                                        .until(superstructure.atSetpoint.and(swerve.atHeadingSetpoint))
+                                        .withTimeout(2) // TODO: fixme
+                                        .andThen(intake.feedCommand()),
+                                superstructure.runState(ShootCommands.shotParametersSupplier(swerve::getPose))
+                        ),
+                        swerve.faceAngle(() -> ShootCommands.angleToSpeaker(swerve.getPose()))
+                ),
+                requirements
         );
     }
 

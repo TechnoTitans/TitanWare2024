@@ -83,8 +83,8 @@ public interface Constants {
          * Standard deviations of the supplied pose estimate (before vision, likely to be solely wheel odometry)
          */
         Vector<N3> STATE_STD_DEVS = VecBuilder.fill(0.1, 0.1, Units.degreesToRadians(1));
-        // TODO: use information from collected vision estimation data to scale standard deviations
-        Vector<N3> VISION_MEASUREMENT_STD_DEVS = VecBuilder.fill(0.6, 0.6, Units.degreesToRadians(30));
+        double VISION_CAMERA_DEFAULT_STD_DEV_FACTOR = 1.0;
+        Vector<N3> VISION_STD_DEV_COEFFS = VecBuilder.fill(0.005, 0.005, 0.01);
         double MULTI_TAG_MAX_AMBIGUITY = 0.4;
         double SINGLE_TAG_MAX_AMBIGUITY = 0.2;
     }

@@ -160,7 +160,8 @@ public class RobotContainer {
                 )
         );
         this.driverController.rightTrigger(0.5, teleopEventLoop)
-                .whileTrue(shootCommands.stopAimAndShoot())
+//                .whileTrue(shootCommands.stopAimAndShoot())
+                .whileTrue(shootCommands.deferredStopAimAndShoot())
                 .onFalse(superstructure.toGoal(Superstructure.Goal.IDLE));
 
         this.driverController.a(teleopEventLoop).whileTrue(shootCommands.lineupAndAmp());

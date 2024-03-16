@@ -13,6 +13,7 @@ public enum TitanCamera {
             "FL_Apriltag",
             Constants.Vision.ROBOT_TO_FL_APRILTAG_CAM,
             CameraProperties.SEE3CAM_24CUG,
+            1.0,
             new TitanCameraCalibration()
                     .withCalibration(
                             CameraProperties.Resolution.R1920x1080,
@@ -58,6 +59,7 @@ public enum TitanCamera {
             "FR_Apriltag",
             Constants.Vision.ROBOT_TO_FR_APRILTAG_CAM,
             CameraProperties.SEE3CAM_24CUG,
+            1.0,
             new TitanCameraCalibration()
                     .withCalibration(
                             CameraProperties.Resolution.R1920x1080,
@@ -103,6 +105,7 @@ public enum TitanCamera {
     private final PhotonCamera photonCamera;
     private final Transform3d robotRelativeToCameraTransform;
     private final CameraProperties cameraProperties;
+    private final double stdDevFactor;
     private final TitanCameraCalibration cameraCalibration;
     private final boolean driverCam;
 
@@ -110,12 +113,14 @@ public enum TitanCamera {
             final String photonCameraName,
             final Transform3d robotRelativeToCameraTransform,
             final CameraProperties cameraProperties,
+            final double stdDevFactor,
             final TitanCameraCalibration titanCameraCalibration,
             final boolean driverCam
     ) {
         this.photonCamera = new PhotonCamera(photonCameraName);
         this.robotRelativeToCameraTransform = robotRelativeToCameraTransform;
         this.cameraProperties = cameraProperties;
+        this.stdDevFactor = stdDevFactor;
         this.cameraCalibration = titanCameraCalibration;
         this.driverCam = driverCam;
 
@@ -146,6 +151,7 @@ public enum TitanCamera {
                 photonCameraName,
                 robotRelativeToCameraTransform,
                 cameraProperties,
+                1.0,
                 TitanCameraCalibration.fromSimCameraProperties(SimCameraProperties.PERFECT_90DEG()),
                 driverCam
         );
@@ -162,6 +168,8 @@ public enum TitanCamera {
     public CameraProperties getCameraProperties() {
         return cameraProperties;
     }
+
+    public double getStdDevFactor() { return stdDevFactor; }
 
     public TitanCameraCalibration getCameraCalibration() {
         return cameraCalibration;
