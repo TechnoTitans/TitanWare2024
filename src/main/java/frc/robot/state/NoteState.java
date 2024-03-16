@@ -20,12 +20,12 @@ public class NoteState {
     }
 
     private State state;
-    private final Trigger isNone = inStateTrigger(State.NONE);
-    private final Trigger isInvalid = inStateTrigger(State.INVALID);
-    private final Trigger isIntaking = inStateTrigger(State.INTAKING);
-    private final Trigger isStoring = inStateTrigger(State.STORING);
-    private final Trigger isStored = inStateTrigger(State.STORED);
-    private final Trigger isFeeding = inStateTrigger(State.FEEDING);
+    public final Trigger isNone = inStateTrigger(State.NONE);
+    public final Trigger isInvalid = inStateTrigger(State.INVALID);
+    public final Trigger isIntaking = inStateTrigger(State.INTAKING);
+    public final Trigger isStoring = inStateTrigger(State.STORING);
+    public final Trigger isStored = inStateTrigger(State.STORED);
+    public final Trigger isFeeding = inStateTrigger(State.FEEDING);
 
     public NoteState(final Intake intake, final Superstructure superstructure) {
         this.intake = intake;

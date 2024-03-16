@@ -14,6 +14,7 @@ import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.button.Trigger;
 import frc.robot.Robot;
 import frc.robot.ShootCommands;
+import frc.robot.state.NoteState;
 import frc.robot.subsystems.drive.Swerve;
 import frc.robot.subsystems.intake.Intake;
 import frc.robot.subsystems.superstructure.Superstructure;
@@ -34,17 +35,22 @@ public class Autos {
     private final Intake intake;
     private final Superstructure superstructure;
 
+    private final NoteState noteState;
+
     private final ShootCommands shootCommands;
 
     public Autos(
             final Swerve swerve,
             final Intake intake,
             final Superstructure superstructure,
+            final NoteState noteState,
             final ShootCommands shootCommands
     ) {
         this.swerve = swerve;
-        this.superstructure = superstructure;
         this.intake = intake;
+        this.superstructure = superstructure;
+        this.noteState = noteState;
+
         this.shootCommands = shootCommands;
     }
 
@@ -386,7 +392,7 @@ public class Autos {
 
         autoTriggers.atTime(1.24).onTrue(
                 Commands.sequence(
-                        Commands.waitUntil(intake.hasStoredNote),
+                        Commands.waitUntil(noteState.isStored),
                         shootCommands.stopAimAndShoot().withName("Shoot0").asProxy(),
                         followPath(trajectoryGroup.get(1), timer).asProxy()
                 ).withName("Shoot0AndFollow1")
@@ -400,7 +406,7 @@ public class Autos {
 
         autoTriggers.atTime(3.55).onTrue(
                 Commands.sequence(
-                        Commands.waitUntil(intake.hasStoredNote),
+                        Commands.waitUntil(noteState.isStored),
                         shootCommands.stopAimAndShoot().withName("Shoot1").asProxy(),
                         followPath(trajectoryGroup.get(2), timer).asProxy()
                 ).withName("Shoot1AndFollow2")
@@ -414,7 +420,7 @@ public class Autos {
 
         autoTriggers.atTime(5.6).onTrue(
                 Commands.sequence(
-                        Commands.waitUntil(intake.hasStoredNote),
+                        Commands.waitUntil(noteState.isStored),
                         shootCommands.stopAimAndShoot().withName("Shoot2").asProxy()
                 ).withName("Shoot2")
         );

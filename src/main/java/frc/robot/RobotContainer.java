@@ -13,6 +13,7 @@ import frc.robot.auto.Autos;
 import frc.robot.constants.Constants;
 import frc.robot.constants.HardwareConstants;
 import frc.robot.constants.RobotMap;
+import frc.robot.state.NoteState;
 import frc.robot.subsystems.drive.Swerve;
 import frc.robot.subsystems.intake.Intake;
 import frc.robot.subsystems.superstructure.Superstructure;
@@ -31,6 +32,8 @@ public class RobotContainer {
     public final Shooter shooter;
 
     public final Superstructure superstructure;
+
+    public final NoteState noteState;
 
     public final ShootCommands shootCommands;
     public final Autos autos;
@@ -67,9 +70,11 @@ public class RobotContainer {
         this.shooter = new Shooter(Constants.CURRENT_MODE, HardwareConstants.SHOOTER);
         this.superstructure = new Superstructure(arm, shooter);
 
+        this.noteState = new NoteState(intake, superstructure);
+
         this.photonVision = new PhotonVision(Constants.CURRENT_MODE, swerve, swerve.getPoseEstimator());
         this.shootCommands = new ShootCommands(swerve, intake, superstructure);
-        this.autos = new Autos(swerve, intake, superstructure, shootCommands);
+        this.autos = new Autos(swerve, intake, superstructure, noteState, shootCommands);
 
         this.driverController = new CommandXboxController(RobotMap.MainController);
         this.coDriverController = new CommandXboxController(RobotMap.CoController);
