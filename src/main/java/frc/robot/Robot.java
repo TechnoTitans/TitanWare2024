@@ -1,6 +1,8 @@
 package frc.robot;
 
 import com.ctre.phoenix6.SignalLogger;
+import edu.wpi.first.math.geometry.Pose2d;
+import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.RobotBase;
 import edu.wpi.first.wpilibj.event.EventLoop;
@@ -8,10 +10,14 @@ import edu.wpi.first.wpilibj.livewindow.LiveWindow;
 import edu.wpi.first.wpilibj2.command.CommandScheduler;
 import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.Subsystem;
+import edu.wpi.first.wpilibj2.command.button.Trigger;
 import edu.wpi.first.wpilibj2.command.sysid.SysIdRoutine;
 import frc.robot.constants.Constants;
 import frc.robot.constants.FieldConstants;
+import frc.robot.state.NoteState;
 import frc.robot.subsystems.superstructure.ShotParameters;
+import frc.robot.subsystems.superstructure.Superstructure;
+import frc.robot.utils.PoseUtils;
 import frc.robot.utils.closeables.ToClose;
 import frc.robot.utils.subsystems.VirtualSubsystem;
 import org.littletonrobotics.junction.LogFileUtil;
@@ -24,6 +30,7 @@ import org.littletonrobotics.junction.wpilog.WPILOGWriter;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
+import java.sql.Driver;
 import java.util.Optional;
 import java.util.function.BooleanSupplier;
 
@@ -38,6 +45,9 @@ public class Robot extends LoggedRobot {
     };
 
     private RobotContainer robotContainer;
+
+    public final Trigger autonomousEnabled = new Trigger(DriverStation::isAutonomousEnabled);
+    public final Trigger teleopEnabled = new Trigger(DriverStation::isTeleopEnabled);
 
     private EventLoop autonomousEventLoop;
     private final EventLoop teleopEventLoop = new EventLoop();
@@ -181,6 +191,20 @@ public class Robot extends LoggedRobot {
         Logger.recordOutput("ShotParameters/LeftVelocityRotsPerSec", shotParameters.leftVelocityRotsPerSec());
         Logger.recordOutput("ShotParameters/RightVelocityRotsPerSec", shotParameters.rightVelocityRotsPerSec());
         Logger.recordOutput("ShotParameters/AmpVelocityRotsPerSec", shotParameters.ampVelocityRotsPerSec());
+
+        final NoteState.State state = robotContainer.noteState.getState();
+        Logger.recordOutput("NoteState", state.toString());
+
+//        final Pose2d firstShootingPose = PoseUtils.flip(
+//                new Pose2d(2.7642409801483154, 2.8818938732147217, Rotation2d.fromRadians(2.356194179098199))
+//        );
+//
+//        final Pose2d secondShootingPose = PoseUtils.flip(
+//                new Pose2d(2.9487416744232178, 2.6832008361816406, Rotation2d.fromRadians(2.338014386437155))
+//        );
+//
+//        Logger.recordOutput("FirstShootingPose", firstShootingPose);
+//        Logger.recordOutput("SecondShootingPose", secondShootingPose);
     }
 
     @Override
@@ -203,6 +227,16 @@ public class Robot extends LoggedRobot {
 
     @Override
     public void teleopInit() {
+        if (!robotContainer.superstructure.isHomed()) {
+            // TODO: do this better
+            Commands.sequence(
+                    robotContainer.superstructure.home(),
+                    robotContainer.superstructure.toGoal(Superstructure.Goal.IDLE)
+            ).schedule();
+        } else {
+            robotContainer.superstructure.toGoal(Superstructure.Goal.IDLE).schedule();
+        }
+
         //noinspection SuspiciousNameCombination
         robotContainer.swerve.setDefaultCommand(
                 robotContainer.swerve.teleopDriveCommand(

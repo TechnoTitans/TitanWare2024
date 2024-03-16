@@ -143,13 +143,23 @@ public class RobotContainer {
                 Constants.CompetitionType.COMPETITION
         ));
         autoChooser.addAutoOption(new AutoOption(
-                "AmpSpeaker2Center3",
-                autos.ampSpeaker2Center3(),
-                Constants.CompetitionType.TESTING
+                "AmpSpeaker2Center3_4",
+                autos.ampSpeaker2Center3_4(),
+                Constants.CompetitionType.COMPETITION
         ));
         autoChooser.addAutoOption(new AutoOption(
                 "ShootAndMobility",
                 autos.shootAndMobility(),
+                Constants.CompetitionType.COMPETITION
+        ));
+        autoChooser.addAutoOption(new AutoOption(
+                "Amp",
+                autos.amp(),
+                Constants.CompetitionType.COMPETITION
+        ));
+        autoChooser.addAutoOption(new AutoOption(
+                "FinishBobo",
+                autos.finishBobo(),
                 Constants.CompetitionType.COMPETITION
         ));
     }
@@ -169,7 +179,7 @@ public class RobotContainer {
                 .whileTrue(shootCommands.deferredStopAimAndShoot())
                 .onFalse(superstructure.toGoal(Superstructure.Goal.IDLE));
 
-        this.driverController.a(teleopEventLoop).whileTrue(shootCommands.lineupAndAmp());
+        this.driverController.a(teleopEventLoop).whileTrue(shootCommands.amp());
         this.driverController.y(teleopEventLoop).onTrue(swerve.zeroRotationCommand());
 
         this.driverController.leftBumper(teleopEventLoop).whileTrue(
@@ -188,7 +198,7 @@ public class RobotContainer {
 
         this.coDriverController.y(teleopEventLoop).whileTrue(runEjectShooter());
         this.coDriverController.a(teleopEventLoop).whileTrue(runEjectIntake());
-        this.coDriverController.b().whileTrue(shootCommands.amp());
+        this.coDriverController.b().whileTrue(shootCommands.lineupAndAmp());
         this.coDriverController.rightTrigger(0.5, teleopEventLoop)
                 .whileTrue(shootCommands.shootSubwoofer());
     }

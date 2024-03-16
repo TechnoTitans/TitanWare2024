@@ -183,7 +183,7 @@ public class Swerve extends SubsystemBase {
                 )
         );
         this.headingController.enableContinuousInput(-Math.PI, Math.PI);
-        this.headingController.setTolerance(Units.degreesToRadians(6), Units.degreesToRadians(8));
+        this.headingController.setTolerance(Units.degreesToRadians(6), Units.degreesToRadians(12));
         this.atHeadingSetpoint = new Trigger(headingController::atGoal);
 
         this.holonomicDriveWithPIDController = new HolonomicDriveWithPIDController(

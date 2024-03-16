@@ -19,20 +19,24 @@ public class NoteState {
         FEEDING
     }
 
-    private State state;
-    public final Trigger isNone = inStateTrigger(State.NONE);
-    public final Trigger isInvalid = inStateTrigger(State.INVALID);
-    public final Trigger isIntaking = inStateTrigger(State.INTAKING);
-    public final Trigger isStoring = inStateTrigger(State.STORING);
-    public final Trigger isStored = inStateTrigger(State.STORED);
-    public final Trigger isFeeding = inStateTrigger(State.FEEDING);
+    private State state = State.NONE;
+    public final Trigger isNone = isStateTrigger(State.NONE);
+    public final Trigger isInvalid = isStateTrigger(State.INVALID);
+    public final Trigger isIntaking = isStateTrigger(State.INTAKING);
+    public final Trigger isStoring = isStateTrigger(State.STORING);
+    public final Trigger isStored = isStateTrigger(State.STORED);
+    public final Trigger isFeeding = isStateTrigger(State.FEEDING);
+
+    public final Trigger hasNote = isStoring.or(isStored).or(isFeeding);
 
     public NoteState(final Intake intake, final Superstructure superstructure) {
         this.intake = intake;
         this.superstructure = superstructure;
+
+//        configureStateBindings();
     }
 
-    public Trigger inStateTrigger(final State state) {
+    public Trigger isStateTrigger(final State state) {
         return new Trigger(() -> this.state == state);
     }
 
@@ -40,23 +44,29 @@ public class NoteState {
         return Commands.runOnce(() -> this.state = state);
     }
 
+    public State getState() {
+        return state;
+    }
+
     public void configureStateBindings() {
-        intake.intaking.and(isNone)
+        intake.intaking.and(hasNote.negate())
                 .onTrue(setState(State.INTAKING));
+        intake.intaking.and(hasNote)
+                .onTrue(setState(State.INVALID));
 
         intake.feeding.and(isStored).and(intake.shooterBeamBreakBroken)
                 .onTrue(setState(State.FEEDING));
         isFeeding.and(intake.shooterBeamBreakBroken.negate())
                 .onTrue(setState(State.NONE));
 
-        isIntaking.and(isNone.negate())
-                .onTrue(setState(State.INVALID));
-
-        isIntaking.and(isNone).and(intake.shooterBeamBreakBroken)
+        isIntaking.and(isInvalid.negate()).and(intake.shooterBeamBreakBroken)
                 .onTrue(Commands.sequence(
                         setState(State.STORING),
                         intake.storeCommand(),
                         setState(State.STORED)
                 ));
+
+//        intake.shooterBeamBreakBroken.negate().and(isFeeding.negate()).and(isStoring.negate())
+//                .onTrue(setState(State.NONE));
     }
 }

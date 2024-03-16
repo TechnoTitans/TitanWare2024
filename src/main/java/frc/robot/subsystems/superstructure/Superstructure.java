@@ -16,6 +16,7 @@ public class Superstructure {
     private final Arm arm;
     private final Shooter shooter;
 
+    private boolean isHomed = false;
     public final Trigger atSetpoint;
 
     public enum Goal {
@@ -42,8 +43,13 @@ public class Superstructure {
 
     public Command home() {
         return Commands.sequence(
-                arm.homePivotCommand()
+                arm.homePivotCommand(),
+                Commands.runOnce(() -> this.isHomed = true)
         );
+    }
+
+    public boolean isHomed() {
+        return isHomed;
     }
 
     public Command toGoal(final Goal goal) {

@@ -12,6 +12,7 @@ import frc.robot.subsystems.superstructure.ShotParameters;
 import frc.robot.subsystems.superstructure.Superstructure;
 
 import java.util.HashSet;
+import java.util.Set;
 import java.util.function.DoubleSupplier;
 import java.util.function.Supplier;
 
@@ -53,6 +54,15 @@ public class ShootCommands {
         );
     }
 
+    public static ShotParameters.Parameters shotParameters(final Pose2d currentPose) {
+        return ShotParameters.get(
+                currentPose
+                        .minus(FieldConstants.getSpeakerPose())
+                        .getTranslation()
+                        .getNorm()
+        );
+    }
+
     public Command amp() {
         return Commands.sequence(
                 intake.feedHalfCommand(),
@@ -67,14 +77,16 @@ public class ShootCommands {
     }
 
     public Command lineupAndAmp() {
-        return Commands.deadline(
-                Commands.sequence(
-                        Commands.waitUntil(swerve.atHolonomicDrivePose)
-                                .withTimeout(6),
-                        amp()
-                ),
-                swerve.driveToPose(FieldConstants::getAmpScoringPose)
-        );
+        return swerve.driveToPose(FieldConstants::getAmpScoringPose)
+                .until(swerve.atHolonomicDrivePose)
+                .withTimeout(6)
+                .andThen(Commands.deadline(
+                        Commands.sequence(
+                                Commands.waitSeconds(0.2),
+                                amp()
+                        ),
+                        swerve.teleopDriveCommand(() -> 0, () -> 0.1, () -> 0)
+                ));
     }
 
     public Command shootSubwoofer() {
@@ -85,6 +97,10 @@ public class ShootCommands {
                         .andThen(intake.feedCommand()),
                 superstructure.toGoal(Superstructure.Goal.SUBWOOFER)
         );
+    }
+
+    public Command readySuperstructureForShot() {
+        return superstructure.runState(ShootCommands.shotParametersSupplier(swerve::getPose));
     }
 
     public Command stopAimAndShoot() {
@@ -102,23 +118,22 @@ public class ShootCommands {
     }
 
     public Command deferredStopAimAndShoot() {
-        final HashSet<Subsystem> requirements = new HashSet<>();
-        requirements.add(swerve);
-        requirements.addAll(superstructure.getRequirements());
-
-        return Commands.defer(() ->
+        return Commands.deadline(
                 Commands.deadline(
-                        Commands.deadline(
-                                intake
-                                        .runStopCommand()
-                                        .until(superstructure.atSetpoint.and(swerve.atHeadingSetpoint))
-                                        .withTimeout(2) // TODO: fixme
-                                        .andThen(intake.feedCommand()),
-                                superstructure.runState(ShootCommands.shotParametersSupplier(swerve::getPose))
-                        ),
-                        swerve.faceAngle(() -> ShootCommands.angleToSpeaker(swerve.getPose()))
+                        intake
+                                .runStopCommand()
+                                .until(superstructure.atSetpoint.and(swerve.atHeadingSetpoint))
+                                .withTimeout(1)
+                                .andThen(intake.feedCommand()),
+                        Commands.defer(() ->
+                                superstructure.runState(() -> ShootCommands.shotParameters(swerve.getPose())),
+                                superstructure.getRequirements()
+                        )
                 ),
-                requirements
+                Commands.defer(
+                        () -> swerve.faceAngle(() -> ShootCommands.angleToSpeaker(swerve.getPose())),
+                        Set.of(swerve)
+                )
         );
     }
 

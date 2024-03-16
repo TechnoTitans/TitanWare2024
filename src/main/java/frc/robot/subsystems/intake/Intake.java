@@ -79,6 +79,9 @@ public class Intake extends SubsystemBase {
                 LogUtils.microsecondsToMilliseconds(Logger.getRealTimestamp() - intakeIOPeriodicStart)
         );
 
+        Logger.recordOutput(LogKey + "/Intaking", intaking.getAsBoolean());
+        Logger.recordOutput(LogKey + "/Feeding", feeding.getAsBoolean());
+
         Logger.recordOutput(LogKey + "/Setpoint/RightRollerVelocityRotsPerSec", setpoint.rightRollerVelocityRotsPerSec);
         Logger.recordOutput(LogKey + "/Setpoint/LeftRollerVelocityRotsPerSec", setpoint.leftRollerVelocityRotsPerSec);
         Logger.recordOutput(LogKey + "/Setpoint/ShooterFeederRotsPerSec", setpoint.shooterFeederRotsPerSec);
@@ -90,8 +93,7 @@ public class Intake extends SubsystemBase {
                 .unless(shooterBeamBreakBroken)
                 .andThen(
                         Commands.deadline(
-                                Commands.waitUntil(shooterBeamBreakBroken.negate())
-                                        .andThen(Commands.waitSeconds(0.1)),
+                                Commands.waitUntil(shooterBeamBreakBroken.negate()),
                                 runVelocityCommand(-4, -4, -4)
                         )
                 )
@@ -101,13 +103,12 @@ public class Intake extends SubsystemBase {
     public Command intakeCommand(final Command runOnHasNote) {
         return Commands.sequence(
                 runOnce(() -> this.intakingActive = true),
-                runVelocityCommand(22, 22, 18)
+                runVelocityCommand(22, 22, 22)
                         .until(shooterBeamBreakBroken),
                 instantStopCommand(),
-                runOnce(() -> this.intakingActive = false),
-//                storeCommand(),
+                storeCommand(),
                 runOnHasNote.asProxy()
-        );
+        ).finallyDo(() -> this.intakingActive = false);
     }
 
     public Command intakeCommand() {

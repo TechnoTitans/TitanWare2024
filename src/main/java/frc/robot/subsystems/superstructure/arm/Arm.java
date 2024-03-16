@@ -21,7 +21,7 @@ import static edu.wpi.first.units.Units.*;
 public class Arm extends SubsystemBase {
     protected static final String LogKey = "Arm";
     private static final double PositionToleranceRots = 0.005;
-    private static final double VelocityToleranceRotsPerSec = 0.01;
+    private static final double VelocityToleranceRotsPerSec = 0.02;
 
     private final HardwareConstants.ArmConstants armConstants;
 

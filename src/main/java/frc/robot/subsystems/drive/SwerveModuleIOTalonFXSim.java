@@ -250,7 +250,7 @@ public class SwerveModuleIOTalonFXSim implements SwerveModuleIO {
         odometryThreadRunner.updateControlRequest(driveMotor, velocityTorqueCurrentFOC);
         driveMotor.setControl(velocityTorqueCurrentFOC
                 .withVelocity(desiredDriverVelocity)
-                .withOverrideCoastDurNeutral(true)
+//                .withOverrideCoastDurNeutral(true)
         );
         turnMotor.setControl(positionVoltage.withPosition(desiredTurnerRotations));
     }
