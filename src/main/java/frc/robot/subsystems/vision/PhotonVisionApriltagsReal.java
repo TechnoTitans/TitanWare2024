@@ -59,6 +59,7 @@ public class PhotonVisionApriltagsReal implements PhotonVisionRunner<PhotonVisio
             this.latestPhotonPipelineResult = photonPipelineResult;
         }
 
+        @SuppressWarnings("DuplicatedCode")
         @Override
         public void updateInputs(final PhotonVisionIOInputs inputs) {
             inputs.name = cameraName;

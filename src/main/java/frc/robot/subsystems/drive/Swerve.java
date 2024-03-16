@@ -26,7 +26,6 @@ import edu.wpi.first.math.trajectory.TrapezoidProfile;
 import edu.wpi.first.math.util.Units;
 import edu.wpi.first.units.Current;
 import edu.wpi.first.units.Measure;
-import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.Timer;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
@@ -46,7 +45,6 @@ import frc.robot.utils.teleop.ControllerUtils;
 import frc.robot.utils.teleop.Profiler;
 import org.littletonrobotics.junction.Logger;
 
-import java.util.Optional;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.function.BooleanSupplier;
 import java.util.function.Consumer;
@@ -204,12 +202,9 @@ public class Swerve extends SubsystemBase {
 
         Swerve.configurePathPlannerAutoBuilder(
                 this,
-                () -> {
-                    final Optional<DriverStation.Alliance> alliance = DriverStation.getAlliance();
-                    return alliance.isPresent() && alliance.get() == DriverStation.Alliance.Red;
-                },
-                currentPose -> Logger.recordOutput("Auto/CurrentPose", currentPose),
-                targetPose -> Logger.recordOutput("Auto/TargetPose", targetPose)
+                Robot.IsRedAlliance,
+                currentPose -> Logger.recordOutput(Autos.LogKey + "/CurrentPose", currentPose),
+                targetPose -> Logger.recordOutput(Autos.LogKey + "TargetPose", targetPose)
         );
         this.odometryThreadRunner.start();
     }
@@ -726,7 +721,7 @@ public class Swerve extends SubsystemBase {
         return Commands.sequence(
                 runOnce(() -> {
                     Logger.recordOutput(
-                            Autos.AutoLogKey + "/Trajectory",
+                            Autos.LogKey + "/Trajectory",
                             mirrorTrajectory.getAsBoolean()
                                     ? choreoTrajectory.flipped().getPoses()
                                     : choreoTrajectory.getPoses()
@@ -743,18 +738,18 @@ public class Swerve extends SubsystemBase {
                     );
 
                     final Pose2d targetPose = targetState.getPose();
-                    Logger.recordOutput(Autos.AutoLogKey + "/Timestamp", time);
-                    Logger.recordOutput(Autos.AutoLogKey + "/CurrentPose", currentPose);
-                    Logger.recordOutput(Autos.AutoLogKey + "/TargetSpeeds", targetState.getChassisSpeeds());
-                    Logger.recordOutput(Autos.AutoLogKey + "/TargetPose", targetPose);
+                    Logger.recordOutput(Autos.LogKey + "/Timestamp", time);
+                    Logger.recordOutput(Autos.LogKey + "/CurrentPose", currentPose);
+                    Logger.recordOutput(Autos.LogKey + "/TargetSpeeds", targetState.getChassisSpeeds());
+                    Logger.recordOutput(Autos.LogKey + "/TargetPose", targetPose);
 
                     Logger.recordOutput(
-                            Autos.AutoLogKey + "/TargetRotation",
+                            Autos.LogKey + "/TargetRotation",
                             MathUtil.angleModulus(targetPose.getRotation().getRadians())
                     );
 
                     Logger.recordOutput(
-                            Autos.AutoLogKey + "/CurrentRotation",
+                            Autos.LogKey + "/CurrentRotation",
                             MathUtil.angleModulus(currentPose.getRotation().getRadians())
                     );
 

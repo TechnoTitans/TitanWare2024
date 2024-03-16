@@ -25,7 +25,7 @@ import java.util.function.DoubleSupplier;
 import java.util.function.Supplier;
 
 public class Autos {
-    public static final String AutoLogKey = "Auto";
+    public static final String LogKey = "Auto";
 
     private static final double TranslationToleranceMeters = 0.5;
     private static final double TimeToleranceSeconds = 0.1;
