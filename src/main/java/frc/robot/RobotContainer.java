@@ -182,6 +182,9 @@ public class RobotContainer {
 
         this.coDriverController.y(teleopEventLoop).whileTrue(runEjectShooter());
         this.coDriverController.a(teleopEventLoop).whileTrue(runEjectIntake());
+        this.coDriverController.b().whileTrue(shootCommands.amp());
+        this.coDriverController.rightTrigger(0.5, teleopEventLoop)
+                .whileTrue(shootCommands.shootSubwoofer());
     }
 
     public EventLoop getAutonomousEventLoop() {

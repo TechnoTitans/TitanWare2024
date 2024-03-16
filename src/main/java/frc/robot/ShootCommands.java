@@ -32,6 +32,14 @@ public class ShootCommands {
                 .minus(Rotation2d.fromRadians(Math.PI));
     }
 
+    public static Rotation2d angleToSpeaker(final Pose2d currentPose) {
+        return currentPose
+                .getTranslation()
+                .minus(FieldConstants.getSpeakerPose().getTranslation())
+                .getAngle()
+                .minus(Rotation2d.fromRadians(Math.PI));
+    }
+
     public static Supplier<ShotParameters.Parameters> shotParametersSupplier(
             final Supplier<Pose2d> currentPoseSupplier
     ) {
@@ -48,7 +56,7 @@ public class ShootCommands {
                 intake.feedHalfCommand(),
                 Commands.deadline(
                         Commands.waitUntil(superstructure.atSetpoint)
-                                .andThen(Commands.waitSeconds(0.5))
+//                                .andThen(Commands.waitSeconds(0.5))
                                 .andThen(intake.feedCommand())
                                 .andThen(Commands.waitSeconds(0.5)),
                         superstructure.toGoal(Superstructure.Goal.AMP)
@@ -83,6 +91,7 @@ public class ShootCommands {
                         intake
                                 .runStopCommand()
                                 .until(superstructure.atSetpoint.and(swerve.atHeadingSetpoint))
+                                .withTimeout(2) // TODO: fixme
                                 .andThen(intake.feedCommand()),
                         superstructure.runState(ShootCommands.shotParametersSupplier(swerve::getPose))
                 ),
