@@ -176,7 +176,7 @@ public class Swerve extends SubsystemBase {
         );
 
         this.headingController = new ProfiledPIDController(
-                6, 0, 0,
+                4, 0, 0,
                 new TrapezoidProfile.Constraints(
                         ROBOT_MAX_ANGULAR_SPEED_RAD_PER_SEC * 0.95,
                         ROBOT_MAX_ANGULAR_SPEED_RAD_PER_SEC * 0.75

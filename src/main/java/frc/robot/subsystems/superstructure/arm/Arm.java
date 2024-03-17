@@ -180,6 +180,20 @@ public class Arm extends SubsystemBase {
         );
     }
 
+    @SuppressWarnings("unused")
+    public Command homePivotWithCurrentCommand() {
+        return Commands.sequence(
+                startEnd(
+                        () -> armIO.toPivotVoltage(-1),
+                        () -> armIO.toPivotVoltage(0)
+                ).until(() -> inputs.leftPivotTorqueCurrentAmps >= 25 || inputs.rightPivotTorqueCurrentAmps >= 25),
+                runOnce(() -> {
+                    armIO.setPivotPosition(0);
+                    armIO.configureSoftLimits(pivotSoftLowerLimit, pivotSoftUpperLimit);
+                })
+        );
+    }
+
     private SysIdRoutine makeVoltageSysIdRoutine(
             final Measure<Velocity<Voltage>> voltageRampRate,
             final Measure<Voltage> stepVoltage,

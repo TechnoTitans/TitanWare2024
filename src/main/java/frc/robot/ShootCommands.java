@@ -107,7 +107,7 @@ public class ShootCommands {
                         intake
                                 .runStopCommand()
                                 .until(superstructure.atSetpoint.and(swerve.atHeadingSetpoint))
-                                .withTimeout(2) // TODO: fixme
+                                .withTimeout(1) // TODO: fixme
                                 .andThen(intake.feedCommand()),
                         superstructure.runState(ShootCommands.shotParametersSupplier(swerve::getPose))
                 ),
@@ -144,6 +144,7 @@ public class ShootCommands {
                         intake
                                 .runStopCommand()
                                 .until(superstructure.atSetpoint.and(swerve.atHeadingSetpoint))
+                                .withTimeout(1) // TODO: fixme
                                 .andThen(intake.feedCommand()),
                         superstructure.runState(ShootCommands.shotParametersSupplier(swerve::getPose))
                 ),

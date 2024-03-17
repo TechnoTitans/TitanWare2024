@@ -445,47 +445,47 @@ public class Autos {
                 Commands.sequence(
                         resetPose(trajectory.getInitialState()),
                         superstructure.home().asProxy(),
-                        shoot().asProxy(),
+                        shoot().withName("ShootPreload").asProxy(),
                         followPath(trajectoryGroup.get(0), timer)
-                )
+                ).withName("ShootPreloadAndFollow0")
 
         );
 
-        autoTriggers.atTime(0.5).onTrue(
+        autoTriggers.atTime(0.4).onTrue(
                 Commands.sequence(
                         intake.intakeCommand(),
                         shootCommands.readySuperstructureForShot()
                 )
         );
 
-        autoTriggers.atTime(1.29).onTrue(
+        autoTriggers.atTime(1.28).onTrue(
                 Commands.sequence(
                         shootCommands.deferredStopAimAndShoot().asProxy(),
                         followPath(trajectoryGroup.get(1), timer)
                 )
         );
 
-        autoTriggers.atTime(2.2).onTrue(
+        autoTriggers.atTime(2.5).onTrue(
                 Commands.sequence(
                         intake.intakeCommand(),
                         shootCommands.readySuperstructureForShot()
                 )
         );
 
-        autoTriggers.atTime(5.41).onTrue(
+        autoTriggers.atTime(5.82).onTrue(
                 Commands.sequence(
                         shootCommands.deferredStopAimAndShoot().asProxy()
                 )
         );
 
-        autoTriggers.atTime(6).onTrue(
+        autoTriggers.atTime(6.5).onTrue(
                 Commands.sequence(
                         intake.intakeCommand(),
                         shootCommands.readySuperstructureForShot()
                 )
         );
 
-        autoTriggers.atTime(8.95).onTrue(
+        autoTriggers.atTime(9.34).onTrue(
                 Commands.sequence(
                         shootCommands.deferredStopAimAndShoot().asProxy()
                 )
@@ -577,6 +577,159 @@ public class Autos {
         );
 
         autoTriggers.atTime(10).onTrue(
+                Commands.sequence(
+                        shootCommands.deferredStopAimAndShoot().withName("Shoot1").asProxy()
+                ).withName("Shoot1AndFollow2")
+        );
+
+        return autoTriggers.eventLoop;
+    }
+
+    public EventLoop harryCook() {
+        final String trajectoryName = "HarryAuto";
+        final ChoreoTrajectory trajectory = Choreo.getTrajectory(trajectoryName);
+        final List<ChoreoTrajectory> trajectoryGroup = Choreo.getTrajectoryGroup(trajectoryName);
+
+        final Timer timer = new Timer();
+        final AutoTriggers autoTriggers = new AutoTriggers(trajectory, swerve::getPose, timer::get);
+
+        autoTriggers.autoEnabled().whileTrue(
+                Commands.sequence(
+                        resetPose(trajectory.getInitialState()),
+                        superstructure.home().asProxy(),
+                        shoot().withName("ShootPreload").asProxy(),
+                        followPath(trajectoryGroup.get(0), timer)
+                ).withName("PreloadAndFollow0")
+        );
+
+        autoTriggers.autoEnabled().whileTrue(
+                Commands.run(() -> Logger.recordOutput("Auto/Timer", timer.get()))
+        );
+
+        autoTriggers.atTime(1.7).onTrue(
+                Commands.parallel(
+                        intake.intakeCommand(),
+                        shootCommands.readySuperstructureForShot()
+                ).withName("Intake0")
+        );
+
+        autoTriggers.atTime(5.13).onTrue(
+                Commands.sequence(
+                        shootCommands.deferredStopAimAndShoot().withName("Shoot0").asProxy(),
+                        followPath(trajectoryGroup.get(1), timer).asProxy()
+                ).withName("Shoot0AndFollow1")
+        );
+
+        autoTriggers.atTime(6.5).onTrue(
+                Commands.parallel(
+                        intake.intakeCommand(),
+                        shootCommands.readySuperstructureForShot()
+                ).withName("Intake1")
+        );
+
+        autoTriggers.atTime(10.7).onTrue(
+                Commands.sequence(
+                        shootCommands.deferredStopAimAndShoot().withName("Shoot1").asProxy()
+                ).withName("Shoot1AndFollow2")
+        );
+
+        return autoTriggers.eventLoop;
+    }
+
+    public EventLoop block1771() {
+        final String trajectoryName = "Block1771";
+        final ChoreoTrajectory trajectory = Choreo.getTrajectory(trajectoryName);
+        final List<ChoreoTrajectory> trajectoryGroup = Choreo.getTrajectoryGroup(trajectoryName);
+
+        final Timer timer = new Timer();
+        final AutoTriggers autoTriggers = new AutoTriggers(trajectory, swerve::getPose, timer::get);
+
+        autoTriggers.autoEnabled().whileTrue(
+                Commands.sequence(
+                        resetPose(trajectory.getInitialState()),
+                        superstructure.home().asProxy(),
+                        shoot().withName("ShootPreload").asProxy(),
+                        followPath(trajectoryGroup.get(0), timer)
+                ).withName("PreloadAndFollow0")
+        );
+
+        autoTriggers.autoEnabled().whileTrue(
+                Commands.run(() -> Logger.recordOutput("Auto/Timer", timer.get()))
+        );
+
+        autoTriggers.atTime(2).onTrue(
+                Commands.parallel(
+                        intake.intakeCommand(),
+                        shootCommands.readySuperstructureForShot()
+                ).withName("Intake0")
+        );
+
+        autoTriggers.atTime(4.98).onTrue(
+                Commands.sequence(
+                        shootCommands.deferredStopAimAndShoot().withName("Shoot0").asProxy(),
+                        followPath(trajectoryGroup.get(1), timer).asProxy()
+                ).withName("Shoot0AndFollow1")
+        );
+
+        autoTriggers.atTime(6).onTrue(
+                Commands.parallel(
+                        intake.intakeCommand(),
+                        shootCommands.readySuperstructureForShot()
+                ).withName("Intake1")
+        );
+
+        autoTriggers.atTime(9.29).onTrue(
+                Commands.sequence(
+                        shootCommands.deferredStopAimAndShoot().withName("Shoot1").asProxy()
+                ).withName("Shoot1AndFollow2")
+        );
+
+        return autoTriggers.eventLoop;
+    }
+
+    public EventLoop blockRoboLion() {
+        final String trajectoryName = "BlockRoboLion";
+        final ChoreoTrajectory trajectory = Choreo.getTrajectory(trajectoryName);
+        final List<ChoreoTrajectory> trajectoryGroup = Choreo.getTrajectoryGroup(trajectoryName);
+
+        final Timer timer = new Timer();
+        final AutoTriggers autoTriggers = new AutoTriggers(trajectory, swerve::getPose, timer::get);
+
+        autoTriggers.autoEnabled().whileTrue(
+                Commands.sequence(
+                        resetPose(trajectory.getInitialState()),
+                        superstructure.home().asProxy(),
+                        shoot().withName("ShootPreload").asProxy(),
+                        followPath(trajectoryGroup.get(0), timer)
+                ).withName("PreloadAndFollow0")
+        );
+
+        autoTriggers.autoEnabled().whileTrue(
+                Commands.run(() -> Logger.recordOutput("Auto/Timer", timer.get()))
+        );
+
+        autoTriggers.atTime(2).onTrue(
+                Commands.parallel(
+                        intake.intakeCommand(),
+                        shootCommands.readySuperstructureForShot()
+                ).withName("Intake0")
+        );
+
+        autoTriggers.atTime(4.86).onTrue(
+                Commands.sequence(
+                        shootCommands.deferredStopAimAndShoot().withName("Shoot0").asProxy(),
+                        followPath(trajectoryGroup.get(1), timer).asProxy()
+                ).withName("Shoot0AndFollow1")
+        );
+
+        autoTriggers.atTime(5.5).onTrue(
+                Commands.parallel(
+                        intake.intakeCommand(),
+                        shootCommands.readySuperstructureForShot()
+                ).withName("Intake1")
+        );
+
+        autoTriggers.atTime(8.74).onTrue(
                 Commands.sequence(
                         shootCommands.deferredStopAimAndShoot().withName("Shoot1").asProxy()
                 ).withName("Shoot1AndFollow2")

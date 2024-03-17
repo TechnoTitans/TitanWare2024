@@ -72,7 +72,7 @@ public class RobotContainer {
 
         this.noteState = new NoteState(intake, superstructure);
 
-        this.photonVision = new PhotonVision(Constants.RobotMode.REPLAY, swerve, swerve.getPoseEstimator());
+        this.photonVision = new PhotonVision(Constants.CURRENT_MODE, swerve, swerve.getPoseEstimator());
         this.shootCommands = new ShootCommands(swerve, intake, superstructure);
         this.autos = new Autos(swerve, intake, superstructure, noteState, shootCommands);
 
@@ -153,6 +153,21 @@ public class RobotContainer {
                 autos.finishBobo(),
                 Constants.CompetitionType.COMPETITION
         ));
+        autoChooser.addAutoOption(new AutoOption(
+                "HarryCook",
+                autos.harryCook(),
+                Constants.CompetitionType.COMPETITION
+        ));
+        autoChooser.addAutoOption(new AutoOption(
+                "Block1771",
+                autos.block1771(),
+                Constants.CompetitionType.COMPETITION
+        ));
+        autoChooser.addAutoOption(new AutoOption(
+                "BlockRobo",
+                autos.blockRoboLion(),
+                Constants.CompetitionType.COMPETITION
+        ));
     }
 
     public void configureButtonBindings(final EventLoop teleopEventLoop) {
@@ -165,16 +180,12 @@ public class RobotContainer {
                         ).withTimeout(0.5)
                 )
         );
-        //noinspection SuspiciousNameCombination
         this.driverController.rightTrigger(0.5, teleopEventLoop)
 //                .whileTrue(shootCommands.stopAimAndShoot())
-                .whileTrue(shootCommands.teleopDriveAimAndShoot(
-                        driverController::getLeftY,
-                        driverController::getLeftX
-                ))
+                .whileTrue(shootCommands.deferredStopAimAndShoot())
                 .onFalse(superstructure.toGoal(Superstructure.Goal.IDLE));
 
-        this.driverController.a(teleopEventLoop).whileTrue(shootCommands.lineupAndAmp());
+        this.driverController.a(teleopEventLoop).whileTrue(shootCommands.amp());
         this.driverController.y(teleopEventLoop).onTrue(swerve.zeroRotationCommand());
 
         this.driverController.leftBumper(teleopEventLoop).whileTrue(
