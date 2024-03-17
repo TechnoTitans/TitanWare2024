@@ -494,8 +494,8 @@ public class Autos {
         return autoTriggers.eventLoop;
     }
 
-    public EventLoop shootAndMobility() {
-        final String trajectoryName = "ShootAndMobility";
+    public EventLoop sourceMobility() {
+        final String trajectoryName = "SourceMobility";
         final ChoreoTrajectory trajectory = Choreo.getTrajectory(trajectoryName);
         final List<ChoreoTrajectory> trajectoryGroup = Choreo.getTrajectoryGroup(trajectoryName);
 

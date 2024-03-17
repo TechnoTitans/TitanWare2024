@@ -71,6 +71,8 @@ public class HolonomicDriveWithPIDController {
     public ChassisSpeeds calculate(final Pose2d currentPose, final Pose2d targetPose) {
         final double xFeedback = xController.calculate(currentPose.getX(), targetPose.getX());
         final double yFeedback = yController.calculate(currentPose.getY(), targetPose.getY());
+
+        final double rotationFF = rotationController.getSetpoint().velocity;
         final double rotationFeedback = rotationController.calculate(
                 currentPose.getRotation().getRadians(),
                 targetPose.getRotation().getRadians()
@@ -79,7 +81,7 @@ public class HolonomicDriveWithPIDController {
         return ChassisSpeeds.fromFieldRelativeSpeeds(
                 xFeedback,
                 yFeedback,
-                rotationFeedback,
+                rotationFF + rotationFeedback,
                 currentPose.getRotation()
         );
     }

@@ -72,7 +72,7 @@ public class RobotContainer {
 
         this.noteState = new NoteState(intake, superstructure);
 
-        this.photonVision = new PhotonVision(Constants.CURRENT_MODE, swerve, swerve.getPoseEstimator());
+        this.photonVision = new PhotonVision(Constants.RobotMode.REPLAY, swerve, swerve.getPoseEstimator());
         this.shootCommands = new ShootCommands(swerve, intake, superstructure);
         this.autos = new Autos(swerve, intake, superstructure, noteState, shootCommands);
 
@@ -89,24 +89,15 @@ public class RobotContainer {
     }
 
     public Command runEjectShooter() {
-        return Commands.deadline(
-                intake
-                        .runStopCommand()
-                        .until(superstructure.atSetpoint)
-                        .withTimeout(6)
-                        .andThen(intake.runEjectInCommand()
-                                .withTimeout(4)),
+        return Commands.parallel(
+                intake.runEjectInCommand(),
                 superstructure.toGoal(Superstructure.Goal.EJECT)
         );
     }
 
     public Command runEjectIntake() {
         return Commands.deadline(
-                intake
-                        .runStopCommand()
-                        .until(superstructure.atSetpoint)
-                        .withTimeout(6)
-                        .andThen(intake.runEjectOutCommand()),
+                intake.runEjectOutCommand(),
                 superstructure.toGoal(Superstructure.Goal.BACK_FEED)
         );
     }
@@ -148,8 +139,8 @@ public class RobotContainer {
                 Constants.CompetitionType.COMPETITION
         ));
         autoChooser.addAutoOption(new AutoOption(
-                "ShootAndMobility",
-                autos.shootAndMobility(),
+                "SourceMobility",
+                autos.sourceMobility(),
                 Constants.CompetitionType.COMPETITION
         ));
         autoChooser.addAutoOption(new AutoOption(
@@ -174,12 +165,16 @@ public class RobotContainer {
                         ).withTimeout(0.5)
                 )
         );
+        //noinspection SuspiciousNameCombination
         this.driverController.rightTrigger(0.5, teleopEventLoop)
 //                .whileTrue(shootCommands.stopAimAndShoot())
-                .whileTrue(shootCommands.deferredStopAimAndShoot())
+                .whileTrue(shootCommands.teleopDriveAimAndShoot(
+                        driverController::getLeftY,
+                        driverController::getLeftX
+                ))
                 .onFalse(superstructure.toGoal(Superstructure.Goal.IDLE));
 
-        this.driverController.a(teleopEventLoop).whileTrue(shootCommands.amp());
+        this.driverController.a(teleopEventLoop).whileTrue(shootCommands.lineupAndAmp());
         this.driverController.y(teleopEventLoop).onTrue(swerve.zeroRotationCommand());
 
         this.driverController.leftBumper(teleopEventLoop).whileTrue(

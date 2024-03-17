@@ -36,7 +36,6 @@ import edu.wpi.first.wpilibj2.command.sysid.SysIdRoutine;
 import frc.robot.Robot;
 import frc.robot.auto.Autos;
 import frc.robot.constants.Constants;
-import frc.robot.constants.FieldConstants;
 import frc.robot.constants.HardwareConstants;
 import frc.robot.subsystems.drive.trajectory.HolonomicDriveWithPIDController;
 import frc.robot.subsystems.gyro.Gyro;
@@ -53,7 +52,8 @@ import java.util.function.DoubleSupplier;
 import java.util.function.Supplier;
 
 import static edu.wpi.first.units.Units.*;
-import static frc.robot.constants.Constants.Swerve.*;
+import static frc.robot.constants.Constants.Swerve.ROBOT_MAX_ANGULAR_SPEED_RAD_PER_SEC;
+import static frc.robot.constants.Constants.Swerve.TELEOP_MAX_ANGULAR_SPEED_RAD_PER_SEC;
 
 public class Swerve extends SubsystemBase {
     protected static final String LogKey = "Swerve";
@@ -176,14 +176,14 @@ public class Swerve extends SubsystemBase {
         );
 
         this.headingController = new ProfiledPIDController(
-                4, 0, 0,
+                6, 0, 0,
                 new TrapezoidProfile.Constraints(
-                        ROBOT_MAX_ANGULAR_SPEED_RAD_PER_SEC * 0.75,
-                        ROBOT_MAX_ANGULAR_SPEED_RAD_PER_SEC * 0.5
+                        ROBOT_MAX_ANGULAR_SPEED_RAD_PER_SEC * 0.95,
+                        ROBOT_MAX_ANGULAR_SPEED_RAD_PER_SEC * 0.75
                 )
         );
         this.headingController.enableContinuousInput(-Math.PI, Math.PI);
-        this.headingController.setTolerance(Units.degreesToRadians(6), Units.degreesToRadians(12));
+        this.headingController.setTolerance(Units.degreesToRadians(3), Units.degreesToRadians(6));
         this.atHeadingSetpoint = new Trigger(headingController::atGoal);
 
         this.holonomicDriveWithPIDController = new HolonomicDriveWithPIDController(
@@ -240,6 +240,7 @@ public class Swerve extends SubsystemBase {
         return swerveModuleStates;
     }
 
+    @SuppressWarnings("SameParameterValue")
     private static void configurePathPlannerAutoBuilder(
             final Swerve swerve,
             final BooleanSupplier flipPathSupplier,
@@ -571,20 +572,7 @@ public class Swerve extends SubsystemBase {
                             leftStickSpeeds.getX(),
                             leftStickSpeeds.getY(),
                             headingController.calculate(getYaw().getRadians(), rotationTarget.getRadians())
-                                    + (
-                                            ChassisSpeeds.fromFieldRelativeSpeeds(
-                                                    getFieldRelativeSpeeds(),
-                                                    getPose()
-                                                            .getTranslation()
-                                                            .minus(FieldConstants.getSpeakerPose().getTranslation())
-                                                            .getAngle()
-                                                            .minus(Rotation2d.fromRadians(Math.PI))
-                                            ).vyMetersPerSecond / (
-                                                    getPose()
-                                                            .getTranslation()
-                                                            .minus(FieldConstants.getSpeakerPose().getTranslation())
-                                                            .getNorm()
-                                            )),
+                                    + headingController.getSetpoint().velocity,
                             true,
                             Robot.IsRedAlliance.getAsBoolean()
                     );
@@ -609,10 +597,8 @@ public class Swerve extends SubsystemBase {
                     drive(
                             0,
                             0,
-                            headingController.calculate(
-                                    getYaw().getRadians(),
-                                    targetHeading.getRadians()
-                            ),
+                            headingController.calculate(getYaw().getRadians(), targetHeading.getRadians())
+                                    + headingController.getSetpoint().velocity,
                             true,
                             false
                     );

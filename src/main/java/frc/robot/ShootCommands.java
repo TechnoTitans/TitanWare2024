@@ -4,14 +4,12 @@ import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
-import edu.wpi.first.wpilibj2.command.Subsystem;
 import frc.robot.constants.FieldConstants;
 import frc.robot.subsystems.drive.Swerve;
 import frc.robot.subsystems.intake.Intake;
 import frc.robot.subsystems.superstructure.ShotParameters;
 import frc.robot.subsystems.superstructure.Superstructure;
 
-import java.util.HashSet;
 import java.util.Set;
 import java.util.function.DoubleSupplier;
 import java.util.function.Supplier;
@@ -85,7 +83,7 @@ public class ShootCommands {
                                 Commands.waitSeconds(0.2),
                                 amp()
                         ),
-                        swerve.teleopDriveCommand(() -> 0, () -> 0.1, () -> 0)
+                        swerve.teleopDriveCommand(() -> 0, () -> 0.5, () -> 0)
                 ));
     }
 
@@ -123,7 +121,7 @@ public class ShootCommands {
                         intake
                                 .runStopCommand()
                                 .until(superstructure.atSetpoint.and(swerve.atHeadingSetpoint))
-                                .withTimeout(1)
+                                .withTimeout(1) // TODO: fixme
                                 .andThen(intake.feedCommand()),
                         Commands.defer(() ->
                                 superstructure.runState(() -> ShootCommands.shotParameters(swerve.getPose())),
