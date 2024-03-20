@@ -124,8 +124,9 @@ public class IntakeIOReal implements IntakeIO {
     @Override
     public void config() {
         final TalonFXConfiguration rightRollerConfig = new TalonFXConfiguration();
+        // TODO: needs FF and tuned PID
         rightRollerConfig.Slot0 = new Slot0Configs()
-                .withKP(0)
+                .withKP(12)
                 .withKA(0)
                 .withKV(0)
                 .withKS(0);
@@ -144,8 +145,9 @@ public class IntakeIOReal implements IntakeIO {
         rightRoller.getConfigurator().apply(rightRollerConfig);
 
         final TalonFXConfiguration leftRollerConfig = new TalonFXConfiguration();
+        // TODO: needs FF and tuned PID
         leftRollerConfig.Slot0 = new Slot0Configs()
-                .withKP(0)
+                .withKP(12)
                 .withKA(0)
                 .withKV(0)
                 .withKS(0);
@@ -164,8 +166,9 @@ public class IntakeIOReal implements IntakeIO {
         leftRoller.getConfigurator().apply(leftRollerConfig);
 
         final TalonFXConfiguration shooterFeederConfig = new TalonFXConfiguration();
+        // TODO: needs FF and tuned PID
         shooterFeederConfig.Slot0 = new Slot0Configs()
-                .withKP(0)
+                .withKP(12)
                 .withKA(0)
                 .withKV(0)
                 .withKS(0);

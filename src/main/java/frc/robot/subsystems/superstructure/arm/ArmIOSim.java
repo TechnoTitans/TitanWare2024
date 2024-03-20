@@ -14,7 +14,6 @@ import com.ctre.phoenix6.signals.InvertedValue;
 import com.ctre.phoenix6.signals.NeutralModeValue;
 import edu.wpi.first.math.system.plant.DCMotor;
 import edu.wpi.first.math.system.plant.LinearSystemId;
-import edu.wpi.first.math.util.Units;
 import edu.wpi.first.wpilibj.DigitalInput;
 import edu.wpi.first.wpilibj.Notifier;
 import edu.wpi.first.wpilibj.simulation.DIOSim;
@@ -27,6 +26,7 @@ import frc.robot.utils.sim.SimUtils;
 import frc.robot.utils.sim.motors.TalonFXSim;
 
 import java.util.List;
+import java.util.concurrent.ThreadLocalRandom;
 
 public class ArmIOSim implements ArmIO {
     private static final double SIM_UPDATE_PERIOD_SEC = 0.005;
@@ -40,8 +40,8 @@ public class ArmIOSim implements ArmIO {
     private final TalonFX rightPivotMotor;
     private final TalonFXSim pivotMotorsSim;
 
-    private final DigitalInput pivotLowerLimitSwitch;
-    private final DIOSim pivotLowerLimitSwitchSim;
+    private final DigitalInput pivotUpperLimitSwitch;
+    private final DIOSim pivotUpperLimitSwitchSim;
 
     private final MotionMagicExpoVoltage motionMagicExpoVoltage;
     private final VoltageOut voltageOut;
@@ -63,7 +63,7 @@ public class ArmIOSim implements ArmIO {
         this.deltaTime = new DeltaTime(true);
         this.armConstants = armConstants;
 
-        final double pivotLowerLimitsRots = armConstants.pivotSoftLowerLimitRots();
+        final double pivotUpperLimitRots = armConstants.pivotSoftUpperLimitRots();
         this.armPivotSim = new SingleJointedArmSim(
                 LinearSystemId.identifyPositionSystem(
                         13.97 / (2d * Math.PI),
@@ -75,7 +75,10 @@ public class ArmIOSim implements ArmIO {
                 0,
                 Math.PI,
                 true,
-                Units.rotationsToRadians(pivotLowerLimitsRots)
+                ThreadLocalRandom.current().nextDouble(
+                        armConstants.pivotSoftLowerLimitRots(),
+                        pivotUpperLimitRots
+                )
         );
 
         this.leftPivotMotor = new TalonFX(armConstants.leftPivotMotorId(), armConstants.CANBus());
@@ -89,11 +92,11 @@ public class ArmIOSim implements ArmIO {
                 armPivotSim::getVelocityRadPerSec
         );
 
-        this.pivotLowerLimitSwitch = new DigitalInput(armConstants.pivotZeroingSwitchDIOChannel());
-        this.pivotLowerLimitSwitchSim = new DIOSim(pivotLowerLimitSwitch);
-        this.pivotLowerLimitSwitchSim.setInitialized(true);
-        this.pivotLowerLimitSwitchSim.setIsInput(true);
-        this.pivotLowerLimitSwitchSim.setValue(false);
+        this.pivotUpperLimitSwitch = new DigitalInput(armConstants.pivotUpperLimitSwitchDIOChannel());
+        this.pivotUpperLimitSwitchSim = new DIOSim(pivotUpperLimitSwitch);
+        this.pivotUpperLimitSwitchSim.setInitialized(true);
+        this.pivotUpperLimitSwitchSim.setIsInput(true);
+        this.pivotUpperLimitSwitchSim.setValue(false);
 
         this.motionMagicExpoVoltage = new MotionMagicExpoVoltage(0);
         this.voltageOut = new VoltageOut(0);
@@ -113,9 +116,9 @@ public class ArmIOSim implements ArmIO {
         final Notifier simUpdateNotifier = new Notifier(() -> {
             final double dt = deltaTime.get();
             pivotMotorsSim.update(dt);
-            pivotLowerLimitSwitchSim.setValue(
-                    _leftPosition.refresh().getValue() <= pivotLowerLimitsRots
-                            || _rightPosition.refresh().getValue() <= pivotLowerLimitsRots
+            pivotUpperLimitSwitchSim.setValue(
+                    _leftPosition.refresh().getValue() >= pivotUpperLimitRots
+                            || _rightPosition.refresh().getValue() >= pivotUpperLimitRots
             );
         });
         ToClose.add(simUpdateNotifier);
@@ -129,10 +132,7 @@ public class ArmIOSim implements ArmIO {
 
     @SuppressWarnings("DuplicatedCode")
     @Override
-    public void config(
-            final Arm.PositionSetpoint pivotSoftLowerLimit,
-            final Arm.PositionSetpoint pivotSoftUpperLimit
-    ) {
+    public void config() {
         final TalonFXConfiguration leftTalonFXConfiguration = new TalonFXConfiguration();
         final InvertedValue leftTalonFXInverted = InvertedValue.Clockwise_Positive;
         leftTalonFXConfiguration.Slot0 = new Slot0Configs()
@@ -148,10 +148,6 @@ public class ArmIOSim implements ArmIO {
         leftTalonFXConfiguration.CurrentLimits.StatorCurrentLimit = 60;
         leftTalonFXConfiguration.CurrentLimits.StatorCurrentLimitEnable = true;
         leftTalonFXConfiguration.Feedback.SensorToMechanismRatio = armConstants.pivotGearing();
-        leftTalonFXConfiguration.SoftwareLimitSwitch.ReverseSoftLimitThreshold = pivotSoftLowerLimit.pivotPositionRots;
-        leftTalonFXConfiguration.SoftwareLimitSwitch.ReverseSoftLimitEnable = true;
-        leftTalonFXConfiguration.SoftwareLimitSwitch.ForwardSoftLimitThreshold = pivotSoftUpperLimit.pivotPositionRots;
-        leftTalonFXConfiguration.SoftwareLimitSwitch.ForwardSoftLimitEnable = true;
         leftTalonFXConfiguration.MotorOutput.Inverted = leftTalonFXInverted;
         leftTalonFXConfiguration.MotorOutput.NeutralMode = NeutralModeValue.Brake;
         leftPivotMotor.getConfigurator().apply(leftTalonFXConfiguration);
@@ -171,10 +167,6 @@ public class ArmIOSim implements ArmIO {
         rightTalonFXConfiguration.CurrentLimits.StatorCurrentLimit = 60;
         rightTalonFXConfiguration.CurrentLimits.StatorCurrentLimitEnable = true;
         rightTalonFXConfiguration.Feedback.SensorToMechanismRatio = armConstants.pivotGearing();
-        rightTalonFXConfiguration.SoftwareLimitSwitch.ReverseSoftLimitThreshold = pivotSoftLowerLimit.pivotPositionRots;
-        rightTalonFXConfiguration.SoftwareLimitSwitch.ReverseSoftLimitEnable = true;
-        rightTalonFXConfiguration.SoftwareLimitSwitch.ForwardSoftLimitThreshold = pivotSoftUpperLimit.pivotPositionRots;
-        rightTalonFXConfiguration.SoftwareLimitSwitch.ForwardSoftLimitEnable = true;
         rightTalonFXConfiguration.MotorOutput.Inverted = rightTalonFXInverted;
         rightTalonFXConfiguration.MotorOutput.NeutralMode = NeutralModeValue.Brake;
         rightPivotMotor.getConfigurator().apply(rightTalonFXConfiguration);
@@ -220,7 +212,7 @@ public class ArmIOSim implements ArmIO {
                 _rightDeviceTemp
         );
 
-        inputs.pivotLowerLimitSwitch = pivotLowerLimitSwitch.get();
+        inputs.pivotUpperLimitSwitch = pivotUpperLimitSwitch.get();
 
         inputs.leftPivotPositionRots = _leftPosition.getValue();
         inputs.leftPivotVelocityRotsPerSec = _leftVelocity.getValue();
@@ -233,6 +225,24 @@ public class ArmIOSim implements ArmIO {
         inputs.rightPivotVoltageVolts = _rightVoltage.getValue();
         inputs.rightPivotTorqueCurrentAmps = _rightTorqueCurrent.getValue();
         inputs.rightPivotTempCelsius = _rightDeviceTemp.getValue();
+    }
+
+    @Override
+    public void configureSoftLimits(
+            final Arm.PositionSetpoint pivotSoftLowerLimit,
+            final Arm.PositionSetpoint pivotSoftUpperLimit
+    ) {
+        Phoenix6Utils.configureTalonFXSoftLimits(
+                leftPivotMotor,
+                pivotSoftLowerLimit.pivotPositionRots,
+                pivotSoftUpperLimit.pivotPositionRots
+        );
+
+        Phoenix6Utils.configureTalonFXSoftLimits(
+                rightPivotMotor,
+                pivotSoftLowerLimit.pivotPositionRots,
+                pivotSoftUpperLimit.pivotPositionRots
+        );
     }
 
     @Override

@@ -158,7 +158,7 @@ public class SwerveModuleIOTalonFXSim implements SwerveModuleIO {
         // TODO: I think we need to look at VoltageConfigs and/or CurrentLimitConfigs for limiting the
         //  current we can apply in sim, this is cause we use VelocityVoltage in sim instead of VelocityTorqueCurrentFOC
         //  which means that TorqueCurrent.PeakForwardTorqueCurrent and related won't affect it
-        final InvertedValue driveInvertedValue = InvertedValue.CounterClockwise_Positive;
+        final InvertedValue driveInvertedValue = InvertedValue.Clockwise_Positive;
         driveTalonFXConfiguration.Slot0 = new Slot0Configs()
                 .withKP(50)
                 .withKS(4.796)

@@ -76,6 +76,7 @@ public class SwerveTest {
             HardwareConstants.BACK_RIGHT_MODULE.translationOffset()
     );
 
+    @Spy
     private final SwerveDrivePoseEstimator poseEstimator = new SwerveDrivePoseEstimator(
             kinematics,
             Rotation2d.fromDegrees(0),
@@ -111,7 +112,6 @@ public class SwerveTest {
 
     @Test
     void periodic() {
-        when(gyro.getYawRotation2d()).thenReturn(Rotation2d.fromDegrees(0));
         when(gyro.getPitchRotation2d()).thenReturn(Rotation2d.fromDegrees(0));
         when(gyro.getRollRotation2d()).thenReturn(Rotation2d.fromDegrees(0));
 
@@ -152,11 +152,10 @@ public class SwerveTest {
     @ParameterizedTest
     @MethodSource("angleArgsProvider")
     void getYaw(final double angleDeg) {
-        when(gyro.getYaw()).thenReturn(angleDeg);
-        when(gyro.getYawRotation2d()).thenCallRealMethod();
+        when(poseEstimator.getEstimatedPosition()).thenReturn(new Pose2d(0, 0, Rotation2d.fromDegrees(angleDeg)));
 
         assertEquals(Rotation2d.fromDegrees(angleDeg), swerve.getYaw());
-        verify(gyro).getYaw();
+        verify(poseEstimator).getEstimatedPosition();
     }
 
     @ParameterizedTest
@@ -181,10 +180,15 @@ public class SwerveTest {
 
     @Test
     void zeroRotation() {
-        doNothing().when(gyro).zeroRotation();
+        when(gyro.getYawRotation2d()).thenReturn(Rotation2d.fromDegrees(0));
+        doNothing().when(poseEstimator).resetPosition(
+                any(Rotation2d.class),
+                any(SwerveModulePosition[].class),
+                any(Pose2d.class)
+        );
 
         swerve.zeroRotation();
-        verify(gyro).zeroRotation();
+        verify(poseEstimator).resetPosition(gyro.getYawRotation2d(), swerve.getModulePositions(), new Pose2d());
     }
 
     @Test
@@ -199,8 +203,6 @@ public class SwerveTest {
 
     @Test
     void getFieldRelativeSpeeds() {
-        when(gyro.getYawRotation2d()).thenReturn(Rotation2d.fromDegrees(0));
-
         final ChassisSpeeds chassisSpeeds = swerve.getFieldRelativeSpeeds();
         final ChassisSpeeds zero = new ChassisSpeeds();
 
@@ -341,9 +343,7 @@ public class SwerveTest {
 
     @Test
     void driveWithJoystick() {
-        when(swerve.getYaw()).thenReturn(Rotation2d.fromDegrees(0));
-
-        swerve.drive(0, 0, 0, true);
+        swerve.drive(0, 0, 0, true, false);
         assertEquals(new SwerveModuleState(), frontLeft.getLastDesiredState());
         assertEquals(new SwerveModuleState(), frontRight.getLastDesiredState());
         assertEquals(new SwerveModuleState(), backLeft.getLastDesiredState());
@@ -419,7 +419,7 @@ public class SwerveTest {
 
     @Test
     void zero() {
-        swerve.zeroCommand().schedule();
+        swerve.zeroModulesCommand().schedule();
 
         assertEquals(new SwerveModuleState(), frontLeft.getLastDesiredState());
         assertEquals(new SwerveModuleState(), frontRight.getLastDesiredState());

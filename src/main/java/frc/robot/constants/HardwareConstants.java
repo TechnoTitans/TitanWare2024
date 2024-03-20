@@ -1,7 +1,6 @@
 package frc.robot.constants;
 
 import edu.wpi.first.math.geometry.Translation2d;
-import edu.wpi.first.math.util.Units;
 import frc.robot.subsystems.drive.OdometryThreadRunner;
 import frc.robot.subsystems.drive.SwerveModule;
 
@@ -41,7 +40,7 @@ public class HardwareConstants {
             1,
             2,
             3,
-            -0.138
+            -0.137
     );
 
     public static final SwerveModuleConstants FRONT_RIGHT_MODULE = new SwerveModuleConstants(
@@ -51,7 +50,7 @@ public class HardwareConstants {
             4,
             5,
             6,
-            0.387
+            0.381
     );
 
     public static final SwerveModuleConstants BACK_LEFT_MODULE = new SwerveModuleConstants(
@@ -71,7 +70,7 @@ public class HardwareConstants {
             10,
             11,
             12,
-            -0.425
+            -0.429
     );
 
     public record GyroConstants(
@@ -110,8 +109,9 @@ public class HardwareConstants {
             String CANBus,
             int leftPivotMotorId,
             int rightPivotMotorId,
-            int pivotZeroingSwitchDIOChannel,
+            int pivotUpperLimitSwitchDIOChannel,
             double pivotGearing,
+            double pivotUpperLimitSwitchPositionRots,
             double pivotSoftLowerLimitRots,
             double pivotSoftUpperLimitRots
     ) {}
@@ -120,10 +120,11 @@ public class HardwareConstants {
             RobotMap.CanivoreCANBus,
             14,
             15,
-            1,
+            0,
             112.5,
-            Units.degreesToRotations(0),
-            Units.degreesToRotations(100)
+            0.221,
+            0.05,
+            0.27
     );
 
     public record ShooterConstants(

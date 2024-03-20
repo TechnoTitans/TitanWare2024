@@ -26,6 +26,9 @@ public class Intake extends SubsystemBase {
     private final VelocitySetpoint setpoint;
     public final Trigger shooterBeamBreakBroken;
 
+    private boolean storedNoteInIntake = false;
+    public final Trigger hasStoredNote;
+
     private static class VelocitySetpoint {
         public double rightRollerVelocityRotsPerSec;
         public double leftRollerVelocityRotsPerSec;
@@ -48,6 +51,7 @@ public class Intake extends SubsystemBase {
 
         this.setpoint = new VelocitySetpoint();
         this.shooterBeamBreakBroken = new Trigger(() -> inputs.shooterBeamBreak);
+        this.hasStoredNote = new Trigger(() -> this.storedNoteInIntake);
 
         this.torqueCurrentSysIdRoutine = makeTorqueCurrentSysIdRoutine(
                 Amps.of(2).per(Second),
@@ -69,37 +73,89 @@ public class Intake extends SubsystemBase {
                 LogKey + "/PeriodicIOPeriodMs",
                 LogUtils.microsecondsToMilliseconds(Logger.getRealTimestamp() - intakeIOPeriodicStart)
         );
+
+        Logger.recordOutput(LogKey + "/HasStoredNote", hasStoredNote.getAsBoolean());
+
         Logger.recordOutput(LogKey + "/Setpoint/RightRollerVelocityRotsPerSec", setpoint.rightRollerVelocityRotsPerSec);
         Logger.recordOutput(LogKey + "/Setpoint/LeftRollerVelocityRotsPerSec", setpoint.leftRollerVelocityRotsPerSec);
         Logger.recordOutput(LogKey + "/Setpoint/ShooterFeederRotsPerSec", setpoint.shooterFeederRotsPerSec);
     }
 
-    public Command intakeCommand() {
-        return toVelocityCommand(9, 9, 9)
+    public Command storeCommand() {
+        return runVelocityCommand(4, 4, 4)
                 .until(shooterBeamBreakBroken)
-                .andThen(stopCommand());
+                .unless(shooterBeamBreakBroken)
+                .andThen(
+                        Commands.deadline(
+                                Commands.waitUntil(shooterBeamBreakBroken.negate())
+                                        .andThen(Commands.waitSeconds(0.1)),
+                                runVelocityCommand(-4, -4, -4)
+                        )
+                )
+                .andThen(instantStopCommand())
+                .andThen(Commands.runOnce(() -> this.storedNoteInIntake = true));
+    }
+
+    public Command intakeCommand(final Command runOnHasNote) {
+        return Commands.sequence(
+                runVelocityCommand(22, 22, 18)
+                        .until(shooterBeamBreakBroken),
+                instantStopCommand(),
+                storeCommand(),
+                runOnHasNote.asProxy()
+        );
+    }
+
+    public Command intakeCommand() {
+        return intakeCommand(Commands.none());
+    }
+
+    public Command feedHalfCommand() {
+        return storeCommand()
+                .onlyIf(shooterBeamBreakBroken)
+                .andThen(Commands.deadline(
+                        Commands.waitUntil(shooterBeamBreakBroken),
+                        runVelocityCommand(6, 6, 6)
+                ));
     }
 
     public Command feedCommand() {
-        return toVelocityCommand(9, 9, 9)
-                .until(shooterBeamBreakBroken.negate())
-                .andThen(stopCommand());
+        return storeCommand()
+                .onlyIf(shooterBeamBreakBroken)
+                .andThen(Commands.deadline(
+                        Commands.waitUntil(shooterBeamBreakBroken)
+                                .andThen(Commands.waitUntil(shooterBeamBreakBroken.negate())),
+                        runVelocityCommand(18, 18, 18)
+                ))
+                .andThen(Commands.runOnce(() -> this.storedNoteInIntake = false));
     }
 
-    public Command outtakeCommand() {
-        return toVoltageCommand(-12, -12, -12);
+    public Command runEjectOutCommand() {
+        return runVoltageCommand(-12, -12, -12);
     }
 
-    public Command stopCommand() {
-        return toVoltageCommand(0, 0, 0);
+    public Command runEjectInCommand() {
+        return runVoltageCommand(12, 12, 12);
     }
 
-    public Command toVelocityCommand(
+    public Command instantStopCommand() {
+        return runOnce(() -> intakeIO.toVoltage(
+                0,
+                0,
+                0
+        ));
+    }
+
+    public Command runStopCommand() {
+        return runVoltageCommand(0, 0, 0);
+    }
+
+    public Command runVelocityCommand(
             final double rightRollerVelocityRotsPerSec,
             final double leftRollerVelocityRotsPerSec,
             final double shooterFeederRotsPerSec
     ) {
-        return runOnce(() -> {
+        return runEnd(() -> {
             setpoint.rightRollerVelocityRotsPerSec = rightRollerVelocityRotsPerSec;
             setpoint.leftRollerVelocityRotsPerSec = leftRollerVelocityRotsPerSec;
             setpoint.shooterFeederRotsPerSec = shooterFeederRotsPerSec;
@@ -109,15 +165,15 @@ public class Intake extends SubsystemBase {
                     leftRollerVelocityRotsPerSec,
                     shooterFeederRotsPerSec
             );
-        });
+        }, () -> intakeIO.toVelocity(0, 0, 0));
     }
 
-    public Command toVoltageCommand(
+    public Command runVoltageCommand(
             final double rightRollerVoltage,
             final double leftRollerVoltage,
             final double shooterFeederVoltage
     ) {
-        return runOnce(() -> intakeIO.toVoltage(
+        return run(() -> intakeIO.toVoltage(
                 rightRollerVoltage,
                 leftRollerVoltage,
                 shooterFeederVoltage

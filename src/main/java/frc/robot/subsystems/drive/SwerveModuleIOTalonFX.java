@@ -100,11 +100,12 @@ public class SwerveModuleIOTalonFX implements SwerveModuleIO {
         canCoderConfiguration.MagnetSensor.AbsoluteSensorRange = AbsoluteSensorRangeValue.Signed_PlusMinusHalf;
         turnEncoder.getConfigurator().apply(canCoderConfiguration);
 
+        // TODO: check these gains, or just re-tune
         driveTalonFXConfiguration.Slot0 = new Slot0Configs()
-                .withKS(3.16)
-                .withKV(0.16023)
-                .withKA(3.5602)
-                .withKP(12.193);
+                .withKS(5.6753)
+                .withKV(0)
+                .withKA(2.5488)
+                .withKP(46.391);
         driveTalonFXConfiguration.TorqueCurrent.PeakForwardTorqueCurrent = Modules.SLIP_CURRENT_A;
         driveTalonFXConfiguration.TorqueCurrent.PeakReverseTorqueCurrent = -Modules.SLIP_CURRENT_A;
         driveTalonFXConfiguration.CurrentLimits.StatorCurrentLimit = Modules.SLIP_CURRENT_A;
@@ -120,7 +121,7 @@ public class SwerveModuleIOTalonFX implements SwerveModuleIO {
         driveMotor.getConfigurator().apply(driveTalonFXConfiguration);
 
         turnTalonFXConfiguration.Slot0 = new Slot0Configs()
-                .withKP(30)
+                .withKP(45)
                 .withKS(0.5);
         turnTalonFXConfiguration.TorqueCurrent.PeakForwardTorqueCurrent = 40;
         turnTalonFXConfiguration.TorqueCurrent.PeakReverseTorqueCurrent = -40;
@@ -130,6 +131,7 @@ public class SwerveModuleIOTalonFX implements SwerveModuleIO {
         turnTalonFXConfiguration.CurrentLimits.SupplyCurrentThreshold = 60;
         turnTalonFXConfiguration.CurrentLimits.SupplyTimeThreshold = 1.5;
         turnTalonFXConfiguration.CurrentLimits.SupplyCurrentLimitEnable = true;
+        turnTalonFXConfiguration.ClosedLoopGeneral.ContinuousWrap = true;
         turnTalonFXConfiguration.Feedback.FeedbackRemoteSensorID = turnEncoder.getDeviceID();
         turnTalonFXConfiguration.Feedback.FeedbackSensorSource = FeedbackSensorSourceValue.FusedCANcoder;
         turnTalonFXConfiguration.Feedback.RotorToSensorRatio = Modules.TURNER_GEAR_RATIO;
@@ -226,6 +228,7 @@ public class SwerveModuleIOTalonFX implements SwerveModuleIO {
         odometryThreadRunner.updateControlRequest(driveMotor, velocityTorqueCurrentFOC);
         driveMotor.setControl(velocityTorqueCurrentFOC
                 .withVelocity(backedOutDriveVelocity)
+                // TODO: fixme
                 .withOverrideCoastDurNeutral(true)
         );
         turnMotor.setControl(positionVoltage.withPosition(desiredTurnerRotations));
