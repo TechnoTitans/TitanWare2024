@@ -54,7 +54,8 @@ import java.util.function.DoubleSupplier;
 import java.util.function.Supplier;
 
 import static edu.wpi.first.units.Units.*;
-import static frc.robot.constants.Constants.Swerve.*;
+import static frc.robot.constants.Constants.Swerve.ROBOT_MAX_ANGULAR_SPEED_RAD_PER_SEC;
+import static frc.robot.constants.Constants.Swerve.TELEOP_MAX_ANGULAR_SPEED_RAD_PER_SEC;
 
 public class Swerve extends SubsystemBase {
     protected static final String LogKey = "Swerve";

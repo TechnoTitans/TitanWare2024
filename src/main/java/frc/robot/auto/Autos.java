@@ -21,9 +21,6 @@ import org.littletonrobotics.junction.Logger;
 
 import java.util.List;
 import java.util.Set;
-import java.util.Optional;
-import java.util.Set;
-import java.util.function.BooleanSupplier;
 import java.util.function.DoubleSupplier;
 import java.util.function.Supplier;
 
