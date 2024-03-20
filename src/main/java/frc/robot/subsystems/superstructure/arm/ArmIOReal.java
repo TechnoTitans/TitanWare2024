@@ -80,7 +80,7 @@ public class ArmIOReal implements ArmIO {
         leftTalonFXConfiguration.Slot0 = new Slot0Configs()
 //                .withKS(0.011965)
                 .withKS(0.15)
-                .withKG(0.27)
+                .withKG(0.22)
                 .withGravityType(GravityTypeValue.Arm_Cosine)
                 .withKV(14.053)
                 .withKA(0.17176 * 0.5)
@@ -103,7 +103,7 @@ public class ArmIOReal implements ArmIO {
         rightTalonFXConfiguration.Slot0 = new Slot0Configs()
 //                .withKS(0.011965)
                 .withKS(0.15)
-                .withKG(0.27)
+                .withKG(0.22)
                 .withGravityType(GravityTypeValue.Arm_Cosine)
                 .withKV(14.053)
                 .withKA(0.17176 * 0.5)
@@ -122,7 +122,7 @@ public class ArmIOReal implements ArmIO {
         rightPivotMotor.getConfigurator().apply(rightTalonFXConfiguration);
 
         BaseStatusSignal.setUpdateFrequencyForAll(
-                250,
+                100,
                 _leftPosition,
                 _leftVelocity,
                 _leftVoltage,

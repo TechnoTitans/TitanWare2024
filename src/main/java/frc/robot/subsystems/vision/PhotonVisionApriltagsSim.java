@@ -174,7 +174,7 @@ public class PhotonVisionApriltagsSim implements PhotonVisionRunner<PhotonVision
             ioApriltagsSim.updateInputs(ioInputs);
 
             Logger.processInputs(
-                    String.format("%s/%s", PhotonVision.photonLogKey, ioApriltagsSim.logKey),
+                    String.format("%s/%s", PhotonVision.PhotonLogKey, ioApriltagsSim.logKey),
                     ioInputs
             );
         }

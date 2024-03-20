@@ -20,7 +20,10 @@ import static edu.wpi.first.units.Units.*;
 
 public class Arm extends SubsystemBase {
     protected static final String LogKey = "Arm";
-    private static final double PositionToleranceRots = 0.01;
+    private static final double PositionToleranceRots = 0.005;
+    private static final double VelocityToleranceRotsPerSec = 0.01;
+
+    private final HardwareConstants.ArmConstants armConstants;
 
     private final HardwareConstants.ArmConstants armConstants;
 
@@ -31,6 +34,8 @@ public class Arm extends SubsystemBase {
     private final SysIdRoutine torqueCurrentSysIdRoutine;
 
     private Goal goal = Goal.STOW;
+    private Goal previousGoal = goal;
+
     private final PositionSetpoint setpoint;
     private final PositionSetpoint pivotSoftLowerLimit;
     private final PositionSetpoint pivotSoftUpperLimit;
@@ -48,12 +53,14 @@ public class Arm extends SubsystemBase {
             return this;
         }
 
-        public boolean atSetpoint(final double pivotPositionRots) {
-            return MathUtil.isNear(this.pivotPositionRots, pivotPositionRots, PositionToleranceRots);
+        public boolean atSetpoint(final double pivotPositionRots, final double pivotVelocityRotsPerSec) {
+            return MathUtil.isNear(this.pivotPositionRots, pivotPositionRots, PositionToleranceRots)
+                    && MathUtil.isNear(0, pivotVelocityRotsPerSec, VelocityToleranceRotsPerSec);
         }
     }
 
     public enum Goal {
+        NONE(0),
         ZERO(0),
         STOW(Units.degreesToRotations(10)),
         AMP(Units.degreesToRotations(94)),
@@ -109,10 +116,14 @@ public class Arm extends SubsystemBase {
                 LogUtils.microsecondsToMilliseconds(Logger.getRealTimestamp() - armPeriodicUpdateStart)
         );
 
-        final double previousPivotPosition = setpoint.pivotPositionRots;
-        setpoint.pivotPositionRots = goal.getPivotPositionGoal();
-        if (setpoint.pivotPositionRots != previousPivotPosition) {
+        if (goal != Goal.NONE && previousGoal != goal) {
+            setpoint.pivotPositionRots = goal.getPivotPositionGoal();
             armIO.toPivotPosition(setpoint.pivotPositionRots);
+
+            this.previousGoal = goal;
+        } else if (goal == Goal.NONE) {
+            armIO.toPivotPosition(setpoint.pivotPositionRots);
+            this.previousGoal = Goal.NONE;
         }
 
         Logger.recordOutput(LogKey + "/Goal", goal.toString());
@@ -123,8 +134,8 @@ public class Arm extends SubsystemBase {
     }
 
     private boolean atPositionSetpoint() {
-        return setpoint.atSetpoint(inputs.leftPivotPositionRots)
-                && setpoint.atSetpoint(inputs.rightPivotPositionRots);
+        return setpoint.atSetpoint(inputs.leftPivotPositionRots, inputs.leftPivotVelocityRotsPerSec)
+                && setpoint.atSetpoint(inputs.rightPivotPositionRots, inputs.rightPivotVelocityRotsPerSec);
     }
 
     private boolean atPivotLowerLimit() {
@@ -145,10 +156,10 @@ public class Arm extends SubsystemBase {
     }
 
     public Command toPivotPositionCommand(final DoubleSupplier pivotPositionRots) {
-        return run(() -> {
-            setpoint.pivotPositionRots = pivotPositionRots.getAsDouble();
-            armIO.toPivotPosition(setpoint.pivotPositionRots);
-        });
+        return Commands.sequence(
+                Commands.runOnce(() -> this.goal = Goal.NONE),
+                run(() -> setpoint.pivotPositionRots = pivotPositionRots.getAsDouble())
+        );
     }
 
     public Command runPivotVoltageCommand(final double pivotVoltageVolts) {
@@ -156,8 +167,9 @@ public class Arm extends SubsystemBase {
     }
 
     public Command homePivotCommand() {
-        // TODO: this could probably be improved to be more robust,
-        //  and potentially do a 2nd, slower, pass to be more accurate
+        // TODO: this could probably be improved to be more robust, and potentially do a 2nd,
+        //  slower, pass to be more accurate
+        // TODO: this probably should un-configure the soft limit, in case we want to zero twice for some reason, lol
         return Commands.sequence(
                 startEnd(
                         () -> armIO.toPivotVoltage(2),

@@ -26,6 +26,9 @@ public class Intake extends SubsystemBase {
     private final VelocitySetpoint setpoint;
     public final Trigger shooterBeamBreakBroken;
 
+    private boolean storedNoteInIntake = false;
+    public final Trigger hasStoredNote;
+
     private static class VelocitySetpoint {
         public double rightRollerVelocityRotsPerSec;
         public double leftRollerVelocityRotsPerSec;
@@ -48,6 +51,7 @@ public class Intake extends SubsystemBase {
 
         this.setpoint = new VelocitySetpoint();
         this.shooterBeamBreakBroken = new Trigger(() -> inputs.shooterBeamBreak);
+        this.hasStoredNote = new Trigger(() -> this.storedNoteInIntake);
 
         this.torqueCurrentSysIdRoutine = makeTorqueCurrentSysIdRoutine(
                 Amps.of(2).per(Second),
@@ -69,6 +73,9 @@ public class Intake extends SubsystemBase {
                 LogKey + "/PeriodicIOPeriodMs",
                 LogUtils.microsecondsToMilliseconds(Logger.getRealTimestamp() - intakeIOPeriodicStart)
         );
+
+        Logger.recordOutput(LogKey + "/HasStoredNote", hasStoredNote.getAsBoolean());
+
         Logger.recordOutput(LogKey + "/Setpoint/RightRollerVelocityRotsPerSec", setpoint.rightRollerVelocityRotsPerSec);
         Logger.recordOutput(LogKey + "/Setpoint/LeftRollerVelocityRotsPerSec", setpoint.leftRollerVelocityRotsPerSec);
         Logger.recordOutput(LogKey + "/Setpoint/ShooterFeederRotsPerSec", setpoint.shooterFeederRotsPerSec);
@@ -85,12 +92,13 @@ public class Intake extends SubsystemBase {
                                 runVelocityCommand(-4, -4, -4)
                         )
                 )
-                .andThen(instantStopCommand());
+                .andThen(instantStopCommand())
+                .andThen(Commands.runOnce(() -> this.storedNoteInIntake = true));
     }
 
     public Command intakeCommand(final Command runOnHasNote) {
         return Commands.sequence(
-                runVelocityCommand(18, 18, 18)
+                runVelocityCommand(22, 22, 18)
                         .until(shooterBeamBreakBroken),
                 instantStopCommand(),
                 storeCommand(),
@@ -117,8 +125,9 @@ public class Intake extends SubsystemBase {
                 .andThen(Commands.deadline(
                         Commands.waitUntil(shooterBeamBreakBroken)
                                 .andThen(Commands.waitUntil(shooterBeamBreakBroken.negate())),
-                        runVelocityCommand(10, 10, 10)
-                ));
+                        runVelocityCommand(18, 18, 18)
+                ))
+                .andThen(Commands.runOnce(() -> this.storedNoteInIntake = false));
     }
 
     public Command runEjectOutCommand() {

@@ -6,6 +6,9 @@ import edu.wpi.first.wpilibj.RobotBase;
 import edu.wpi.first.wpilibj.event.EventLoop;
 import edu.wpi.first.wpilibj.livewindow.LiveWindow;
 import edu.wpi.first.wpilibj2.command.CommandScheduler;
+import edu.wpi.first.wpilibj2.command.Commands;
+import edu.wpi.first.wpilibj2.command.Subsystem;
+import edu.wpi.first.wpilibj2.command.sysid.SysIdRoutine;
 import frc.robot.constants.Constants;
 import frc.robot.constants.FieldConstants;
 import frc.robot.subsystems.superstructure.ShotParameters;
@@ -21,14 +24,24 @@ import org.littletonrobotics.junction.wpilog.WPILOGWriter;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
+import java.util.Optional;
+import java.util.function.BooleanSupplier;
 
 @SuppressWarnings("RedundantMethodOverride")
 public class Robot extends LoggedRobot {
     private static final String AKitLogPath = "/U/logs";
     private static final String HootLogPath = "/U/logs";
 
+    public static final BooleanSupplier IsRedAlliance = () -> {
+        final Optional<DriverStation.Alliance> alliance = DriverStation.getAlliance();
+        return alliance.isPresent() && alliance.get() == DriverStation.Alliance.Red;
+    };
+
     private RobotContainer robotContainer;
+
     private EventLoop autonomousEventLoop;
+    private final EventLoop teleopEventLoop = new EventLoop();
+    private final EventLoop testEventLoop = new EventLoop();
 
     @Override
     public void robotInit() {
@@ -107,10 +120,47 @@ public class Robot extends LoggedRobot {
         }
 
         robotContainer = new RobotContainer();
+        robotContainer.configureAutos();
+        robotContainer.configureButtonBindings(teleopEventLoop);
 
         SignalLogger.enableAutoLogging(true);
         SignalLogger.start();
         ToClose.add(SignalLogger::stop);
+
+        CommandScheduler.getInstance().onCommandInitialize(
+                command -> Logger.recordOutput("Commands/Initialized", command.getName())
+        );
+
+        CommandScheduler.getInstance().onCommandFinish(
+                command -> Logger.recordOutput("Commands/Finished", command.getName())
+        );
+
+        CommandScheduler.getInstance().onCommandInterrupt(
+                (interrupted, interrupting) -> {
+                    Logger.recordOutput("Commands/Interrupted", interrupted.getName());
+                    Logger.recordOutput(
+                            "Commands/InterruptedRequirements",
+                            interrupted.getRequirements()
+                                    .stream()
+                                    .map(Subsystem::getName)
+                                    .toArray(String[]::new)
+                    );
+
+                    Logger.recordOutput("Commands/Interrupting", interrupting.isPresent()
+                            ? interrupting.get().getName()
+                            : "None"
+                    );
+                    Logger.recordOutput(
+                            "Commands/InterruptingRequirements",
+                            interrupting
+                                    .map(command -> command.getRequirements()
+                                            .stream()
+                                            .map(Subsystem::getName)
+                                            .toArray(String[]::new)
+                                    ).orElseGet(() -> new String[0])
+                    );
+                }
+        );
 
         Logger.start();
     }
@@ -120,14 +170,14 @@ public class Robot extends LoggedRobot {
         CommandScheduler.getInstance().run();
         VirtualSubsystem.run();
 
-        final ShotParameters.Parameters shotParameters = ShotParameters.get(
-                robotContainer.swerve.getPose()
-                        .minus(FieldConstants.getSpeakerPose())
-                        .getTranslation()
-                        .getNorm()
-        );
+        final double distanceToSpeaker = robotContainer.swerve.getPose()
+                .minus(FieldConstants.getSpeakerPose())
+                .getTranslation()
+                .getNorm();
+        final ShotParameters.Parameters shotParameters = ShotParameters.get(distanceToSpeaker);
 
-        Logger.recordOutput("ShotParameters/ArmPivotAngle", shotParameters.armPivotAngle());
+        Logger.recordOutput("ShotParameters/SpeakerDistance", distanceToSpeaker);
+        Logger.recordOutput("ShotParameters/ArmPivotAngle", shotParameters.armPivotAngle().getRotations());
         Logger.recordOutput("ShotParameters/LeftVelocityRotsPerSec", shotParameters.leftVelocityRotsPerSec());
         Logger.recordOutput("ShotParameters/RightVelocityRotsPerSec", shotParameters.rightVelocityRotsPerSec());
         Logger.recordOutput("ShotParameters/AmpVelocityRotsPerSec", shotParameters.ampVelocityRotsPerSec());
@@ -153,10 +203,6 @@ public class Robot extends LoggedRobot {
 
     @Override
     public void teleopInit() {
-        if (autonomousEventLoop != null) {
-            autonomousEventLoop.clear();
-        }
-
         //noinspection SuspiciousNameCombination
         robotContainer.swerve.setDefaultCommand(
                 robotContainer.swerve.teleopDriveCommand(
@@ -168,15 +214,39 @@ public class Robot extends LoggedRobot {
     }
 
     @Override
-    public void teleopPeriodic() {}
+    public void teleopPeriodic() {
+        if (teleopEventLoop != null) {
+            teleopEventLoop.poll();
+        }
+    }
 
     @Override
     public void testInit() {
         CommandScheduler.getInstance().cancelAll();
+
+        robotContainer.coDriverController.leftBumper(testEventLoop)
+                .onTrue(Commands.runOnce(SignalLogger::stop));
+
+        robotContainer.coDriverController.y(testEventLoop)
+                .whileTrue(robotContainer.swerve
+                        .angularVoltageSysIdQuasistaticCommand(SysIdRoutine.Direction.kForward));
+        robotContainer.coDriverController.a(testEventLoop)
+                .whileTrue(robotContainer.swerve
+                        .angularVoltageSysIdQuasistaticCommand(SysIdRoutine.Direction.kReverse));
+        robotContainer.coDriverController.b(testEventLoop)
+                .whileTrue(robotContainer.swerve
+                        .angularVoltageSysIdDynamicCommand(SysIdRoutine.Direction.kForward));
+        robotContainer.coDriverController.x(testEventLoop)
+                .whileTrue(robotContainer.swerve
+                        .angularVoltageSysIdDynamicCommand(SysIdRoutine.Direction.kReverse));
     }
 
     @Override
-    public void testPeriodic() {}
+    public void testPeriodic() {
+        if (testEventLoop != null) {
+            testEventLoop.poll();
+        }
+    }
 
     @Override
     public void simulationInit() {}

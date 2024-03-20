@@ -1,6 +1,5 @@
 package frc.robot;
 
-import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.GenericHID;
 import edu.wpi.first.wpilibj.PowerDistribution;
 import edu.wpi.first.wpilibj.XboxController;
@@ -8,17 +7,14 @@ import edu.wpi.first.wpilibj.event.EventLoop;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
-import edu.wpi.first.wpilibj2.command.button.Trigger;
 import frc.robot.auto.AutoChooser;
 import frc.robot.auto.AutoOption;
 import frc.robot.auto.Autos;
 import frc.robot.constants.Constants;
-import frc.robot.constants.FieldConstants;
 import frc.robot.constants.HardwareConstants;
 import frc.robot.constants.RobotMap;
 import frc.robot.subsystems.drive.Swerve;
 import frc.robot.subsystems.intake.Intake;
-import frc.robot.subsystems.superstructure.ShotParameters;
 import frc.robot.subsystems.superstructure.Superstructure;
 import frc.robot.subsystems.superstructure.arm.Arm;
 import frc.robot.subsystems.superstructure.shooter.Shooter;
@@ -36,8 +32,9 @@ public class RobotContainer {
 
     public final Superstructure superstructure;
 
+    public final ShootCommands shootCommands;
     public final Autos autos;
-    private final AutoChooser<String, AutoOption> autoChooser;
+    public final AutoChooser<String, AutoOption> autoChooser;
 
     public final PhotonVision photonVision;
 
@@ -71,7 +68,8 @@ public class RobotContainer {
         this.superstructure = new Superstructure(arm, shooter);
 
         this.photonVision = new PhotonVision(Constants.CURRENT_MODE, swerve, swerve.getPoseEstimator());
-        this.autos = new Autos(swerve, superstructure, intake);
+        this.shootCommands = new ShootCommands(swerve, intake, superstructure);
+        this.autos = new Autos(swerve, intake, superstructure, shootCommands);
 
         this.driverController = new CommandXboxController(RobotMap.MainController);
         this.coDriverController = new CommandXboxController(RobotMap.CoController);
@@ -83,9 +81,6 @@ public class RobotContainer {
                         Constants.CompetitionType.COMPETITION
                 )
         );
-
-        configureAutos();
-        configureButtonBindings();
     }
 
     public Command runEjectShooter() {
@@ -108,99 +103,6 @@ public class RobotContainer {
                         .withTimeout(6)
                         .andThen(intake.runEjectOutCommand()),
                 superstructure.toGoal(Superstructure.Goal.BACK_FEED)
-        );
-    }
-
-    public Command driveAndAmp() {
-        return Commands.deadline(
-                Commands.sequence(
-                        Commands.waitUntil(swerve.atHolonomicDrivePose)
-                                .withTimeout(6),
-                        intake.feedHalfCommand(),
-                        Commands.deadline(
-                                Commands.waitUntil(superstructure.atSetpoint)
-                                        .andThen(Commands.waitSeconds(0.5))
-                                        .andThen(intake.feedCommand())
-                                        .andThen(Commands.waitSeconds(0.5)),
-                                superstructure.toGoal(Superstructure.Goal.AMP)
-                        )
-                ),
-                swerve.driveToPose(FieldConstants::getAmpScoringPose)
-        );
-    }
-
-    public Command amp() {
-        return Commands.sequence(
-                intake.feedHalfCommand(),
-                Commands.deadline(
-                        Commands.waitUntil(superstructure.atSetpoint)
-                                .andThen(Commands.waitSeconds(0.5))
-                                .andThen(intake.feedCommand())
-                                .andThen(Commands.waitSeconds(0.5)),
-                        superstructure.toGoal(Superstructure.Goal.AMP)
-                )
-        );
-    }
-
-    public Command shootSubwoofer() {
-        return Commands.deadline(
-                intake
-                        .runStopCommand()
-                        .until(superstructure.atSetpoint)
-                        .andThen(intake.feedCommand()),
-                superstructure.toGoal(Superstructure.Goal.SUBWOOFER)
-        );
-    }
-
-    public Command stopAndShoot() {
-        return Commands.deadline(
-                Commands.deadline(
-                        intake
-                                .runStopCommand()
-                                .until(superstructure.atSetpoint.and(swerve.atHeadingSetpoint))
-                                .withTimeout(4)
-                                .andThen(intake.feedCommand()),
-                        superstructure.runState(() -> ShotParameters.get(
-                                swerve.getPose()
-                                        .minus(FieldConstants.getSpeakerPose())
-                                        .getTranslation()
-                                        .getNorm()
-                        ))
-                ),
-                swerve.teleopFacingAngleCommand(
-                        () -> 0,
-                        () -> 0,
-                        () -> swerve.getPose()
-                                .getTranslation()
-                                .minus(FieldConstants.getSpeakerPose().getTranslation())
-                                .getAngle()
-                )
-        );
-    }
-
-    public Command teleopDriveAimAndShoot() {
-        //noinspection SuspiciousNameCombination
-        return Commands.deadline(
-                Commands.deadline(
-                        intake
-                                .runStopCommand()
-                                .until(superstructure.atSetpoint.and(swerve.atHeadingSetpoint))
-                                .andThen(intake.feedCommand()),
-                        superstructure.runState(() -> ShotParameters.get(
-                                swerve.getPose()
-                                        .minus(FieldConstants.getSpeakerPose())
-                                        .getTranslation()
-                                        .getNorm())
-                        )
-                ),
-                swerve.teleopFacingAngleCommand(
-                        driverController::getLeftY,
-                        driverController::getLeftX,
-                        () -> swerve.getPose()
-                                .getTranslation()
-                                .minus(FieldConstants.getSpeakerPose().getTranslation())
-                                .getAngle()
-                )
         );
     }
 
@@ -247,21 +149,9 @@ public class RobotContainer {
         ));
     }
 
-    public void configureButtonBindings() {
-        this.driverController.leftTrigger().whileTrue(amp());
-        this.driverController.rightTrigger().whileTrue(shootSubwoofer());
-
-//        this.driverController.x().whileTrue(driveAndAmp());
-
-//        this.coDriverController.b().whileTrue(swerve.faceAngle(() ->
-//                swerve.getPose()
-//                        .getTranslation()
-//                        .minus(FieldConstants.getSpeakerPose().getTranslation())
-//                        .getAngle()
-//        ));
-
+    public void configureButtonBindings(final EventLoop teleopEventLoop) {
         final XboxController driverHID = driverController.getHID();
-        this.driverController.a().whileTrue(
+        this.driverController.leftTrigger(0.5, teleopEventLoop).whileTrue(
                 intake.intakeCommand(
                         Commands.startEnd(
                                 () -> driverHID.setRumble(GenericHID.RumbleType.kBothRumble, 0.5),
@@ -269,30 +159,32 @@ public class RobotContainer {
                         ).withTimeout(0.5)
                 )
         );
-        this.driverController.y().onTrue(swerve.zeroRotationCommand());
+        this.driverController.rightTrigger(0.5, teleopEventLoop)
+                .whileTrue(shootCommands.teleopDriveAimAndShoot(
+                        driverController::getLeftY,
+                        driverController::getLeftX
+                ))
+                .onFalse(superstructure.toGoal(Superstructure.Goal.IDLE));
 
-        this.driverController.leftBumper().whileTrue(
+        this.driverController.a(teleopEventLoop).whileTrue(shootCommands.lineupAndAmp());
+        this.driverController.y(teleopEventLoop).onTrue(swerve.zeroRotationCommand());
+
+        this.driverController.leftBumper(teleopEventLoop).whileTrue(
                 Commands.startEnd(
                         () -> Profiler.setSwerveSpeed(Profiler.SwerveSpeed.FAST),
                         () -> Profiler.setSwerveSpeed(Profiler.SwerveSpeed.NORMAL)
                 )
         );
 
-        this.driverController.rightBumper().whileTrue(
+        this.driverController.rightBumper(teleopEventLoop).whileTrue(
                 Commands.startEnd(
                         () -> Profiler.setSwerveSpeed(Profiler.SwerveSpeed.SLOW),
                         () -> Profiler.setSwerveSpeed(Profiler.SwerveSpeed.NORMAL)
                 )
         );
 
-        this.coDriverController.y().whileTrue(runEjectShooter());
-        this.coDriverController.a().whileTrue(runEjectIntake());
-//        this.coDriverController.leftBumper().onTrue(Commands.runOnce(SignalLogger::stop));
-
-//        this.coDriverController.y().whileTrue(swerve.linearTorqueCurrentSysIdQuasistaticCommand(SysIdRoutine.Direction.kForward));
-//        this.coDriverController.a().whileTrue(swerve.linearTorqueCurrentSysIdQuasistaticCommand(SysIdRoutine.Direction.kReverse));
-//        this.coDriverController.b().whileTrue(swerve.linearTorqueCurrentSysIdDynamicCommand(SysIdRoutine.Direction.kForward));
-//        this.coDriverController.x().whileTrue(swerve.linearTorqueCurrentSysIdDynamicCommand(SysIdRoutine.Direction.kReverse));
+        this.coDriverController.y(teleopEventLoop).whileTrue(runEjectShooter());
+        this.coDriverController.a(teleopEventLoop).whileTrue(runEjectIntake());
     }
 
     public EventLoop getAutonomousEventLoop() {

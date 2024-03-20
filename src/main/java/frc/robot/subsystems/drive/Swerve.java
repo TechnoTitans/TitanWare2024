@@ -1,7 +1,9 @@
 package frc.robot.subsystems.drive;
 
 import com.choreo.lib.Choreo;
+import com.choreo.lib.ChoreoControlFunction;
 import com.choreo.lib.ChoreoTrajectory;
+import com.choreo.lib.ChoreoTrajectoryState;
 import com.ctre.phoenix6.SignalLogger;
 import com.ctre.phoenix6.signals.NeutralModeValue;
 import com.pathplanner.lib.auto.AutoBuilder;
@@ -10,7 +12,6 @@ import com.pathplanner.lib.util.PIDConstants;
 import com.pathplanner.lib.util.PathPlannerLogging;
 import com.pathplanner.lib.util.ReplanningConfig;
 import edu.wpi.first.math.MathUtil;
-import edu.wpi.first.math.controller.HolonomicDriveController;
 import edu.wpi.first.math.controller.PIDController;
 import edu.wpi.first.math.controller.ProfiledPIDController;
 import edu.wpi.first.math.estimator.SwerveDrivePoseEstimator;
@@ -26,13 +27,18 @@ import edu.wpi.first.math.util.Units;
 import edu.wpi.first.units.Current;
 import edu.wpi.first.units.Measure;
 import edu.wpi.first.wpilibj.DriverStation;
+import edu.wpi.first.wpilibj.Timer;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import edu.wpi.first.wpilibj2.command.button.Trigger;
 import edu.wpi.first.wpilibj2.command.sysid.SysIdRoutine;
+import frc.robot.Robot;
+import frc.robot.auto.Autos;
 import frc.robot.constants.Constants;
+import frc.robot.constants.FieldConstants;
 import frc.robot.constants.HardwareConstants;
+import frc.robot.subsystems.drive.trajectory.HolonomicDriveWithPIDController;
 import frc.robot.subsystems.gyro.Gyro;
 import frc.robot.utils.gyro.GyroUtils;
 import frc.robot.utils.logging.LogUtils;
@@ -76,7 +82,7 @@ public class Swerve extends SubsystemBase {
     public final Trigger atHeadingSetpoint;
     private final ProfiledPIDController headingController;
     public final Trigger atHolonomicDrivePose;
-    private final HolonomicDriveController holonomicDriveController;
+    private final HolonomicDriveWithPIDController holonomicDriveWithPIDController;
 
     private final SysIdRoutine linearVoltageSysIdRoutine;
     private final SysIdRoutine linearTorqueCurrentSysIdRoutine;
@@ -118,16 +124,16 @@ public class Swerve extends SubsystemBase {
         this.headingController.setTolerance(Units.degreesToRadians(3), Units.degreesToRadians(6));
         this.atHeadingSetpoint = new Trigger(headingController::atGoal);
 
-        this.holonomicDriveController = new HolonomicDriveController(
+        this.holonomicDriveWithPIDController = new HolonomicDriveWithPIDController(
                 new PIDController(5, 0, 0),
                 new PIDController(5, 0, 0),
                 new ProfiledPIDController(
                         headingController.getP(), headingController.getI(), headingController.getD(),
                         headingController.getConstraints()
-                )
+                ),
+                new Pose2d(0.1, 0.1, Rotation2d.fromDegrees(3))
         );
-        this.holonomicDriveController.setTolerance(new Pose2d(0.15, 0.15, Rotation2d.fromDegrees(2)));
-        this.atHolonomicDrivePose = new Trigger(holonomicDriveController::atReference);
+        this.atHolonomicDrivePose = new Trigger(holonomicDriveWithPIDController::atReference);
 
         this.linearVoltageSysIdRoutine = makeLinearVoltageSysIdRoutine();
         this.linearTorqueCurrentSysIdRoutine = makeLinearTorqueCurrentSysIdRoutine();
@@ -171,26 +177,26 @@ public class Swerve extends SubsystemBase {
         );
 
         this.headingController = new ProfiledPIDController(
-                5, 0, 0,
+                8, 0, 0,
                 new TrapezoidProfile.Constraints(
                         ROBOT_MAX_ANGULAR_SPEED_RAD_PER_SEC * 0.75,
-                        TELEOP_MAX_ANGULAR_SPEED_RAD_PER_SEC * 0.5
+                        ROBOT_MAX_ANGULAR_SPEED_RAD_PER_SEC * 0.5
                 )
         );
         this.headingController.enableContinuousInput(-Math.PI, Math.PI);
         this.headingController.setTolerance(Units.degreesToRadians(3), Units.degreesToRadians(6));
         this.atHeadingSetpoint = new Trigger(headingController::atGoal);
 
-        this.holonomicDriveController = new HolonomicDriveController(
+        this.holonomicDriveWithPIDController = new HolonomicDriveWithPIDController(
                 new PIDController(5, 0, 0),
                 new PIDController(5, 0, 0),
                 new ProfiledPIDController(
                         headingController.getP(), headingController.getI(), headingController.getD(),
                         headingController.getConstraints()
-                )
+                ),
+                new Pose2d(0.01, 0.01, Rotation2d.fromDegrees(3))
         );
-        this.holonomicDriveController.setTolerance(new Pose2d(0.15, 0.15, Rotation2d.fromDegrees(2)));
-        this.atHolonomicDrivePose = new Trigger(holonomicDriveController::atReference);
+        this.atHolonomicDrivePose = new Trigger(holonomicDriveWithPIDController::atReference);
 
         this.linearVoltageSysIdRoutine = makeLinearVoltageSysIdRoutine();
         this.linearTorqueCurrentSysIdRoutine = makeLinearTorqueCurrentSysIdRoutine();
@@ -374,12 +380,8 @@ public class Swerve extends SubsystemBase {
         return gyro.getRollRotation2d();
     }
 
-    //TODO: usage of this is a mess, standardize on using gyro or using the pose estimator (I think latter is preferred)
     public Rotation2d getYaw() {
-        // TODO: check that using the pose estimator is not an issue anymore now that the camera angles have
-        //  been audited/fixed
-//        return getPose().getRotation();
-        return gyro.getYawRotation2d();
+        return getPose().getRotation();
     }
 
     /**
@@ -390,11 +392,15 @@ public class Swerve extends SubsystemBase {
     }
 
     public void zeroRotation() {
-        gyro.zeroRotation();
         poseEstimator.resetPosition(
-                Rotation2d.fromRadians(0),
+                gyro.getYawRotation2d(),
                 getModulePositions(),
-                getPose()
+                new Pose2d(
+                        getPose().getTranslation(),
+                        Robot.IsRedAlliance.getAsBoolean()
+                                ? Rotation2d.fromDegrees(180)
+                                : Rotation2d.fromDegrees(0)
+                )
         );
     }
 
@@ -465,11 +471,23 @@ public class Swerve extends SubsystemBase {
             final double xSpeed,
             final double ySpeed,
             final double rot,
-            final boolean fieldRelative
+            final boolean fieldRelative,
+            final boolean invertYaw
     ) {
-        final ChassisSpeeds speeds = fieldRelative
-                ? ChassisSpeeds.fromFieldRelativeSpeeds(xSpeed, ySpeed, rot, getYaw())
-                : new ChassisSpeeds(xSpeed, ySpeed, rot);
+        final ChassisSpeeds speeds;
+        if (fieldRelative) {
+            final Rotation2d poseYaw = getYaw();
+            speeds = ChassisSpeeds.fromFieldRelativeSpeeds(
+                    xSpeed,
+                    ySpeed,
+                    rot,
+                    invertYaw
+                            ? poseYaw.plus(Rotation2d.fromRadians(Math.PI))
+                            : poseYaw
+            );
+        } else {
+            speeds = new ChassisSpeeds(xSpeed, ySpeed, rot);
+        }
 
         drive(speeds);
     }
@@ -481,40 +499,6 @@ public class Swerve extends SubsystemBase {
         );
 
         drive(kinematics.toSwerveModuleStates(correctedSpeeds));
-    }
-
-    public Command teleopFacingAngleCommand(
-            final DoubleSupplier xSpeedSupplier,
-            final DoubleSupplier ySpeedSupplier,
-            final Supplier<Rotation2d> rotationTargetSupplier
-    ) {
-        return Commands.sequence(
-                runOnce(() -> headingController.reset(
-                        getYaw().getRadians(),
-                        getFieldRelativeSpeeds().omegaRadiansPerSecond)
-                ),
-                run(() -> {
-                    final Profiler.DriverProfile driverProfile = Profiler.getDriverProfile();
-                    final Profiler.SwerveSpeed swerveSpeed = Profiler.getSwerveSpeed();
-
-                    final double throttleWeight = swerveSpeed.getThrottleWeight();
-                    final Translation2d leftStickSpeeds = ControllerUtils.getStickXYSquaredInput(
-                            xSpeedSupplier.getAsDouble(),
-                            ySpeedSupplier.getAsDouble(),
-                            0.01,
-                            Constants.Swerve.TELEOP_MAX_SPEED_MPS,
-                            driverProfile.getThrottleSensitivity(),
-                            throttleWeight
-                    );
-
-                    drive(
-                            leftStickSpeeds.getX(),
-                            leftStickSpeeds.getY(),
-                            headingController.calculate(getYaw().getRadians(), rotationTargetSupplier.get().getRadians()),
-                            true
-                    );
-                })
-        );
     }
 
     public Command teleopDriveCommand(
@@ -546,43 +530,115 @@ public class Swerve extends SubsystemBase {
                     rotWeight
             );
 
-            // TODO: do we keep the wheelX stuff?
-            if (Math.abs(leftStickSpeeds.getNorm()) <= 0.01 && Math.abs(rot) <= 0.01) {
-                wheelX();
-            } else {
-                drive(
-                        leftStickSpeeds.getX(),
-                        leftStickSpeeds.getY(),
-                        rot,
-                        true
-                );
-            }
+            // TODO: do we need to add back the wheelX stuff?
+            drive(
+                    leftStickSpeeds.getX(),
+                    leftStickSpeeds.getY(),
+                    rot,
+                    true,
+                    Robot.IsRedAlliance.getAsBoolean()
+            );
         });
+    }
+
+    public Command teleopFacingAngleCommand(
+            final DoubleSupplier xSpeedSupplier,
+            final DoubleSupplier ySpeedSupplier,
+            final Supplier<Rotation2d> rotationTargetSupplier
+    ) {
+        return Commands.sequence(
+                runOnce(() -> {
+                    Logger.recordOutput(LogKey + "/HeadingController/Active", true);
+                    headingController.reset(
+                            getYaw().getRadians(),
+                            getFieldRelativeSpeeds().omegaRadiansPerSecond
+                    );
+                }),
+                run(() -> {
+                    final Profiler.DriverProfile driverProfile = Profiler.getDriverProfile();
+                    final Profiler.SwerveSpeed swerveSpeed = Profiler.getSwerveSpeed();
+
+                    final double throttleWeight = swerveSpeed.getThrottleWeight();
+                    final Translation2d leftStickSpeeds = ControllerUtils.getStickXYSquaredInput(
+                            xSpeedSupplier.getAsDouble(),
+                            ySpeedSupplier.getAsDouble(),
+                            0.01,
+                            Constants.Swerve.TELEOP_MAX_SPEED_MPS,
+                            driverProfile.getThrottleSensitivity(),
+                            throttleWeight
+                    );
+
+                    final Rotation2d rotationTarget = rotationTargetSupplier.get();
+                    Logger.recordOutput(LogKey + "/HeadingController/TargetHeading", rotationTarget);
+
+                    drive(
+                            leftStickSpeeds.getX(),
+                            leftStickSpeeds.getY(),
+                            headingController.calculate(getYaw().getRadians(), rotationTarget.getRadians())
+                                    + (
+                                            ChassisSpeeds.fromFieldRelativeSpeeds(
+                                                    getFieldRelativeSpeeds(),
+                                                    getPose()
+                                                            .getTranslation()
+                                                            .minus(FieldConstants.getSpeakerPose().getTranslation())
+                                                            .getAngle()
+                                                            .minus(Rotation2d.fromRadians(Math.PI))
+                                            ).vyMetersPerSecond / (
+                                                    getPose()
+                                                            .getTranslation()
+                                                            .minus(FieldConstants.getSpeakerPose().getTranslation())
+                                                            .getNorm()
+                                            )),
+                            true,
+                            Robot.IsRedAlliance.getAsBoolean()
+                    );
+                })
+        ).finallyDo(
+                () -> Logger.recordOutput(LogKey + "/HeadingController/Active", false)
+        );
     }
 
     public Command faceAngle(final Supplier<Rotation2d> rotationTargetSupplier) {
         return Commands.sequence(
-                runOnce(() -> headingController.reset(
-                        getPose().getRotation().getRadians(),
-                        getFieldRelativeSpeeds().omegaRadiansPerSecond)
-                ),
-                run(() -> drive(
-                        0,
-                        0,
-                        headingController.calculate(
-                                getPose().getRotation().getRadians(),
-                                rotationTargetSupplier.get().getRadians()
-                        ),
-                        true
-                ))
+                runOnce(() -> {
+                    Logger.recordOutput(LogKey + "/HeadingController/Active", true);
+                    headingController.reset(
+                            getYaw().getRadians(),
+                            getFieldRelativeSpeeds().omegaRadiansPerSecond
+                    );
+                }),
+                run(() -> {
+                    Logger.recordOutput(LogKey + "/HeadingController/TargetHeading", rotationTargetSupplier.get());
+                    drive(
+                            0,
+                            0,
+                            headingController.calculate(
+                                    getYaw().getRadians(),
+                                    rotationTargetSupplier.get().getRadians()
+                            ),
+                            true,
+                            false
+                    );
+                })
+        ).finallyDo(
+                () -> Logger.recordOutput(LogKey + "/HeadingController/Active", false)
         );
     }
 
     public Command driveToPose(final Supplier<Pose2d> poseSupplier) {
-        return Commands.run(() -> {
-            final Pose2d pose = poseSupplier.get();
-            drive(holonomicDriveController.calculate(getPose(), pose, ROBOT_MAX_SPEED_MPS, pose.getRotation()));
-        }).until(holonomicDriveController::atReference);
+        return runOnce(() -> {
+            Logger.recordOutput(LogKey + "/HolonomicController/Active", true);
+            holonomicDriveWithPIDController.reset(getPose(), getRobotRelativeSpeeds());
+        }).andThen(
+                run(() -> {
+                    final Pose2d targetPose = poseSupplier.get();
+                    Logger.recordOutput(LogKey + "/HolonomicController/TargetPose", targetPose);
+
+                    drive(holonomicDriveWithPIDController.calculate(getPose(), poseSupplier.get()));
+                }).until(holonomicDriveWithPIDController::atReference)
+        ).finallyDo(
+                () -> Logger.recordOutput(LogKey + "/HolonomicController/Active", false)
+        );
     }
 
     public void stop() {
@@ -653,28 +709,72 @@ public class Swerve extends SubsystemBase {
         backRight.setNeutralMode(neutralMode);
     }
 
-    public Command followChoreoPathCommand(final ChoreoTrajectory choreoTrajectory) {
-        return Choreo.choreoSwerveCommand(
-                choreoTrajectory,
-                this::getPose,
-                new PIDController(10, 0, 0),
-                new PIDController(10, 0, 0),
-                new PIDController(10, 0, 0),
-                this::drive,
-                () -> {
-                    final Optional<DriverStation.Alliance> alliance = DriverStation.getAlliance();
-                    return alliance.isPresent() && alliance.get() == DriverStation.Alliance.Red;
-                },
-                this
+    public Command followChoreoPathCommand(
+            final ChoreoTrajectory choreoTrajectory,
+            final BooleanSupplier mirrorTrajectory
+    ) {
+        final Timer timer = new Timer();
+        final ChoreoControlFunction controller = Choreo.choreoSwerveController(
+                new PIDController(4, 0, 0),
+                new PIDController(4, 0, 0),
+                new PIDController(2, 0, 0)
+        );
+
+        return Commands.sequence(
+                runOnce(() -> {
+                    Logger.recordOutput(
+                            Autos.AutoLogKey + "/Trajectory",
+                            mirrorTrajectory.getAsBoolean()
+                                    ? choreoTrajectory.flipped().getPoses()
+                                    : choreoTrajectory.getPoses()
+                    );
+
+                    timer.restart();
+                }),
+                run(() -> {
+                    final double time = timer.get();
+                    final Pose2d currentPose = getPose();
+                    final ChoreoTrajectoryState targetState = choreoTrajectory.sample(
+                            time,
+                            mirrorTrajectory.getAsBoolean()
+                    );
+
+                    final Pose2d targetPose = targetState.getPose();
+                    Logger.recordOutput(Autos.AutoLogKey + "/Timestamp", time);
+                    Logger.recordOutput(Autos.AutoLogKey + "/CurrentPose", currentPose);
+                    Logger.recordOutput(Autos.AutoLogKey + "/TargetSpeeds", targetState.getChassisSpeeds());
+                    Logger.recordOutput(Autos.AutoLogKey + "/TargetPose", targetPose);
+
+                    Logger.recordOutput(
+                            Autos.AutoLogKey + "/TargetRotation",
+                            MathUtil.angleModulus(targetPose.getRotation().getRadians())
+                    );
+
+                    Logger.recordOutput(
+                            Autos.AutoLogKey + "/CurrentRotation",
+                            MathUtil.angleModulus(currentPose.getRotation().getRadians())
+                    );
+
+                    drive(controller.apply(currentPose, targetState));
+                })
+                        .until(() -> timer.hasElapsed(choreoTrajectory.getTotalTime()))
+                        .finallyDo((interrupted) -> {
+                            timer.stop();
+                            if (interrupted) {
+                                drive(new ChassisSpeeds());
+                            } else {
+                                drive(choreoTrajectory.getFinalState().getChassisSpeeds());
+                            }
+                        })
         );
     }
 
     private SysIdRoutine makeLinearVoltageSysIdRoutine() {
         return new SysIdRoutine(
                 new SysIdRoutine.Config(
-                        Volts.of(0.5).per(Second),
-                        Volts.of(4),
-                        Seconds.of(20),
+                        Volts.of(2).per(Second),
+                        Volts.of(6),
+                        Seconds.of(12),
                         state -> SignalLogger.writeString("state", state.toString())
                 ),
                 new SysIdRoutine.Mechanism(
