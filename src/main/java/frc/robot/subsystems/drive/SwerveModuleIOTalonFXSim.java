@@ -6,7 +6,9 @@ import com.ctre.phoenix6.StatusSignal;
 import com.ctre.phoenix6.configs.CANcoderConfiguration;
 import com.ctre.phoenix6.configs.Slot0Configs;
 import com.ctre.phoenix6.configs.TalonFXConfiguration;
+import com.ctre.phoenix6.controls.CoastOut;
 import com.ctre.phoenix6.controls.PositionVoltage;
+import com.ctre.phoenix6.controls.StaticBrake;
 import com.ctre.phoenix6.controls.VelocityTorqueCurrentFOC;
 import com.ctre.phoenix6.hardware.CANcoder;
 import com.ctre.phoenix6.hardware.TalonFX;
@@ -262,10 +264,8 @@ public class SwerveModuleIOTalonFXSim implements SwerveModuleIO {
             return;
         }
 
-        final StatusCode refreshCode = driveMotor.getConfigurator().refresh(turnTalonFXConfiguration, 0.2);
+        final StatusCode refreshCode = driveMotor.getConfigurator().refresh(driveTalonFXConfiguration);
         if (!refreshCode.isOK()) {
-            // warn if the refresh call failed in sim, which might happen pretty often as
-            // there seems to be an issue with calling refresh while disabled in sim
             DriverStation.reportWarning(
                     String.format(
                             "Failed to set NeutralMode on TalonFX %s (%s)",
@@ -276,7 +276,17 @@ public class SwerveModuleIOTalonFXSim implements SwerveModuleIO {
             return;
         }
 
-        turnTalonFXConfiguration.MotorOutput.NeutralMode = neutralMode;
-        driveMotor.getConfigurator().apply(turnTalonFXConfiguration);
+        driveTalonFXConfiguration.MotorOutput.NeutralMode = neutralMode;
+        driveMotor.getConfigurator().apply(driveTalonFXConfiguration);
+    }
+
+    @Override
+    public void setBrakeOrCoastOut(final NeutralModeValue neutralMode) {
+        switch (neutralMode) {
+            case Brake ->
+                    driveMotor.setControl(new StaticBrake());
+            case Coast ->
+                    driveMotor.setControl(new CoastOut());
+        }
     }
 }

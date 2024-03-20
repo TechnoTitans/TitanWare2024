@@ -94,4 +94,6 @@ public interface SwerveModuleIO {
      * @see NeutralModeValue
      */
     default void setNeutralMode(final NeutralModeValue neutralMode) {}
+
+    default void setBrakeOrCoastOut(final NeutralModeValue neutralMode) {}
 }
