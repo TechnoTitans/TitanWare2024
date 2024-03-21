@@ -194,8 +194,8 @@ public class Autos {
         return autoTriggers.eventLoop;
     }
 
-    public EventLoop ampSpeaker0() {
-        final String trajectoryName = "AmpSpeaker0";
+    public EventLoop ampSpeaker2() {
+        final String trajectoryName = "AmpSpeaker2";
         final ChoreoTrajectory trajectory = Choreo.getTrajectory(trajectoryName);
         final List<ChoreoTrajectory> trajectoryGroup = Choreo.getTrajectoryGroup(trajectoryName);
 
@@ -363,8 +363,69 @@ public class Autos {
         return autoTriggers.eventLoop;
     }
 
-    public EventLoop speaker0_1_2() {
-        final String trajectoryName = "Speaker0_1_2";
+    public EventLoop ampSpeaker2Center2_3() {
+        final String trajectoryName = "AmpSpeaker2Center2_3";
+        final ChoreoTrajectory trajectory = Choreo.getTrajectory(trajectoryName);
+        final List<ChoreoTrajectory> trajectoryGroup = Choreo.getTrajectoryGroup(trajectoryName);
+
+        final Timer timer = new Timer();
+        final AutoTriggers autoTriggers = new AutoTriggers(trajectory, swerve::getPose, timer::get);
+
+        autoTriggers.autoEnabled().whileTrue(
+                Commands.sequence(
+                        resetPose(trajectory.getInitialState()),
+                        superstructure.home().asProxy(),
+                        shoot().withName("ShootPreload").asProxy(),
+                        followPath(trajectoryGroup.get(0), timer)
+                ).withName("ShootPreloadAndFollow0")
+
+        );
+
+        autoTriggers.atTime(0.4).onTrue(
+                Commands.sequence(
+                        intake.intakeCommand(),
+                        shootCommands.readySuperstructureForShot()
+                )
+        );
+
+        autoTriggers.atTime(1.28).onTrue(
+                Commands.sequence(
+                        shootCommands.deferredStopAimAndShoot().asProxy(),
+                        followPath(trajectoryGroup.get(1), timer)
+                )
+        );
+
+        autoTriggers.atTime(2.5).onTrue(
+                Commands.sequence(
+                        intake.intakeCommand(),
+                        shootCommands.readySuperstructureForShot()
+                )
+        );
+
+        autoTriggers.atTime(5.82).onTrue(
+                Commands.sequence(
+                        shootCommands.deferredStopAimAndShoot().asProxy()
+                )
+        );
+
+        autoTriggers.atTime(6.5).onTrue(
+                Commands.sequence(
+                        intake.intakeCommand(),
+                        shootCommands.readySuperstructureForShot()
+                )
+        );
+
+        autoTriggers.atTime(9.34).onTrue(
+                Commands.sequence(
+                        shootCommands.deferredStopAimAndShoot().asProxy()
+                )
+        );
+
+        return autoTriggers.eventLoop;
+    }
+
+    public EventLoop speaker2_1_0() {
+        final String trajectoryName = "Speaker2_1_0";
         final ChoreoTrajectory trajectory = Choreo.getTrajectory(trajectoryName);
         final List<ChoreoTrajectory> trajectoryGroup = Choreo.getTrajectoryGroup(trajectoryName);
 
@@ -433,67 +494,6 @@ public class Autos {
         return autoTriggers.eventLoop;
     }
 
-    public EventLoop ampSpeaker2Center3_4() {
-        final String trajectoryName = "AmpSpeaker2Center3_4";
-        final ChoreoTrajectory trajectory = Choreo.getTrajectory(trajectoryName);
-        final List<ChoreoTrajectory> trajectoryGroup = Choreo.getTrajectoryGroup(trajectoryName);
-
-        final Timer timer = new Timer();
-        final AutoTriggers autoTriggers = new AutoTriggers(trajectory, swerve::getPose, timer::get);
-
-        autoTriggers.autoEnabled().whileTrue(
-                Commands.sequence(
-                        resetPose(trajectory.getInitialState()),
-                        superstructure.home().asProxy(),
-                        shoot().withName("ShootPreload").asProxy(),
-                        followPath(trajectoryGroup.get(0), timer)
-                ).withName("ShootPreloadAndFollow0")
-
-        );
-
-        autoTriggers.atTime(0.4).onTrue(
-                Commands.sequence(
-                        intake.intakeCommand(),
-                        shootCommands.readySuperstructureForShot()
-                )
-        );
-
-        autoTriggers.atTime(1.28).onTrue(
-                Commands.sequence(
-                        shootCommands.deferredStopAimAndShoot().asProxy(),
-                        followPath(trajectoryGroup.get(1), timer)
-                )
-        );
-
-        autoTriggers.atTime(2.5).onTrue(
-                Commands.sequence(
-                        intake.intakeCommand(),
-                        shootCommands.readySuperstructureForShot()
-                )
-        );
-
-        autoTriggers.atTime(5.82).onTrue(
-                Commands.sequence(
-                        shootCommands.deferredStopAimAndShoot().asProxy()
-                )
-        );
-
-        autoTriggers.atTime(6.5).onTrue(
-                Commands.sequence(
-                        intake.intakeCommand(),
-                        shootCommands.readySuperstructureForShot()
-                )
-        );
-
-        autoTriggers.atTime(9.34).onTrue(
-                Commands.sequence(
-                        shootCommands.deferredStopAimAndShoot().asProxy()
-                )
-        );
-
-        return autoTriggers.eventLoop;
-    }
-
     public EventLoop sourceMobility() {
         final String trajectoryName = "SourceMobility";
         final ChoreoTrajectory trajectory = Choreo.getTrajectory(trajectoryName);
@@ -515,27 +515,8 @@ public class Autos {
         return autoTriggers.eventLoop;
     }
 
-    public EventLoop amp() {
-        final String trajectoryName = "Amp";
-        final ChoreoTrajectory trajectory = Choreo.getTrajectory(trajectoryName);
-
-        final Timer timer = new Timer();
-        final AutoTriggers autoTriggers = new AutoTriggers(trajectory, swerve::getPose, timer::get);
-
-        autoTriggers.autoEnabled()
-                .whileTrue(
-                        Commands.sequence(
-                                resetPose(trajectory.getInitialState()),
-                                superstructure.home().asProxy(),
-                                shoot().withName("ShootPreload").asProxy()
-                        ).withName("ShootPreload")
-                );
-
-        return autoTriggers.eventLoop;
-    }
-
-    public EventLoop finishBobo() {
-        final String trajectoryName = "FinishBobo";
+    public EventLoop sourceCenter1_0() {
+        final String trajectoryName = "SourceCenter1_0";
         final ChoreoTrajectory trajectory = Choreo.getTrajectory(trajectoryName);
         final List<ChoreoTrajectory> trajectoryGroup = Choreo.getTrajectoryGroup(trajectoryName);
 
@@ -585,59 +566,8 @@ public class Autos {
         return autoTriggers.eventLoop;
     }
 
-    public EventLoop harryCook() {
-        final String trajectoryName = "HarryAuto";
-        final ChoreoTrajectory trajectory = Choreo.getTrajectory(trajectoryName);
-        final List<ChoreoTrajectory> trajectoryGroup = Choreo.getTrajectoryGroup(trajectoryName);
-
-        final Timer timer = new Timer();
-        final AutoTriggers autoTriggers = new AutoTriggers(trajectory, swerve::getPose, timer::get);
-
-        autoTriggers.autoEnabled().whileTrue(
-                Commands.sequence(
-                        resetPose(trajectory.getInitialState()),
-                        superstructure.home().asProxy(),
-                        shoot().withName("ShootPreload").asProxy(),
-                        followPath(trajectoryGroup.get(0), timer)
-                ).withName("PreloadAndFollow0")
-        );
-
-        autoTriggers.autoEnabled().whileTrue(
-                Commands.run(() -> Logger.recordOutput("Auto/Timer", timer.get()))
-        );
-
-        autoTriggers.atTime(1.7).onTrue(
-                Commands.parallel(
-                        intake.intakeCommand(),
-                        shootCommands.readySuperstructureForShot()
-                ).withName("Intake0")
-        );
-
-        autoTriggers.atTime(5.13).onTrue(
-                Commands.sequence(
-                        shootCommands.deferredStopAimAndShoot().withName("Shoot0").asProxy(),
-                        followPath(trajectoryGroup.get(1), timer).asProxy()
-                ).withName("Shoot0AndFollow1")
-        );
-
-        autoTriggers.atTime(6.5).onTrue(
-                Commands.parallel(
-                        intake.intakeCommand(),
-                        shootCommands.readySuperstructureForShot()
-                ).withName("Intake1")
-        );
-
-        autoTriggers.atTime(10.7).onTrue(
-                Commands.sequence(
-                        shootCommands.deferredStopAimAndShoot().withName("Shoot1").asProxy()
-                ).withName("Shoot1AndFollow2")
-        );
-
-        return autoTriggers.eventLoop;
-    }
-
-    public EventLoop block1771() {
-        final String trajectoryName = "Block1771";
+    public EventLoop ampCenter3_2() {
+        final String trajectoryName = "AmpCenter3_2";
         final ChoreoTrajectory trajectory = Choreo.getTrajectory(trajectoryName);
         final List<ChoreoTrajectory> trajectoryGroup = Choreo.getTrajectoryGroup(trajectoryName);
 
@@ -687,8 +617,8 @@ public class Autos {
         return autoTriggers.eventLoop;
     }
 
-    public EventLoop blockRoboLion() {
-        final String trajectoryName = "BlockRoboLion";
+    public EventLoop ampCenter4_3() {
+        final String trajectoryName = "AmpCenter4_3";
         final ChoreoTrajectory trajectory = Choreo.getTrajectory(trajectoryName);
         final List<ChoreoTrajectory> trajectoryGroup = Choreo.getTrajectoryGroup(trajectoryName);
 

@@ -110,7 +110,7 @@ public class RobotContainer {
         ));
         autoChooser.addAutoOption(new AutoOption(
                 "AmpSpeaker0",
-                autos.ampSpeaker0(),
+                autos.ampSpeaker2(),
                 Constants.CompetitionType.COMPETITION
         ));
         autoChooser.addAutoOption(new AutoOption(
@@ -129,13 +129,13 @@ public class RobotContainer {
                 Constants.CompetitionType.TESTING
         ));
         autoChooser.addAutoOption(new AutoOption(
-                "Speaker0_1_2",
-                autos.speaker0_1_2(),
+                "Speaker2_1_0",
+                autos.speaker2_1_0(),
                 Constants.CompetitionType.COMPETITION
         ));
         autoChooser.addAutoOption(new AutoOption(
-                "AmpSpeaker2Center3_4",
-                autos.ampSpeaker2Center3_4(),
+                "AmpSpeaker2Center2_3",
+                autos.ampSpeaker2Center2_3(),
                 Constants.CompetitionType.COMPETITION
         ));
         autoChooser.addAutoOption(new AutoOption(
@@ -144,28 +144,18 @@ public class RobotContainer {
                 Constants.CompetitionType.COMPETITION
         ));
         autoChooser.addAutoOption(new AutoOption(
-                "Amp",
-                autos.amp(),
+                "SourceCenter1_0",
+                autos.sourceCenter1_0(),
                 Constants.CompetitionType.COMPETITION
         ));
         autoChooser.addAutoOption(new AutoOption(
-                "FinishBobo",
-                autos.finishBobo(),
+                "AmpCenter3_2",
+                autos.ampCenter3_2(),
                 Constants.CompetitionType.COMPETITION
         ));
         autoChooser.addAutoOption(new AutoOption(
-                "HarryCook",
-                autos.harryCook(),
-                Constants.CompetitionType.COMPETITION
-        ));
-        autoChooser.addAutoOption(new AutoOption(
-                "Block1771",
-                autos.block1771(),
-                Constants.CompetitionType.COMPETITION
-        ));
-        autoChooser.addAutoOption(new AutoOption(
-                "BlockRobo",
-                autos.blockRoboLion(),
+                "AmpCenter4_3",
+                autos.ampCenter4_3(),
                 Constants.CompetitionType.COMPETITION
         ));
     }
