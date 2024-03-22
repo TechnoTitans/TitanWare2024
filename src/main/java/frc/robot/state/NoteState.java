@@ -6,6 +6,7 @@ import edu.wpi.first.wpilibj2.command.button.Trigger;
 import frc.robot.subsystems.intake.Intake;
 import frc.robot.subsystems.superstructure.Superstructure;
 
+// TODO: get this working before district champs
 public class NoteState {
     private final Intake intake;
     private final Superstructure superstructure;
