@@ -109,7 +109,7 @@ public class RobotContainer {
                 Constants.CompetitionType.COMPETITION
         ));
         autoChooser.addAutoOption(new AutoOption(
-                "AmpSpeaker0",
+                "AmpSpeaker2",
                 autos.ampSpeaker2(),
                 Constants.CompetitionType.COMPETITION
         ));
