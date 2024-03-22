@@ -21,7 +21,7 @@ import static edu.wpi.first.units.Units.*;
 public class Arm extends SubsystemBase {
     protected static final String LogKey = "Arm";
     private static final double PositionToleranceRots = 0.005;
-    private static final double VelocityToleranceRotsPerSec = 0.01;
+    private static final double VelocityToleranceRotsPerSec = 0.02;
 
     private final HardwareConstants.ArmConstants armConstants;
 
@@ -61,7 +61,7 @@ public class Arm extends SubsystemBase {
         NONE(0),
         ZERO(0),
         STOW(Units.degreesToRotations(10)),
-        AMP(Units.degreesToRotations(94)),
+        AMP(Units.degreesToRotations(95)),
         SUBWOOFER(Units.degreesToRotations(56.5));
 
         private final double pivotPositionGoal;
@@ -175,6 +175,20 @@ public class Arm extends SubsystemBase {
                 ).until(() -> inputs.pivotUpperLimitSwitch),
                 runOnce(() -> {
                     armIO.setPivotPosition(armConstants.pivotUpperLimitSwitchPositionRots());
+                    armIO.configureSoftLimits(pivotSoftLowerLimit, pivotSoftUpperLimit);
+                })
+        );
+    }
+
+    @SuppressWarnings("unused")
+    public Command homePivotWithCurrentCommand() {
+        return Commands.sequence(
+                startEnd(
+                        () -> armIO.toPivotVoltage(-1),
+                        () -> armIO.toPivotVoltage(0)
+                ).until(() -> inputs.leftPivotTorqueCurrentAmps >= 25 || inputs.rightPivotTorqueCurrentAmps >= 25),
+                runOnce(() -> {
+                    armIO.setPivotPosition(0);
                     armIO.configureSoftLimits(pivotSoftLowerLimit, pivotSoftUpperLimit);
                 })
         );

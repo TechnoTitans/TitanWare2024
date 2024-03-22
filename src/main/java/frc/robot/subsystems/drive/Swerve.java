@@ -12,6 +12,7 @@ import com.pathplanner.lib.util.PIDConstants;
 import com.pathplanner.lib.util.PathPlannerLogging;
 import com.pathplanner.lib.util.ReplanningConfig;
 import edu.wpi.first.math.MathUtil;
+import edu.wpi.first.math.VecBuilder;
 import edu.wpi.first.math.controller.PIDController;
 import edu.wpi.first.math.controller.ProfiledPIDController;
 import edu.wpi.first.math.estimator.SwerveDrivePoseEstimator;
@@ -26,7 +27,6 @@ import edu.wpi.first.math.trajectory.TrapezoidProfile;
 import edu.wpi.first.math.util.Units;
 import edu.wpi.first.units.Current;
 import edu.wpi.first.units.Measure;
-import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.Timer;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
@@ -36,7 +36,6 @@ import edu.wpi.first.wpilibj2.command.sysid.SysIdRoutine;
 import frc.robot.Robot;
 import frc.robot.auto.Autos;
 import frc.robot.constants.Constants;
-import frc.robot.constants.FieldConstants;
 import frc.robot.constants.HardwareConstants;
 import frc.robot.subsystems.drive.trajectory.HolonomicDriveWithPIDController;
 import frc.robot.subsystems.gyro.Gyro;
@@ -46,7 +45,6 @@ import frc.robot.utils.teleop.ControllerUtils;
 import frc.robot.utils.teleop.Profiler;
 import org.littletonrobotics.junction.Logger;
 
-import java.util.Optional;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.function.BooleanSupplier;
 import java.util.function.Consumer;
@@ -54,7 +52,8 @@ import java.util.function.DoubleSupplier;
 import java.util.function.Supplier;
 
 import static edu.wpi.first.units.Units.*;
-import static frc.robot.constants.Constants.Swerve.*;
+import static frc.robot.constants.Constants.Swerve.ROBOT_MAX_ANGULAR_SPEED_RAD_PER_SEC;
+import static frc.robot.constants.Constants.Swerve.TELEOP_MAX_ANGULAR_SPEED_RAD_PER_SEC;
 
 public class Swerve extends SubsystemBase {
     protected static final String LogKey = "Swerve";
@@ -173,14 +172,14 @@ public class Swerve extends SubsystemBase {
                 getModulePositions(),
                 new Pose2d(),
                 Constants.Vision.STATE_STD_DEVS,
-                Constants.Vision.VISION_MEASUREMENT_STD_DEVS
+                VecBuilder.fill(0.6, 0.6, Units.degreesToRadians(80))
         );
 
         this.headingController = new ProfiledPIDController(
-                8, 0, 0,
+                4, 0, 0,
                 new TrapezoidProfile.Constraints(
-                        ROBOT_MAX_ANGULAR_SPEED_RAD_PER_SEC * 0.75,
-                        ROBOT_MAX_ANGULAR_SPEED_RAD_PER_SEC * 0.5
+                        ROBOT_MAX_ANGULAR_SPEED_RAD_PER_SEC * 0.95,
+                        ROBOT_MAX_ANGULAR_SPEED_RAD_PER_SEC * 0.75
                 )
         );
         this.headingController.enableContinuousInput(-Math.PI, Math.PI);
@@ -194,7 +193,7 @@ public class Swerve extends SubsystemBase {
                         headingController.getP(), headingController.getI(), headingController.getD(),
                         headingController.getConstraints()
                 ),
-                new Pose2d(0.01, 0.01, Rotation2d.fromDegrees(3))
+                new Pose2d(0.05, 0.05, Rotation2d.fromDegrees(3))
         );
         this.atHolonomicDrivePose = new Trigger(holonomicDriveWithPIDController::atReference);
 
@@ -204,12 +203,9 @@ public class Swerve extends SubsystemBase {
 
         Swerve.configurePathPlannerAutoBuilder(
                 this,
-                () -> {
-                    final Optional<DriverStation.Alliance> alliance = DriverStation.getAlliance();
-                    return alliance.isPresent() && alliance.get() == DriverStation.Alliance.Red;
-                },
-                currentPose -> Logger.recordOutput("Auto/CurrentPose", currentPose),
-                targetPose -> Logger.recordOutput("Auto/TargetPose", targetPose)
+                Robot.IsRedAlliance,
+                currentPose -> Logger.recordOutput(Autos.LogKey + "/CurrentPose", currentPose),
+                targetPose -> Logger.recordOutput(Autos.LogKey + "TargetPose", targetPose)
         );
         this.odometryThreadRunner.start();
     }
@@ -244,6 +240,7 @@ public class Swerve extends SubsystemBase {
         return swerveModuleStates;
     }
 
+    @SuppressWarnings("SameParameterValue")
     private static void configurePathPlannerAutoBuilder(
             final Swerve swerve,
             final BooleanSupplier flipPathSupplier,
@@ -575,20 +572,7 @@ public class Swerve extends SubsystemBase {
                             leftStickSpeeds.getX(),
                             leftStickSpeeds.getY(),
                             headingController.calculate(getYaw().getRadians(), rotationTarget.getRadians())
-                                    + (
-                                            ChassisSpeeds.fromFieldRelativeSpeeds(
-                                                    getFieldRelativeSpeeds(),
-                                                    getPose()
-                                                            .getTranslation()
-                                                            .minus(FieldConstants.getSpeakerPose().getTranslation())
-                                                            .getAngle()
-                                                            .minus(Rotation2d.fromRadians(Math.PI))
-                                            ).vyMetersPerSecond / (
-                                                    getPose()
-                                                            .getTranslation()
-                                                            .minus(FieldConstants.getSpeakerPose().getTranslation())
-                                                            .getNorm()
-                                            )),
+                                    + headingController.getSetpoint().velocity,
                             true,
                             Robot.IsRedAlliance.getAsBoolean()
                     );
@@ -608,14 +592,13 @@ public class Swerve extends SubsystemBase {
                     );
                 }),
                 run(() -> {
-                    Logger.recordOutput(LogKey + "/HeadingController/TargetHeading", rotationTargetSupplier.get());
+                    final Rotation2d targetHeading = rotationTargetSupplier.get();
+                    Logger.recordOutput(LogKey + "/HeadingController/TargetHeading", targetHeading);
                     drive(
                             0,
                             0,
-                            headingController.calculate(
-                                    getYaw().getRadians(),
-                                    rotationTargetSupplier.get().getRadians()
-                            ),
+                            headingController.calculate(getYaw().getRadians(), targetHeading.getRadians())
+                                    + headingController.getSetpoint().velocity,
                             true,
                             false
                     );
@@ -626,16 +609,18 @@ public class Swerve extends SubsystemBase {
     }
 
     public Command driveToPose(final Supplier<Pose2d> poseSupplier) {
-        return runOnce(() -> {
-            Logger.recordOutput(LogKey + "/HolonomicController/Active", true);
-            holonomicDriveWithPIDController.reset(getPose(), getRobotRelativeSpeeds());
-        }).andThen(
+        return Commands.sequence(
+                runOnce(() -> {
+                    Logger.recordOutput(LogKey + "/HolonomicController/Active", true);
+                    holonomicDriveWithPIDController.reset(getPose(), getRobotRelativeSpeeds());
+                }),
                 run(() -> {
                     final Pose2d targetPose = poseSupplier.get();
                     Logger.recordOutput(LogKey + "/HolonomicController/TargetPose", targetPose);
 
                     drive(holonomicDriveWithPIDController.calculate(getPose(), poseSupplier.get()));
-                }).until(holonomicDriveWithPIDController::atReference)
+                }).until(holonomicDriveWithPIDController::atReference),
+                runOnce(this::stop)
         ).finallyDo(
                 () -> Logger.recordOutput(LogKey + "/HolonomicController/Active", false)
         );
@@ -723,7 +708,7 @@ public class Swerve extends SubsystemBase {
         return Commands.sequence(
                 runOnce(() -> {
                     Logger.recordOutput(
-                            Autos.AutoLogKey + "/Trajectory",
+                            Autos.LogKey + "/Trajectory",
                             mirrorTrajectory.getAsBoolean()
                                     ? choreoTrajectory.flipped().getPoses()
                                     : choreoTrajectory.getPoses()
@@ -740,18 +725,18 @@ public class Swerve extends SubsystemBase {
                     );
 
                     final Pose2d targetPose = targetState.getPose();
-                    Logger.recordOutput(Autos.AutoLogKey + "/Timestamp", time);
-                    Logger.recordOutput(Autos.AutoLogKey + "/CurrentPose", currentPose);
-                    Logger.recordOutput(Autos.AutoLogKey + "/TargetSpeeds", targetState.getChassisSpeeds());
-                    Logger.recordOutput(Autos.AutoLogKey + "/TargetPose", targetPose);
+                    Logger.recordOutput(Autos.LogKey + "/Timestamp", time);
+                    Logger.recordOutput(Autos.LogKey + "/CurrentPose", currentPose);
+                    Logger.recordOutput(Autos.LogKey + "/TargetSpeeds", targetState.getChassisSpeeds());
+                    Logger.recordOutput(Autos.LogKey + "/TargetPose", targetPose);
 
                     Logger.recordOutput(
-                            Autos.AutoLogKey + "/TargetRotation",
+                            Autos.LogKey + "/TargetRotation",
                             MathUtil.angleModulus(targetPose.getRotation().getRadians())
                     );
 
                     Logger.recordOutput(
-                            Autos.AutoLogKey + "/CurrentRotation",
+                            Autos.LogKey + "/CurrentRotation",
                             MathUtil.angleModulus(currentPose.getRotation().getRadians())
                     );
 

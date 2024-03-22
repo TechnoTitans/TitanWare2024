@@ -22,10 +22,6 @@ public class TitanCameraCalibration {
         this(new HashMap<>());
     }
 
-    public static double getPxAvgError(final List<Double> pxErrors) {
-        return pxErrors.stream().mapToDouble(error -> error).average().orElse(0);
-    }
-
     public static TitanCameraCalibration fromSimCameraProperties(final SimCameraProperties simCameraProperties) {
         final int width = simCameraProperties.getResWidth();
         final int height = simCameraProperties.getResHeight();
@@ -43,7 +39,11 @@ public class TitanCameraCalibration {
         return new TitanCameraCalibration(new HashMap<>(Map.of(resolution, simCameraProperties)));
     }
 
-    public SimCameraProperties getOrMake(final CameraProperties.Resolution resolution) {
+    private static double getPxAvgError(final List<Double> pxErrors) {
+        return pxErrors.stream().mapToDouble(error -> error).average().orElse(0);
+    }
+
+    private SimCameraProperties getOrMake(final CameraProperties.Resolution resolution) {
         final SimCameraProperties simCameraProperties = cameraPropertiesMap.get(resolution);
         if (simCameraProperties != null) {
             return simCameraProperties;
@@ -55,7 +55,7 @@ public class TitanCameraCalibration {
         return newSimCameraProperties;
     }
 
-    public TitanCameraCalibration withIntrinsics(
+    private TitanCameraCalibration withIntrinsics(
             final CameraProperties.Resolution resolution,
             final Matrix<N3, N3> intrinsics
     ) {
@@ -67,7 +67,7 @@ public class TitanCameraCalibration {
         return this;
     }
 
-    public TitanCameraCalibration withDistortions(
+    private TitanCameraCalibration withDistortions(
             final CameraProperties.Resolution resolution,
             final Matrix<N5, N1> distortions
     ) {
@@ -79,7 +79,7 @@ public class TitanCameraCalibration {
         return this;
     }
 
-    public TitanCameraCalibration withIntrinsicsAndDistortions(
+    public TitanCameraCalibration withCalibration(
             final CameraProperties.Resolution resolution,
             final Matrix<N3, N3> intrinsics,
             final Matrix<N5, N1> distortions
@@ -90,26 +90,35 @@ public class TitanCameraCalibration {
         return this;
     }
 
-    public TitanCameraCalibration withPxErrorsAndStdDev(
+    public TitanCameraCalibration withCalibrationError(
             final CameraProperties.Resolution resolution,
-            final List<Double> pxErrors,
+            final double avgPxError,
             final double pxErrorStdDev
     ) {
         final SimCameraProperties simCameraProperties = getOrMake(resolution);
-        simCameraProperties.setCalibError(getPxAvgError(pxErrors), pxErrorStdDev);
+        simCameraProperties.setCalibError(avgPxError, pxErrorStdDev);
 
         return this;
     }
 
-    public TitanCameraCalibration withCalibrations(
+    public TitanCameraCalibration withFPS(
             final CameraProperties.Resolution resolution,
-            final Matrix<N3, N3> intrinsics,
-            final Matrix<N5, N1> distortions,
-            final List<Double> pxErrors,
-            final double pxErrorStdDev
+            final double avgFPS
     ) {
-        withIntrinsicsAndDistortions(resolution, intrinsics, distortions);
-        withPxErrorsAndStdDev(resolution, pxErrors, pxErrorStdDev);
+        final SimCameraProperties simCameraProperties = getOrMake(resolution);
+        simCameraProperties.setFPS(avgFPS);
+
+        return this;
+    }
+
+    public TitanCameraCalibration withLatency(
+            final CameraProperties.Resolution resolution,
+            final double avgLatencyMs,
+            final double latencyStdDevMs
+    ) {
+        final SimCameraProperties simCameraProperties = getOrMake(resolution);
+        simCameraProperties.setAvgLatencyMs(avgLatencyMs);
+        simCameraProperties.setLatencyStdDevMs(latencyStdDevMs);
 
         return this;
     }

@@ -13,6 +13,7 @@ import frc.robot.auto.Autos;
 import frc.robot.constants.Constants;
 import frc.robot.constants.HardwareConstants;
 import frc.robot.constants.RobotMap;
+import frc.robot.state.NoteState;
 import frc.robot.subsystems.drive.Swerve;
 import frc.robot.subsystems.intake.Intake;
 import frc.robot.subsystems.superstructure.Superstructure;
@@ -31,6 +32,8 @@ public class RobotContainer {
     public final Shooter shooter;
 
     public final Superstructure superstructure;
+
+    public final NoteState noteState;
 
     public final ShootCommands shootCommands;
     public final Autos autos;
@@ -67,9 +70,11 @@ public class RobotContainer {
         this.shooter = new Shooter(Constants.CURRENT_MODE, HardwareConstants.SHOOTER);
         this.superstructure = new Superstructure(arm, shooter);
 
+        this.noteState = new NoteState(intake, superstructure);
+
         this.photonVision = new PhotonVision(Constants.CURRENT_MODE, swerve, swerve.getPoseEstimator());
         this.shootCommands = new ShootCommands(swerve, intake, superstructure);
-        this.autos = new Autos(swerve, intake, superstructure, shootCommands);
+        this.autos = new Autos(swerve, intake, superstructure, noteState, shootCommands);
 
         this.driverController = new CommandXboxController(RobotMap.MainController);
         this.coDriverController = new CommandXboxController(RobotMap.CoController);
@@ -84,24 +89,15 @@ public class RobotContainer {
     }
 
     public Command runEjectShooter() {
-        return Commands.deadline(
-                intake
-                        .runStopCommand()
-                        .until(superstructure.atSetpoint)
-                        .withTimeout(6)
-                        .andThen(intake.runEjectInCommand()
-                                .withTimeout(4)),
+        return Commands.parallel(
+                intake.runEjectInCommand(),
                 superstructure.toGoal(Superstructure.Goal.EJECT)
         );
     }
 
     public Command runEjectIntake() {
         return Commands.deadline(
-                intake
-                        .runStopCommand()
-                        .until(superstructure.atSetpoint)
-                        .withTimeout(6)
-                        .andThen(intake.runEjectOutCommand()),
+                intake.runEjectOutCommand(),
                 superstructure.toGoal(Superstructure.Goal.BACK_FEED)
         );
     }
@@ -113,8 +109,8 @@ public class RobotContainer {
                 Constants.CompetitionType.COMPETITION
         ));
         autoChooser.addAutoOption(new AutoOption(
-                "AmpSpeaker0",
-                autos.ampSpeaker0(),
+                "AmpSpeaker2",
+                autos.ampSpeaker2(),
                 Constants.CompetitionType.COMPETITION
         ));
         autoChooser.addAutoOption(new AutoOption(
@@ -133,18 +129,33 @@ public class RobotContainer {
                 Constants.CompetitionType.TESTING
         ));
         autoChooser.addAutoOption(new AutoOption(
-                "Speaker0_1_2",
-                autos.speaker0_1_2(),
+                "Speaker2_1_0",
+                autos.speaker2_1_0(),
                 Constants.CompetitionType.COMPETITION
         ));
         autoChooser.addAutoOption(new AutoOption(
-                "AmpSpeaker2Center3",
-                autos.ampSpeaker2Center3(),
-                Constants.CompetitionType.TESTING
+                "AmpSpeaker2Center2_3",
+                autos.ampSpeaker2Center2_3(),
+                Constants.CompetitionType.COMPETITION
         ));
         autoChooser.addAutoOption(new AutoOption(
-                "ShootAndMobility",
-                autos.shootAndMobility(),
+                "SourceMobility",
+                autos.sourceMobility(),
+                Constants.CompetitionType.COMPETITION
+        ));
+        autoChooser.addAutoOption(new AutoOption(
+                "SourceCenter1_0",
+                autos.sourceCenter1_0(),
+                Constants.CompetitionType.COMPETITION
+        ));
+        autoChooser.addAutoOption(new AutoOption(
+                "AmpCenter3_2",
+                autos.ampCenter3_2(),
+                Constants.CompetitionType.COMPETITION
+        ));
+        autoChooser.addAutoOption(new AutoOption(
+                "AmpCenter4_3",
+                autos.ampCenter4_3(),
                 Constants.CompetitionType.COMPETITION
         ));
     }
@@ -160,13 +171,11 @@ public class RobotContainer {
                 )
         );
         this.driverController.rightTrigger(0.5, teleopEventLoop)
-                .whileTrue(shootCommands.teleopDriveAimAndShoot(
-                        driverController::getLeftY,
-                        driverController::getLeftX
-                ))
+//                .whileTrue(shootCommands.stopAimAndShoot())
+                .whileTrue(shootCommands.deferredStopAimAndShoot())
                 .onFalse(superstructure.toGoal(Superstructure.Goal.IDLE));
 
-        this.driverController.a(teleopEventLoop).whileTrue(shootCommands.lineupAndAmp());
+        this.driverController.a(teleopEventLoop).whileTrue(shootCommands.amp());
         this.driverController.y(teleopEventLoop).onTrue(swerve.zeroRotationCommand());
 
         this.driverController.leftBumper(teleopEventLoop).whileTrue(
@@ -185,6 +194,9 @@ public class RobotContainer {
 
         this.coDriverController.y(teleopEventLoop).whileTrue(runEjectShooter());
         this.coDriverController.a(teleopEventLoop).whileTrue(runEjectIntake());
+        this.coDriverController.b().whileTrue(shootCommands.lineupAndAmp());
+        this.coDriverController.rightTrigger(0.5, teleopEventLoop)
+                .whileTrue(shootCommands.shootSubwoofer());
     }
 
     public EventLoop getAutonomousEventLoop() {

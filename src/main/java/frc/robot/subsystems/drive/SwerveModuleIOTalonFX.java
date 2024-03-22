@@ -229,7 +229,7 @@ public class SwerveModuleIOTalonFX implements SwerveModuleIO {
         driveMotor.setControl(velocityTorqueCurrentFOC
                 .withVelocity(backedOutDriveVelocity)
                 // TODO: fixme
-                .withOverrideCoastDurNeutral(true)
+//                .withOverrideCoastDurNeutral(true)
         );
         turnMotor.setControl(positionVoltage.withPosition(desiredTurnerRotations));
     }

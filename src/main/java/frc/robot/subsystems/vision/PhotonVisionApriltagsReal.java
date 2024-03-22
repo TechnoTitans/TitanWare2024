@@ -21,6 +21,8 @@ public class PhotonVisionApriltagsReal implements PhotonVisionRunner<PhotonVisio
         private final PhotonCamera photonCamera;
         private final String cameraName;
 
+        private final double stdDevFactor;
+
         private final PhotonPoseEstimator poseEstimator;
 
         private PhotonPipelineResult latestPhotonPipelineResult;
@@ -39,6 +41,8 @@ public class PhotonVisionApriltagsReal implements PhotonVisionRunner<PhotonVisio
         ) {
             this.photonCamera = titanCamera.getPhotonCamera();
             this.cameraName = photonCamera.getName();
+
+            this.stdDevFactor = titanCamera.getStdDevFactor();
 
             this.poseEstimator = new PhotonPoseEstimator(
                     blueSideApriltagFieldLayout,
@@ -59,9 +63,11 @@ public class PhotonVisionApriltagsReal implements PhotonVisionRunner<PhotonVisio
             this.latestPhotonPipelineResult = photonPipelineResult;
         }
 
+        @SuppressWarnings("DuplicatedCode")
         @Override
         public void updateInputs(final PhotonVisionIOInputs inputs) {
             inputs.name = cameraName;
+            inputs.stdDevFactor = stdDevFactor;
             if (latestPhotonPipelineResult == null) {
                 inputs.pipelineResultTargets = new double[] {};
             } else {

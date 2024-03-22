@@ -13,15 +13,12 @@ public class FieldConstants {
     public static final double FIELD_LENGTH_X_METERS = Units.inchesToMeters(651.223);
     public static final double FIELD_WIDTH_Y_METERS = Units.inchesToMeters(323.277);
 
-    // TODO: verify this pose
     public static final Pose2d BLUE_SPEAKER_POSE =
             new Pose2d(new Translation2d(0.2381, 5.547868), Rotation2d.fromDegrees(0));
 
-    // TODO: verify this pose
     public static final Pose2d RED_SPEAKER_POSE =
             new Pose2d(new Translation2d(16.379342, 5.547868), Rotation2d.fromDegrees(180));
 
-    // TODO: verify this pose
     public static final Pose2d BLUE_AMP_POSE =
             new Pose2d(
                     Units.inchesToMeters(72.455),
@@ -29,7 +26,6 @@ public class FieldConstants {
                     Rotation2d.fromRadians(-Math.PI / 2)
             );
 
-    // TODO: verify this pose
     public static final Pose2d RED_AMP_POSE = PoseUtils.flip(BLUE_AMP_POSE);
 
     private static Pose2d getAllianceFlippedPose(final Pose2d blueAlliancePose, final Pose2d redAlliancePose) {

@@ -33,45 +33,115 @@ public class ShotParameters {
     );
 
     static {
+//        shotDataMap.put(1.5d, new Parameters(
+//                Rotation2d.fromDegrees(57.5),
+//                80,
+//                70,
+//                80
+//        ));
+//
+//        shotDataMap.put(2.15d, new Parameters(
+//                Rotation2d.fromDegrees(46),
+//                80,
+//                70,
+//                80
+//        ));
+//
+//        shotDataMap.put(3d, new Parameters(
+//                Rotation2d.fromDegrees(38),
+//                85,
+//                80,
+//                85
+//        ));
+//
+//        shotDataMap.put(3.5d, new Parameters(
+//                Rotation2d.fromDegrees(37),
+//                90,
+//                85,
+//                85
+//        ));
+//
+//        shotDataMap.put(3.6d, new Parameters(
+//                Rotation2d.fromDegrees(35.25),
+//                95,
+//                90,
+//                95
+//        ));
+//
+//        shotDataMap.put(4d, new Parameters(
+//                Rotation2d.fromDegrees(34.5),
+//                100,
+//                95,
+//                100
+//        ));
+
         shotDataMap.put(1.5d, new Parameters(
-                Rotation2d.fromDegrees(56.5),
-                80,
-                70,
-                80
+                Rotation2d.fromDegrees(52.5),
+                133.3,
+                100,
+                100
         ));
 
         shotDataMap.put(2.15d, new Parameters(
-                Rotation2d.fromDegrees(45),
-                80,
-                70,
-                80
+                Rotation2d.fromDegrees(44),
+                133.3,
+                100,
+                100
         ));
 
         shotDataMap.put(3d, new Parameters(
-                Rotation2d.fromDegrees(37),
-                85,
-                80,
-                85
+                Rotation2d.fromDegrees(35),
+                133.3,
+                100,
+                100
         ));
 
         shotDataMap.put(3.5d, new Parameters(
-                Rotation2d.fromDegrees(36),
-                90,
-                85,
-                85
+                Rotation2d.fromDegrees(32.75),
+                150,
+                100,
+                100
         ));
 
         shotDataMap.put(3.6d, new Parameters(
-                Rotation2d.fromDegrees(34.25),
-                95,
-                90,
-                95
+                Rotation2d.fromDegrees(33.5),
+                150,
+                100,
+                100
         ));
 
         shotDataMap.put(4d, new Parameters(
-                Rotation2d.fromDegrees(33.5),
+                Rotation2d.fromDegrees(31),
+                150,
                 100,
-                95,
+                100
+        ));
+
+        shotDataMap.put(4.5d, new Parameters(
+                Rotation2d.fromDegrees(27.5),
+                150,
+                100,
+                100
+        ));
+
+        shotDataMap.put(5d, new Parameters(
+                Rotation2d.fromDegrees(26.75),
+                150,
+                100,
+                100
+        ));
+
+        shotDataMap.put(5.5d, new Parameters(
+                Rotation2d.fromDegrees(25.5),
+                150,
+                100,
+                100
+        ));
+
+        shotDataMap.put(6d, new Parameters(
+                Rotation2d.fromDegrees(24.75),
+                150,
+                100,
                 100
         ));
     }

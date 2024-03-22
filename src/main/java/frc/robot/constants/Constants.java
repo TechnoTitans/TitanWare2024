@@ -33,7 +33,6 @@ public interface Constants {
         double TELEOP_MAX_SPEED_MPS = ROBOT_MAX_SPEED_MPS;
         double TELEOP_MAX_ANGULAR_SPEED_RAD_PER_SEC = ROBOT_MAX_ANGULAR_SPEED_RAD_PER_SEC;
 
-        // MOI 1.793
         interface Modules {
             double WHEEL_RADIUS_M = 0.0508; //2 in
             double WHEEL_MASS_KG = 0.2313321; //0.51 lbs
@@ -43,7 +42,7 @@ public interface Constants {
             double TURNER_GEAR_RATIO = 150.0 / 7.0;
 
             //TODO: TUNE AT DE
-            double SLIP_CURRENT_A = 60;
+            double SLIP_CURRENT_A = 80;
             double COUPLING_GEAR_RATIO = 50d / 14;
 
             double WHEEL_CIRCUMFERENCE_M = 2 * Math.PI * WHEEL_RADIUS_M;
@@ -58,11 +57,6 @@ public interface Constants {
         }
     }
 
-    interface Intake {
-        double RollerRadiusMeters = Units.inchesToMeters(1);
-        double RollerCircumferenceMeters = Math.PI * RollerRadiusMeters * 2;
-    }
-
     interface NetworkTables {
         String AUTO_TABLE = "AutoSelector";
         String AUTO_PUBLISHER = "AutoOptions";
@@ -75,23 +69,22 @@ public interface Constants {
         PhotonPoseEstimator.PoseStrategy MULTI_TAG_POSE_STRATEGY =
                 PhotonPoseEstimator.PoseStrategy.MULTI_TAG_PNP_ON_COPROCESSOR;
 
-        Transform3d ROBOT_TO_FR_APRILTAG_CAM = new Transform3d(
-                new Translation3d(Units.inchesToMeters(11.838), Units.inchesToMeters(-12.861), Units.inchesToMeters(8.947)),
-                new Rotation3d(Units.degreesToRadians(7.44802852475369), Units.degreesToRadians(-25), Units.degreesToRadians(-25))
+        Transform3d ROBOT_TO_FL_APRILTAG_CAM = new Transform3d(
+                new Translation3d(Units.inchesToMeters(11.862), Units.inchesToMeters(12.681), Units.inchesToMeters(8.947)),
+                new Rotation3d(0, Units.degreesToRadians(-25), Units.degreesToRadians(20))
         );
 
-        //L = Left, R = Right, F = Forward, B = Backward (Facing)
-        Transform3d ROBOT_TO_FL_APRILTAG_CAM = new Transform3d( // X Z Y
-                new Translation3d(Units.inchesToMeters(11.862), Units.inchesToMeters(12.681), Units.inchesToMeters(8.947)),
-                new Rotation3d(Units.degreesToRadians(-7.44802852475369), Units.degreesToRadians(-25), Units.degreesToRadians(25))
+        Transform3d ROBOT_TO_FR_APRILTAG_CAM = new Transform3d(
+                new Translation3d(Units.inchesToMeters(11.838), Units.inchesToMeters(-12.861), Units.inchesToMeters(8.947)),
+                new Rotation3d(0, Units.degreesToRadians(-25), Units.degreesToRadians(-20))
         );
 
         /**
          * Standard deviations of the supplied pose estimate (before vision, likely to be solely wheel odometry)
          */
         Vector<N3> STATE_STD_DEVS = VecBuilder.fill(0.1, 0.1, Units.degreesToRadians(1));
-        // TODO: use information from collected vision estimation data to scale standard deviations
-        Vector<N3> VISION_MEASUREMENT_STD_DEVS = VecBuilder.fill(0.6, 0.6, Units.degreesToRadians(30));
+        double VISION_CAMERA_DEFAULT_STD_DEV_FACTOR = 1.0;
+        Vector<N3> VISION_STD_DEV_COEFFS = VecBuilder.fill(0.005, 0.005, 0.01);
         double MULTI_TAG_MAX_AMBIGUITY = 0.4;
         double SINGLE_TAG_MAX_AMBIGUITY = 0.2;
     }

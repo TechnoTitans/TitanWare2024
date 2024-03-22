@@ -11,6 +11,7 @@ import edu.wpi.first.wpilibj2.command.Subsystem;
 import edu.wpi.first.wpilibj2.command.sysid.SysIdRoutine;
 import frc.robot.constants.Constants;
 import frc.robot.constants.FieldConstants;
+import frc.robot.state.NoteState;
 import frc.robot.subsystems.superstructure.ShotParameters;
 import frc.robot.utils.closeables.ToClose;
 import frc.robot.utils.subsystems.VirtualSubsystem;
@@ -181,6 +182,9 @@ public class Robot extends LoggedRobot {
         Logger.recordOutput("ShotParameters/LeftVelocityRotsPerSec", shotParameters.leftVelocityRotsPerSec());
         Logger.recordOutput("ShotParameters/RightVelocityRotsPerSec", shotParameters.rightVelocityRotsPerSec());
         Logger.recordOutput("ShotParameters/AmpVelocityRotsPerSec", shotParameters.ampVelocityRotsPerSec());
+
+        final NoteState.State state = robotContainer.noteState.getState();
+        Logger.recordOutput("NoteState", state.toString());
     }
 
     @Override
@@ -203,6 +207,19 @@ public class Robot extends LoggedRobot {
 
     @Override
     public void teleopInit() {
+        // TODO: superstructure to IDLE state on teleop init
+        // TODO: bonus points if it homes/zeros itself if it isn't already zeroed,
+        //  although, if we have an absolute encoder on it, we won't need to zero anymore
+//        if (!robotContainer.superstructure.isHomed()) {
+//            // TODO: do this better
+//            Commands.sequence(
+//                    robotContainer.superstructure.home(),
+//                    robotContainer.superstructure.toGoal(Superstructure.Goal.IDLE)
+//            ).schedule();
+//        } else {
+//            robotContainer.superstructure.toGoal(Superstructure.Goal.IDLE).schedule();
+//        }
+
         //noinspection SuspiciousNameCombination
         robotContainer.swerve.setDefaultCommand(
                 robotContainer.swerve.teleopDriveCommand(

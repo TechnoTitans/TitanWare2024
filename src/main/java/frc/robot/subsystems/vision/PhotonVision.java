@@ -2,12 +2,15 @@ package frc.robot.subsystems.vision;
 
 import edu.wpi.first.apriltag.AprilTagFieldLayout;
 import edu.wpi.first.apriltag.AprilTagFields;
+import edu.wpi.first.math.VecBuilder;
+import edu.wpi.first.math.Vector;
 import edu.wpi.first.math.estimator.SwerveDrivePoseEstimator;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Pose3d;
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.geometry.Twist2d;
 import edu.wpi.first.math.kinematics.SwerveDriveOdometry;
+import edu.wpi.first.math.numbers.N3;
 import edu.wpi.first.wpilibj.DriverStation;
 import frc.robot.constants.Constants;
 import frc.robot.subsystems.drive.Swerve;
@@ -215,6 +218,24 @@ public class PhotonVision extends VirtualSubsystem {
         return EstimationRejectionReason.DID_NOT_REJECT;
     }
 
+    public Vector<N3> calculateStdDevs(final EstimatedRobotPose estimatedRobotPose, final double stdDevFactor) {
+        if (estimatedRobotPose.targetsUsed.isEmpty()) {
+            return VecBuilder.fill(Double.POSITIVE_INFINITY, Double.POSITIVE_INFINITY, Double.POSITIVE_INFINITY);
+        }
+
+        final int nTargetsUsed = estimatedRobotPose.targetsUsed.size();
+        double totalDistanceMeters = 0;
+        for (final PhotonTrackedTarget target : estimatedRobotPose.targetsUsed) {
+            totalDistanceMeters += target.getBestCameraToTarget().getTranslation().getNorm();
+        }
+
+        final double avgDistanceMeters = totalDistanceMeters / nTargetsUsed;
+        return Constants.Vision.VISION_STD_DEV_COEFFS
+                .times(Math.pow(avgDistanceMeters, 2))
+                .div(nTargetsUsed)
+                .times(stdDevFactor);
+    }
+
     private void update() {
         for (
                 final Map.Entry<? extends PhotonVisionIO, PhotonVisionIO.PhotonVisionIOInputs>
@@ -246,10 +267,13 @@ public class PhotonVision extends VirtualSubsystem {
 
             lastEstimatedRobotPose.put(photonVisionIO, stableEstimatedRobotPose);
 
-            // TODO: use dynamic standard deviations
+            final Vector<N3> stdDevs = calculateStdDevs(estimatedRobotPose, photonVisionIOInputs.stdDevFactor);
+            Logger.recordOutput(PhotonLogKey + "/" + photonVisionIOInputs.name + "/StdDevs", stdDevs.getData());
+
             poseEstimator.addVisionMeasurement(
                     estimatedRobotPose.estimatedPose.toPose2d(),
-                    estimatedRobotPose.timestampSeconds
+                    estimatedRobotPose.timestampSeconds,
+                    stdDevs
             );
         }
     }
