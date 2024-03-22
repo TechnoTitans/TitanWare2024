@@ -41,9 +41,6 @@ public class Robot extends LoggedRobot {
 
     private RobotContainer robotContainer;
 
-    public final Trigger autonomousEnabled = new Trigger(DriverStation::isAutonomousEnabled);
-    public final Trigger teleopEnabled = new Trigger(DriverStation::isTeleopEnabled);
-
     private EventLoop autonomousEventLoop;
     private final EventLoop teleopEventLoop = new EventLoop();
     private final EventLoop testEventLoop = new EventLoop();
