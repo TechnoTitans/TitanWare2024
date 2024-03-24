@@ -229,4 +229,8 @@ public class SwerveModule {
     public void setNeutralMode(final NeutralModeValue neutralMode) {
         moduleIO.setNeutralMode(neutralMode);
     }
+
+    public void setBreakOrCoastOut(final NeutralModeValue neutralMode) {
+        moduleIO.setBrakeOrCoastOut(neutralMode);
+    }
 }

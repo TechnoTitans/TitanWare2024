@@ -6,10 +6,7 @@ import com.ctre.phoenix6.StatusSignal;
 import com.ctre.phoenix6.configs.CANcoderConfiguration;
 import com.ctre.phoenix6.configs.Slot0Configs;
 import com.ctre.phoenix6.configs.TalonFXConfiguration;
-import com.ctre.phoenix6.controls.PositionVoltage;
-import com.ctre.phoenix6.controls.TorqueCurrentFOC;
-import com.ctre.phoenix6.controls.VelocityTorqueCurrentFOC;
-import com.ctre.phoenix6.controls.VoltageOut;
+import com.ctre.phoenix6.controls.*;
 import com.ctre.phoenix6.hardware.CANcoder;
 import com.ctre.phoenix6.hardware.ParentDevice;
 import com.ctre.phoenix6.hardware.TalonFX;
@@ -250,7 +247,7 @@ public class SwerveModuleIOTalonFX implements SwerveModuleIO {
 
     @Override
     public void setNeutralMode(final NeutralModeValue neutralMode) {
-        final StatusCode refreshCode = driveMotor.getConfigurator().refresh(turnTalonFXConfiguration);
+        final StatusCode refreshCode = driveMotor.getConfigurator().refresh(driveTalonFXConfiguration);
         if (!refreshCode.isOK()) {
             DriverStation.reportWarning(
                     String.format(
@@ -262,7 +259,17 @@ public class SwerveModuleIOTalonFX implements SwerveModuleIO {
             return;
         }
 
-        turnTalonFXConfiguration.MotorOutput.NeutralMode = neutralMode;
-        driveMotor.getConfigurator().apply(turnTalonFXConfiguration);
+        driveTalonFXConfiguration.MotorOutput.NeutralMode = neutralMode;
+        driveMotor.getConfigurator().apply(driveTalonFXConfiguration);
+    }
+
+    @Override
+    public void setBrakeOrCoastOut(final NeutralModeValue neutralMode) {
+        switch (neutralMode) {
+            case Brake ->
+                driveMotor.setControl(new StaticBrake());
+            case Coast ->
+                driveMotor.setControl(new CoastOut());
+        }
     }
 }

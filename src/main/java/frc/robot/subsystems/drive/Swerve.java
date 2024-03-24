@@ -137,6 +137,7 @@ public class Swerve extends SubsystemBase {
         this.linearVoltageSysIdRoutine = makeLinearVoltageSysIdRoutine();
         this.linearTorqueCurrentSysIdRoutine = makeLinearTorqueCurrentSysIdRoutine();
         this.angularVoltageSysIdRoutine = makeAngularVoltageSysIdRoutine();
+
         this.odometryThreadRunner.start();
     }
 
@@ -207,6 +208,11 @@ public class Swerve extends SubsystemBase {
                 currentPose -> Logger.recordOutput(Autos.LogKey + "/CurrentPose", currentPose),
                 targetPose -> Logger.recordOutput(Autos.LogKey + "TargetPose", targetPose)
         );
+
+        new Trigger(DriverStation::isDisabled)
+                .onTrue(runOnce(() -> setBrakeOrCoast(NeutralModeValue.Brake)).ignoringDisable(true))
+                .onFalse(runOnce(() -> setBrakeOrCoast(NeutralModeValue.Coast)));
+
         this.odometryThreadRunner.start();
     }
 
@@ -692,6 +698,13 @@ public class Swerve extends SubsystemBase {
         frontRight.setNeutralMode(neutralMode);
         backLeft.setNeutralMode(neutralMode);
         backRight.setNeutralMode(neutralMode);
+    }
+
+    public void setBrakeOrCoast(final NeutralModeValue neutralMode) {
+        frontLeft.setBreakOrCoastOut(neutralMode);
+        frontRight.setBreakOrCoastOut(neutralMode);
+        backLeft.setBreakOrCoastOut(neutralMode);
+        backRight.setBreakOrCoastOut(neutralMode);
     }
 
     public Command followChoreoPathCommand(
