@@ -15,7 +15,6 @@ import com.ctre.phoenix6.signals.InvertedValue;
 import com.ctre.phoenix6.signals.NeutralModeValue;
 import edu.wpi.first.math.system.plant.DCMotor;
 import edu.wpi.first.math.system.plant.LinearSystemId;
-import edu.wpi.first.math.util.Units;
 import edu.wpi.first.wpilibj.DigitalInput;
 import edu.wpi.first.wpilibj.Notifier;
 import edu.wpi.first.wpilibj.simulation.DIOSim;
@@ -28,6 +27,7 @@ import frc.robot.utils.sim.SimUtils;
 import frc.robot.utils.sim.motors.TalonFXSim;
 
 import java.util.List;
+import java.util.concurrent.ThreadLocalRandom;
 
 public class ArmIOSim implements ArmIO {
     private static final double SIM_UPDATE_PERIOD_SEC = 0.005;
@@ -41,8 +41,8 @@ public class ArmIOSim implements ArmIO {
     private final TalonFX rightPivotMotor;
     private final TalonFXSim pivotMotorsSim;
 
-    private final DigitalInput pivotLowerLimitSwitch;
-    private final DIOSim pivotLowerLimitSwitchSim;
+    private final DigitalInput pivotUpperLimitSwitch;
+    private final DIOSim pivotUpperLimitSwitchSim;
 
     private final MotionMagicExpoVoltage motionMagicExpoVoltage;
     private final TorqueCurrentFOC torqueCurrentFOC;
@@ -65,7 +65,7 @@ public class ArmIOSim implements ArmIO {
         this.deltaTime = new DeltaTime(true);
         this.armConstants = armConstants;
 
-        final double pivotLowerLimitsRots = armConstants.pivotSoftLowerLimitRots();
+        final double pivotUpperLimitRots = armConstants.pivotSoftUpperLimitRots();
         this.armPivotSim = new SingleJointedArmSim(
                 LinearSystemId.identifyPositionSystem(
                         13.97 / (2d * Math.PI),
@@ -77,7 +77,10 @@ public class ArmIOSim implements ArmIO {
                 0,
                 Math.PI,
                 true,
-                Units.rotationsToRadians(pivotLowerLimitsRots)
+                ThreadLocalRandom.current().nextDouble(
+                        armConstants.pivotSoftLowerLimitRots(),
+                        pivotUpperLimitRots
+                )
         );
 
         this.leftPivotMotor = new TalonFX(armConstants.leftPivotMotorId(), armConstants.CANBus());
@@ -91,11 +94,11 @@ public class ArmIOSim implements ArmIO {
                 armPivotSim::getVelocityRadPerSec
         );
 
-        this.pivotLowerLimitSwitch = new DigitalInput(armConstants.pivotZeroingSwitchDIOChannel());
-        this.pivotLowerLimitSwitchSim = new DIOSim(pivotLowerLimitSwitch);
-        this.pivotLowerLimitSwitchSim.setInitialized(true);
-        this.pivotLowerLimitSwitchSim.setIsInput(true);
-        this.pivotLowerLimitSwitchSim.setValue(false);
+        this.pivotUpperLimitSwitch = new DigitalInput(armConstants.pivotUpperLimitSwitchDIOChannel());
+        this.pivotUpperLimitSwitchSim = new DIOSim(pivotUpperLimitSwitch);
+        this.pivotUpperLimitSwitchSim.setInitialized(true);
+        this.pivotUpperLimitSwitchSim.setIsInput(true);
+        this.pivotUpperLimitSwitchSim.setValue(false);
 
         this.motionMagicExpoVoltage = new MotionMagicExpoVoltage(0);
         this.torqueCurrentFOC = new TorqueCurrentFOC(0);
@@ -116,9 +119,9 @@ public class ArmIOSim implements ArmIO {
         final Notifier simUpdateNotifier = new Notifier(() -> {
             final double dt = deltaTime.get();
             pivotMotorsSim.update(dt);
-            pivotLowerLimitSwitchSim.setValue(
-                    _leftPosition.refresh().getValue() <= pivotLowerLimitsRots
-                            || _rightPosition.refresh().getValue() <= pivotLowerLimitsRots
+            pivotUpperLimitSwitchSim.setValue(
+                    _leftPosition.refresh().getValue() >= pivotUpperLimitRots
+                            || _rightPosition.refresh().getValue() >= pivotUpperLimitRots
             );
         });
         ToClose.add(simUpdateNotifier);
@@ -212,7 +215,7 @@ public class ArmIOSim implements ArmIO {
                 _rightDeviceTemp
         );
 
-        inputs.pivotLowerLimitSwitch = pivotLowerLimitSwitch.get();
+        inputs.pivotUpperLimitSwitch = pivotUpperLimitSwitch.get();
 
         inputs.leftPivotPositionRots = _leftPosition.getValue();
         inputs.leftPivotVelocityRotsPerSec = _leftVelocity.getValue();

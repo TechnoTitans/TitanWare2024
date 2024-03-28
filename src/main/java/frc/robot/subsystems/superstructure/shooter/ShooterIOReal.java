@@ -72,12 +72,11 @@ public class ShooterIOReal implements ShooterIO {
     @Override
     public void config() {
         final TalonFXConfiguration ampTalonFXConfiguration = new TalonFXConfiguration();
-        // TODO: get feedforward gains
         ampTalonFXConfiguration.Slot0 = new Slot0Configs()
-                .withKS(9.6776)
-                .withKV(0.080065)
-                .withKA(0.14978)
-                .withKP(2);
+                .withKS(9.4242)
+                .withKV(0.065377)
+                .withKA(0.10034)
+                .withKP(6.246);
         ampTalonFXConfiguration.TorqueCurrent.PeakForwardTorqueCurrent = 80;
         ampTalonFXConfiguration.TorqueCurrent.PeakReverseTorqueCurrent = -80;
         ampTalonFXConfiguration.CurrentLimits.StatorCurrentLimit = 60;
@@ -93,10 +92,10 @@ public class ShooterIOReal implements ShooterIO {
 
         final TalonFXConfiguration leftTalonFXConfiguration = new TalonFXConfiguration();
         leftTalonFXConfiguration.Slot0 = new Slot0Configs()
-                .withKS(10.133)
-                .withKV(0.11958)
-                .withKA(0.43716)
-                .withKP(2);
+                .withKS(7.7976)
+                .withKV(0.10021)
+                .withKA(0.38814)
+                .withKP(6.7163);
         leftTalonFXConfiguration.TorqueCurrent.PeakForwardTorqueCurrent = 80;
         leftTalonFXConfiguration.TorqueCurrent.PeakReverseTorqueCurrent = -80;
         leftTalonFXConfiguration.CurrentLimits.StatorCurrentLimit = 60;
@@ -112,10 +111,10 @@ public class ShooterIOReal implements ShooterIO {
 
         final TalonFXConfiguration rightTalonFXConfiguration = new TalonFXConfiguration();
         rightTalonFXConfiguration.Slot0 = new Slot0Configs()
-                .withKS(13.797)
-                .withKV(0.13482)
-                .withKA(0.41707)
-                .withKP(2);
+                .withKS(8.0581)
+                .withKV(0.1144)
+                .withKA(0.4075)
+                .withKP(6.7113);
         rightTalonFXConfiguration.TorqueCurrent.PeakForwardTorqueCurrent = 80;
         rightTalonFXConfiguration.TorqueCurrent.PeakReverseTorqueCurrent = -80;
         rightTalonFXConfiguration.CurrentLimits.StatorCurrentLimit = 60;

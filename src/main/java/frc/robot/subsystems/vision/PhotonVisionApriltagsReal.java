@@ -8,17 +8,20 @@ import org.littletonrobotics.junction.Logger;
 import org.photonvision.EstimatedRobotPose;
 import org.photonvision.PhotonCamera;
 import org.photonvision.PhotonPoseEstimator;
+import org.photonvision.targeting.MultiTargetPNPResult;
 import org.photonvision.targeting.PhotonPipelineResult;
 import org.photonvision.targeting.PhotonTrackedTarget;
 
-import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
+@SuppressWarnings("ClassCanBeRecord")
 public class PhotonVisionApriltagsReal implements PhotonVisionRunner<PhotonVisionApriltagsReal.IOApriltagsReal> {
     public static class IOApriltagsReal implements PhotonVisionIO {
         private final PhotonCamera photonCamera;
-        private final String logKey;
+        private final String cameraName;
+
+        private final double stdDevFactor;
 
         private final PhotonPoseEstimator poseEstimator;
 
@@ -37,7 +40,9 @@ public class PhotonVisionApriltagsReal implements PhotonVisionRunner<PhotonVisio
                 final AprilTagFieldLayout blueSideApriltagFieldLayout
         ) {
             this.photonCamera = titanCamera.getPhotonCamera();
-            this.logKey = String.format("%s_PhotonVisionIOApriltagsReal", photonCamera.getName());
+            this.cameraName = photonCamera.getName();
+
+            this.stdDevFactor = titanCamera.getStdDevFactor();
 
             this.poseEstimator = new PhotonPoseEstimator(
                     blueSideApriltagFieldLayout,
@@ -58,8 +63,11 @@ public class PhotonVisionApriltagsReal implements PhotonVisionRunner<PhotonVisio
             this.latestPhotonPipelineResult = photonPipelineResult;
         }
 
+        @SuppressWarnings("DuplicatedCode")
         @Override
         public void updateInputs(final PhotonVisionIOInputs inputs) {
+            inputs.name = cameraName;
+            inputs.stdDevFactor = stdDevFactor;
             if (latestPhotonPipelineResult == null) {
                 inputs.pipelineResultTargets = new double[] {};
             } else {
@@ -81,31 +89,18 @@ public class PhotonVisionApriltagsReal implements PhotonVisionRunner<PhotonVisio
                 return;
             }
 
-            final List<PhotonTrackedTarget> targets = photonResult.targets;
-            final int nTargets = targets.size();
-
-            if (nTargets == 1) {
-                // single-tag
-                final PhotonTrackedTarget firstTarget = targets.get(0);
-                if (firstTarget.getPoseAmbiguity() <= Constants.Vision.SINGLE_TAG_MAX_AMBIGUITY) {
+            final MultiTargetPNPResult multiTargetPNPResult = photonResult.getMultiTagResult();
+            if (multiTargetPNPResult.estimatedPose.isPresent) {
+                // multi-tag
+                if (multiTargetPNPResult.estimatedPose.ambiguity <= Constants.Vision.MULTI_TAG_MAX_AMBIGUITY) {
                     updatePoseEstimator(photonResult);
                 }
             } else {
-                // multi-tag
-                final List<PhotonTrackedTarget> filteredTargets = photonResult.getTargets()
-                        .stream()
-                        .filter(
-                                photonTrackedTarget ->
-                                        photonTrackedTarget.getPoseAmbiguity() <= Constants.Vision.MULTI_TAG_MAX_AMBIGUITY
-                        )
-                        .toList();
-
-                final PhotonPipelineResult filteredPhotonPipelineResult = new PhotonPipelineResult(
-                        photonResult.getLatencyMillis(), filteredTargets
-                );
-
-                filteredPhotonPipelineResult.setTimestampSeconds(photonResult.getTimestampSeconds());
-                updatePoseEstimator(filteredPhotonPipelineResult);
+                // single-tag
+                final PhotonTrackedTarget photonTrackedTarget = photonResult.targets.get(0);
+                if (photonTrackedTarget.getPoseAmbiguity() <= Constants.Vision.SINGLE_TAG_MAX_AMBIGUITY) {
+                    updatePoseEstimator(photonResult);
+                }
             }
         }
 
@@ -150,7 +145,7 @@ public class PhotonVisionApriltagsReal implements PhotonVisionRunner<PhotonVisio
             ioApriltagsReal.updateInputs(ioInputs);
 
             Logger.processInputs(
-                    String.format("%s/%s", PhotonVision.photonLogKey, ioApriltagsReal.logKey),
+                    String.format("%s/%s", PhotonVision.PhotonLogKey, ioApriltagsReal.cameraName),
                     ioInputs
             );
         }

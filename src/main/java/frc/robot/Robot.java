@@ -3,10 +3,16 @@ package frc.robot;
 import com.ctre.phoenix6.SignalLogger;
 import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.RobotBase;
+import edu.wpi.first.wpilibj.event.EventLoop;
 import edu.wpi.first.wpilibj.livewindow.LiveWindow;
-import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.CommandScheduler;
+import edu.wpi.first.wpilibj2.command.Commands;
+import edu.wpi.first.wpilibj2.command.Subsystem;
+import edu.wpi.first.wpilibj2.command.sysid.SysIdRoutine;
 import frc.robot.constants.Constants;
+import frc.robot.constants.FieldConstants;
+import frc.robot.state.NoteState;
+import frc.robot.subsystems.superstructure.ShotParameters;
 import frc.robot.utils.closeables.ToClose;
 import frc.robot.utils.subsystems.VirtualSubsystem;
 import org.littletonrobotics.junction.LogFileUtil;
@@ -19,12 +25,24 @@ import org.littletonrobotics.junction.wpilog.WPILOGWriter;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
+import java.util.Optional;
+import java.util.function.BooleanSupplier;
 
+@SuppressWarnings("RedundantMethodOverride")
 public class Robot extends LoggedRobot {
-    private static final String HOOT_LOG_PATH = "/U/hoot";
+    private static final String AKitLogPath = "/U/logs";
+    private static final String HootLogPath = "/U/logs";
+
+    public static final BooleanSupplier IsRedAlliance = () -> {
+        final Optional<DriverStation.Alliance> alliance = DriverStation.getAlliance();
+        return alliance.isPresent() && alliance.get() == DriverStation.Alliance.Red;
+    };
 
     private RobotContainer robotContainer;
-    private Command autonomousCommand;
+
+    private EventLoop autonomousEventLoop;
+    private final EventLoop teleopEventLoop = new EventLoop();
+    private final EventLoop testEventLoop = new EventLoop();
 
     @Override
     public void robotInit() {
@@ -70,21 +88,21 @@ public class Robot extends LoggedRobot {
         switch (Constants.CURRENT_MODE) {
             case REAL -> {
                 try {
-                    Files.createDirectories(Paths.get(HOOT_LOG_PATH));
-                    SignalLogger.setPath(HOOT_LOG_PATH);
+                    Files.createDirectories(Paths.get(HootLogPath));
+                    SignalLogger.setPath(HootLogPath);
                 } catch (final IOException ioException) {
                     SignalLogger.setPath("/U");
                     DriverStation.reportError(
                             String.format(
                                     "Failed to create CTRE .hoot log path at \"%s\"! Falling back to default.\n%s",
-                                    HOOT_LOG_PATH,
+                                    HootLogPath,
                                     ioException
                             ),
                             false
                     );
                 }
 
-                Logger.addDataReceiver(new WPILOGWriter("/U/akit"));
+                Logger.addDataReceiver(new WPILOGWriter(AKitLogPath));
                 Logger.addDataReceiver(new NT4Publisher());
             }
             case SIM -> {
@@ -103,10 +121,47 @@ public class Robot extends LoggedRobot {
         }
 
         robotContainer = new RobotContainer();
+        robotContainer.configureAutos();
+        robotContainer.configureButtonBindings(teleopEventLoop);
 
         SignalLogger.enableAutoLogging(true);
         SignalLogger.start();
         ToClose.add(SignalLogger::stop);
+
+        CommandScheduler.getInstance().onCommandInitialize(
+                command -> Logger.recordOutput("Commands/Initialized", command.getName())
+        );
+
+        CommandScheduler.getInstance().onCommandFinish(
+                command -> Logger.recordOutput("Commands/Finished", command.getName())
+        );
+
+        CommandScheduler.getInstance().onCommandInterrupt(
+                (interrupted, interrupting) -> {
+                    Logger.recordOutput("Commands/Interrupted", interrupted.getName());
+                    Logger.recordOutput(
+                            "Commands/InterruptedRequirements",
+                            interrupted.getRequirements()
+                                    .stream()
+                                    .map(Subsystem::getName)
+                                    .toArray(String[]::new)
+                    );
+
+                    Logger.recordOutput("Commands/Interrupting", interrupting.isPresent()
+                            ? interrupting.get().getName()
+                            : "None"
+                    );
+                    Logger.recordOutput(
+                            "Commands/InterruptingRequirements",
+                            interrupting
+                                    .map(command -> command.getRequirements()
+                                            .stream()
+                                            .map(Subsystem::getName)
+                                            .toArray(String[]::new)
+                                    ).orElseGet(() -> new String[0])
+                    );
+                }
+        );
 
         Logger.start();
     }
@@ -115,6 +170,21 @@ public class Robot extends LoggedRobot {
     public void robotPeriodic() {
         CommandScheduler.getInstance().run();
         VirtualSubsystem.run();
+
+        final double distanceToSpeaker = robotContainer.swerve.getPose()
+                .minus(FieldConstants.getSpeakerPose())
+                .getTranslation()
+                .getNorm();
+        final ShotParameters.Parameters shotParameters = ShotParameters.get(distanceToSpeaker);
+
+        Logger.recordOutput("ShotParameters/SpeakerDistance", distanceToSpeaker);
+        Logger.recordOutput("ShotParameters/ArmPivotAngle", shotParameters.armPivotAngle().getRotations());
+        Logger.recordOutput("ShotParameters/LeftVelocityRotsPerSec", shotParameters.leftVelocityRotsPerSec());
+        Logger.recordOutput("ShotParameters/RightVelocityRotsPerSec", shotParameters.rightVelocityRotsPerSec());
+        Logger.recordOutput("ShotParameters/AmpVelocityRotsPerSec", shotParameters.ampVelocityRotsPerSec());
+
+        final NoteState.State state = robotContainer.noteState.getState();
+        Logger.recordOutput("NoteState", state.toString());
     }
 
     @Override
@@ -125,24 +195,31 @@ public class Robot extends LoggedRobot {
 
     @Override
     public void autonomousInit() {
-        autonomousCommand = robotContainer.getAutonomousCommand();
+        autonomousEventLoop = robotContainer.getAutonomousEventLoop();
+    }
 
-        if (autonomousCommand != null) {
-            autonomousCommand.schedule();
+    @Override
+    public void autonomousPeriodic() {
+        if (autonomousEventLoop != null) {
+            autonomousEventLoop.poll();
         }
     }
 
     @Override
-    public void autonomousPeriodic() {}
-
-    @Override
     public void teleopInit() {
-        if (autonomousCommand != null) {
-            autonomousCommand.cancel();
-        }
+        // TODO: superstructure to IDLE state on teleop init
+        // TODO: bonus points if it homes/zeros itself if it isn't already zeroed,
+        //  although, if we have an absolute encoder on it, we won't need to zero anymore
+//        if (!robotContainer.superstructure.isHomed()) {
+//            // TODO: do this better
+//            Commands.sequence(
+//                    robotContainer.superstructure.home(),
+//                    robotContainer.superstructure.toGoal(Superstructure.Goal.IDLE)
+//            ).schedule();
+//        } else {
+//            robotContainer.superstructure.toGoal(Superstructure.Goal.IDLE).schedule();
+//        }
 
-        // No need to lint this here, X and Y are flipped for robot vs. controller joystick coordinate systems, so we
-        // pass the controller X into the robot Y, and vice versa
         //noinspection SuspiciousNameCombination
         robotContainer.swerve.setDefaultCommand(
                 robotContainer.swerve.teleopDriveCommand(
@@ -154,13 +231,43 @@ public class Robot extends LoggedRobot {
     }
 
     @Override
-    public void teleopPeriodic() {}
+    public void teleopPeriodic() {
+        if (teleopEventLoop != null) {
+            teleopEventLoop.poll();
+        }
+    }
 
     @Override
     public void testInit() {
         CommandScheduler.getInstance().cancelAll();
+
+        robotContainer.coDriverController.leftBumper(testEventLoop)
+                .onTrue(Commands.runOnce(SignalLogger::stop));
+
+        robotContainer.coDriverController.y(testEventLoop)
+                .whileTrue(robotContainer.swerve
+                        .angularVoltageSysIdQuasistaticCommand(SysIdRoutine.Direction.kForward));
+        robotContainer.coDriverController.a(testEventLoop)
+                .whileTrue(robotContainer.swerve
+                        .angularVoltageSysIdQuasistaticCommand(SysIdRoutine.Direction.kReverse));
+        robotContainer.coDriverController.b(testEventLoop)
+                .whileTrue(robotContainer.swerve
+                        .angularVoltageSysIdDynamicCommand(SysIdRoutine.Direction.kForward));
+        robotContainer.coDriverController.x(testEventLoop)
+                .whileTrue(robotContainer.swerve
+                        .angularVoltageSysIdDynamicCommand(SysIdRoutine.Direction.kReverse));
     }
 
     @Override
-    public void testPeriodic() {}
+    public void testPeriodic() {
+        if (testEventLoop != null) {
+            testEventLoop.poll();
+        }
+    }
+
+    @Override
+    public void simulationInit() {}
+
+    @Override
+    public void simulationPeriodic() {}
 }

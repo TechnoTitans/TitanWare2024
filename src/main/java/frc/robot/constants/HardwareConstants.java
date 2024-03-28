@@ -1,7 +1,6 @@
 package frc.robot.constants;
 
 import edu.wpi.first.math.geometry.Translation2d;
-import edu.wpi.first.math.util.Units;
 import frc.robot.subsystems.drive.OdometryThreadRunner;
 import frc.robot.subsystems.drive.SwerveModule;
 
@@ -110,8 +109,9 @@ public class HardwareConstants {
             String CANBus,
             int leftPivotMotorId,
             int rightPivotMotorId,
-            int pivotZeroingSwitchDIOChannel,
+            int pivotUpperLimitSwitchDIOChannel,
             double pivotGearing,
+            double pivotUpperLimitSwitchPositionRots,
             double pivotSoftLowerLimitRots,
             double pivotSoftUpperLimitRots
     ) {}
@@ -122,8 +122,9 @@ public class HardwareConstants {
             15,
             0,
             112.5,
+            0.221,
             0.05,
-            0.26
+            0.27
     );
 
     public record ShooterConstants(
