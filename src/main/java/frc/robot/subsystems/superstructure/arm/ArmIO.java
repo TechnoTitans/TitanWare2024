@@ -5,8 +5,6 @@ import org.littletonrobotics.junction.AutoLog;
 public interface ArmIO {
     @AutoLog
     class ArmIOInputs {
-        boolean pivotUpperLimitSwitch = false;
-
         double leftPivotPositionRots = 0;
         double leftPivotVelocityRotsPerSec = 0;
         double leftPivotVoltageVolts = 0;
@@ -18,6 +16,9 @@ public interface ArmIO {
         double rightPivotVoltageVolts = 0;
         double rightPivotTorqueCurrentAmps = 0;
         double rightPivotTempCelsius = 0;
+
+        double pivotEncoderPositionRots = 0;
+        double pivotEncoderVelocityRotsPerSec = 0;
     }
 
     /**

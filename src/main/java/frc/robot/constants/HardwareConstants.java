@@ -109,9 +109,9 @@ public class HardwareConstants {
             String CANBus,
             int leftPivotMotorId,
             int rightPivotMotorId,
-            int pivotUpperLimitSwitchDIOChannel,
+            int pivotCANCoderId,
             double pivotGearing,
-            double pivotUpperLimitSwitchPositionRots,
+            double pivotCANCoderOffset,
             double pivotSoftLowerLimitRots,
             double pivotSoftUpperLimitRots
     ) {}
@@ -120,7 +120,8 @@ public class HardwareConstants {
             RobotMap.CanivoreCANBus,
             14,
             15,
-            0,
+            //TODO: Do we change all other ids so that this is in order. Or do we just add this one out of order?
+            19,
             112.5,
             0.221,
             0.05,

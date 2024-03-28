@@ -2,18 +2,20 @@ package frc.robot.subsystems.superstructure.arm;
 
 import com.ctre.phoenix6.BaseStatusSignal;
 import com.ctre.phoenix6.StatusSignal;
+import com.ctre.phoenix6.configs.CANcoderConfiguration;
 import com.ctre.phoenix6.configs.Slot0Configs;
 import com.ctre.phoenix6.configs.TalonFXConfiguration;
 import com.ctre.phoenix6.controls.Follower;
 import com.ctre.phoenix6.controls.MotionMagicExpoVoltage;
 import com.ctre.phoenix6.controls.TorqueCurrentFOC;
 import com.ctre.phoenix6.controls.VoltageOut;
+import com.ctre.phoenix6.hardware.CANcoder;
 import com.ctre.phoenix6.hardware.ParentDevice;
 import com.ctre.phoenix6.hardware.TalonFX;
+import com.ctre.phoenix6.signals.FeedbackSensorSourceValue;
 import com.ctre.phoenix6.signals.GravityTypeValue;
 import com.ctre.phoenix6.signals.InvertedValue;
 import com.ctre.phoenix6.signals.NeutralModeValue;
-import edu.wpi.first.wpilibj.DigitalInput;
 import frc.robot.constants.HardwareConstants;
 import frc.robot.utils.ctre.Phoenix6Utils;
 
@@ -22,6 +24,7 @@ public class ArmIOReal implements ArmIO {
 
     private final TalonFX leftPivotMotor;
     private final TalonFX rightPivotMotor;
+    private final CANcoder pivotCANCoder;
 
     // TODO: use MotionMagicExpoTorqueCurrentFOC
 //    private final MotionMagicExpoTorqueCurrentFOC motionMagicExpoTorqueCurrentFOC;
@@ -30,8 +33,6 @@ public class ArmIOReal implements ArmIO {
     private final VoltageOut voltageOut;
 
     private final Follower leftPivotFollower;
-
-    private final DigitalInput pivotUpperLimitSwitch;
 
     // Cached StatusSignals
     private final StatusSignal<Double> _leftPosition;
@@ -44,12 +45,15 @@ public class ArmIOReal implements ArmIO {
     private final StatusSignal<Double> _rightVoltage;
     private final StatusSignal<Double> _rightTorqueCurrent;
     private final StatusSignal<Double> _rightDeviceTemp;
+    private final StatusSignal<Double> _encoderPosition;
+    private final StatusSignal<Double> _encoderVelocity;
 
     public ArmIOReal(final HardwareConstants.ArmConstants armConstants) {
         this.armConstants = armConstants;
 
         this.leftPivotMotor = new TalonFX(armConstants.leftPivotMotorId(), armConstants.CANBus());
         this.rightPivotMotor = new TalonFX(armConstants.rightPivotMotorId(), armConstants.CANBus());
+        this.pivotCANCoder = new CANcoder(armConstants.pivotCANCoderId(), armConstants.CANBus());
 
 //        this.motionMagicExpoTorqueCurrentFOC = new MotionMagicExpoTorqueCurrentFOC(0);
         this.motionMagicExpoVoltage = new MotionMagicExpoVoltage(0);
@@ -57,8 +61,6 @@ public class ArmIOReal implements ArmIO {
         this.voltageOut = new VoltageOut(0);
 
         this.leftPivotFollower = new Follower(leftPivotMotor.getDeviceID(), true);
-
-        this.pivotUpperLimitSwitch = new DigitalInput(armConstants.pivotUpperLimitSwitchDIOChannel());
 
         this._leftPosition = leftPivotMotor.getPosition();
         this._leftVelocity = leftPivotMotor.getVelocity();
@@ -70,11 +72,17 @@ public class ArmIOReal implements ArmIO {
         this._rightVoltage = rightPivotMotor.getMotorVoltage();
         this._rightTorqueCurrent = rightPivotMotor.getTorqueCurrent();
         this._rightDeviceTemp = rightPivotMotor.getDeviceTemp();
+        this._encoderPosition = pivotCANCoder.getPosition();
+        this._encoderVelocity = pivotCANCoder.getVelocity();
     }
 
     @SuppressWarnings("DuplicatedCode")
     @Override
     public void config() {
+        final CANcoderConfiguration pivotCANCoderConfiguration = new CANcoderConfiguration();
+        pivotCANCoderConfiguration.MagnetSensor.MagnetOffset = armConstants.pivotCANCoderOffset();
+        pivotCANCoder.getConfigurator().apply(pivotCANCoderConfiguration);
+
         final TalonFXConfiguration leftTalonFXConfiguration = new TalonFXConfiguration();
         final InvertedValue leftTalonFXInverted = InvertedValue.Clockwise_Positive;
         leftTalonFXConfiguration.Slot0 = new Slot0Configs()
@@ -93,7 +101,9 @@ public class ArmIOReal implements ArmIO {
         leftTalonFXConfiguration.TorqueCurrent.PeakReverseTorqueCurrent = -80;
         leftTalonFXConfiguration.CurrentLimits.StatorCurrentLimit = 60;
         leftTalonFXConfiguration.CurrentLimits.StatorCurrentLimitEnable = true;
-        leftTalonFXConfiguration.Feedback.SensorToMechanismRatio = armConstants.pivotGearing();
+        leftTalonFXConfiguration.Feedback.FeedbackSensorSource = FeedbackSensorSourceValue.FusedCANcoder;
+        leftTalonFXConfiguration.Feedback.FeedbackRemoteSensorID = pivotCANCoder.getDeviceID();
+        leftTalonFXConfiguration.Feedback.RotorToSensorRatio = armConstants.pivotGearing();
         leftTalonFXConfiguration.MotorOutput.Inverted = leftTalonFXInverted;
         leftTalonFXConfiguration.MotorOutput.NeutralMode = NeutralModeValue.Brake;
         leftPivotMotor.getConfigurator().apply(leftTalonFXConfiguration);
@@ -116,7 +126,9 @@ public class ArmIOReal implements ArmIO {
         rightTalonFXConfiguration.TorqueCurrent.PeakReverseTorqueCurrent = -80;
         rightTalonFXConfiguration.CurrentLimits.StatorCurrentLimit = 60;
         rightTalonFXConfiguration.CurrentLimits.StatorCurrentLimitEnable = true;
-        rightTalonFXConfiguration.Feedback.SensorToMechanismRatio = armConstants.pivotGearing();
+        rightTalonFXConfiguration.Feedback.FeedbackSensorSource = FeedbackSensorSourceValue.FusedCANcoder;
+        rightTalonFXConfiguration.Feedback.FeedbackRemoteSensorID = pivotCANCoder.getDeviceID();
+        rightTalonFXConfiguration.Feedback.RotorToSensorRatio = armConstants.pivotGearing();
         rightTalonFXConfiguration.MotorOutput.Inverted = rightTalonFXInverted;
         rightTalonFXConfiguration.MotorOutput.NeutralMode = NeutralModeValue.Brake;
         rightPivotMotor.getConfigurator().apply(rightTalonFXConfiguration);
@@ -130,7 +142,9 @@ public class ArmIOReal implements ArmIO {
                 _rightPosition,
                 _rightVelocity,
                 _rightVoltage,
-                _rightTorqueCurrent
+                _rightTorqueCurrent,
+                _encoderPosition,
+                _encoderVelocity
         );
         BaseStatusSignal.setUpdateFrequencyForAll(
                 4,
@@ -139,7 +153,8 @@ public class ArmIOReal implements ArmIO {
         );
         ParentDevice.optimizeBusUtilizationForAll(
                 leftPivotMotor,
-                rightPivotMotor
+                rightPivotMotor,
+                pivotCANCoder
         );
     }
 
@@ -156,10 +171,10 @@ public class ArmIOReal implements ArmIO {
                 _rightVelocity,
                 _rightVoltage,
                 _rightTorqueCurrent,
-                _rightDeviceTemp
+                _rightDeviceTemp,
+                _encoderPosition,
+                _encoderVelocity
         );
-
-        inputs.pivotUpperLimitSwitch = !pivotUpperLimitSwitch.get();
 
         inputs.leftPivotPositionRots = _leftPosition.getValue();
         inputs.leftPivotVelocityRotsPerSec = _leftVelocity.getValue();
@@ -172,6 +187,9 @@ public class ArmIOReal implements ArmIO {
         inputs.rightPivotVoltageVolts = _rightVoltage.getValue();
         inputs.rightPivotTorqueCurrentAmps = _rightTorqueCurrent.getValue();
         inputs.rightPivotTempCelsius = _rightDeviceTemp.getValue();
+
+        inputs.pivotEncoderPositionRots = _encoderPosition.getValue();
+        inputs.pivotEncoderVelocityRotsPerSec = _encoderVelocity.getValue();
     }
 
     @Override
