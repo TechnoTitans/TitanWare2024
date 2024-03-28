@@ -14,6 +14,7 @@ import frc.robot.constants.Constants;
 import frc.robot.constants.HardwareConstants;
 import frc.robot.constants.RobotMap;
 import frc.robot.state.NoteState;
+import frc.robot.subsystems.climb.Climb;
 import frc.robot.subsystems.drive.Swerve;
 import frc.robot.subsystems.intake.Intake;
 import frc.robot.subsystems.superstructure.Superstructure;
@@ -30,6 +31,7 @@ public class RobotContainer {
 
     public final Arm arm;
     public final Shooter shooter;
+    public final Climb climb;
 
     public final Superstructure superstructure;
 
@@ -68,6 +70,7 @@ public class RobotContainer {
 
         this.arm = new Arm(Constants.CURRENT_MODE, HardwareConstants.ARM);
         this.shooter = new Shooter(Constants.CURRENT_MODE, HardwareConstants.SHOOTER);
+        this.climb = new Climb(Constants.CURRENT_MODE, HardwareConstants.CLIMB);
         this.superstructure = new Superstructure(arm, shooter);
 
         this.noteState = new NoteState(intake, superstructure);
@@ -177,6 +180,7 @@ public class RobotContainer {
 
         this.driverController.a(teleopEventLoop).whileTrue(shootCommands.amp());
         this.driverController.y(teleopEventLoop).onTrue(swerve.zeroRotationCommand());
+        this.driverController.b(teleopEventLoop).whileTrue(climb.climbCommand());
 
         this.driverController.leftBumper(teleopEventLoop).whileTrue(
                 Commands.startEnd(
