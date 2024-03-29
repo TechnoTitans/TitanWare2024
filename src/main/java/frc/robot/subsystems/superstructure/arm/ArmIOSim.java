@@ -25,6 +25,7 @@ import frc.robot.utils.closeables.ToClose;
 import frc.robot.utils.control.DeltaTime;
 import frc.robot.utils.ctre.Phoenix6Utils;
 import frc.robot.utils.sim.SimUtils;
+import frc.robot.utils.sim.feedback.SimPhoenix6CANCoder;
 import frc.robot.utils.sim.motors.TalonFXSim;
 
 import java.util.List;
@@ -96,6 +97,8 @@ public class ArmIOSim implements ArmIO {
                 armPivotSim::getAngleRads,
                 armPivotSim::getVelocityRadPerSec
         );
+
+        this.pivotMotorsSim.attachFeedbackSensor(new SimPhoenix6CANCoder(pivotCANCoder));
 
         this.motionMagicExpoVoltage = new MotionMagicExpoVoltage(0);
         this.torqueCurrentFOC = new TorqueCurrentFOC(0);
@@ -170,7 +173,9 @@ public class ArmIOSim implements ArmIO {
         rightTalonFXConfiguration.MotionMagic.MotionMagicExpo_kA = 0.015;
         rightTalonFXConfiguration.CurrentLimits.StatorCurrentLimit = 60;
         rightTalonFXConfiguration.CurrentLimits.StatorCurrentLimitEnable = true;
-        rightTalonFXConfiguration.Feedback.SensorToMechanismRatio = armConstants.pivotGearing();
+        leftTalonFXConfiguration.Feedback.FeedbackSensorSource = FeedbackSensorSourceValue.FusedCANcoder;
+        leftTalonFXConfiguration.Feedback.FeedbackRemoteSensorID = pivotCANCoder.getDeviceID();
+        leftTalonFXConfiguration.Feedback.RotorToSensorRatio = armConstants.pivotGearing();
         rightTalonFXConfiguration.MotorOutput.Inverted = rightTalonFXInverted;
         rightTalonFXConfiguration.MotorOutput.NeutralMode = NeutralModeValue.Brake;
         rightPivotMotor.getConfigurator().apply(rightTalonFXConfiguration);
