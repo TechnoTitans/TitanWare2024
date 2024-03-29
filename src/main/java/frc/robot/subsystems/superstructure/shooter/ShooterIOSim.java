@@ -272,12 +272,12 @@ public class ShooterIOSim implements ShooterIO {
 
         inputs.ampPositionRots = _ampPosition.getValue();
         inputs.ampVelocityRotsPerSec = _ampVelocity.getValue();
-        inputs.ampVoltage = _ampVoltage.getValue();
+        inputs.ampVoltageVolts = _ampVoltage.getValue();
         inputs.ampCurrentAmps = _ampTorqueCurrent.getValue();
         inputs.ampTempCelsius = _ampDeviceTemp.getValue();
         inputs.leftPositionRots = _leftPosition.getValue();
         inputs.leftVelocityRotsPerSec = _leftVelocity.getValue();
-        inputs.leftVoltage = _leftVoltage.getValue();
+        inputs.leftVoltageVolts = _leftVoltage.getValue();
         inputs.leftCurrentAmps = _leftTorqueCurrent.getValue();
         inputs.leftTempCelsius = _leftDeviceTemp.getValue();
         inputs.rightPositionRots = _rightPosition.getValue();

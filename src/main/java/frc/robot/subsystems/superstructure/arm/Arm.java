@@ -132,7 +132,7 @@ public class Arm extends SubsystemBase {
     }
 
     private boolean atPositionSetpoint() {
-        return setpoint.atSetpoint(inputs.leftPivotPositionRots, inputs.pivotEncoderVelocityRotsPerSec);
+        return setpoint.atSetpoint(inputs.leftPivotPositionRots, inputs.leftPivotVelocityRotsPerSec);
     }
 
     private boolean atPivotLowerLimit() {
