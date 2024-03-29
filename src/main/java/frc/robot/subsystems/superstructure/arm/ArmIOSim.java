@@ -170,8 +170,6 @@ public class ArmIOSim implements ArmIO {
         rightTalonFXConfiguration.MotionMagic.MotionMagicExpo_kA = 0.015;
         rightTalonFXConfiguration.CurrentLimits.StatorCurrentLimit = 60;
         rightTalonFXConfiguration.CurrentLimits.StatorCurrentLimitEnable = true;
-        rightTalonFXConfiguration.Feedback.FeedbackSensorSource = FeedbackSensorSourceValue.FusedCANcoder;
-        rightTalonFXConfiguration.Feedback.FeedbackRemoteSensorID = pivotCANCoder.getDeviceID();
         rightTalonFXConfiguration.Feedback.RotorToSensorRatio = armConstants.pivotGearing();
         rightTalonFXConfiguration.MotorOutput.Inverted = rightTalonFXInverted;
         rightTalonFXConfiguration.MotorOutput.NeutralMode = NeutralModeValue.Brake;

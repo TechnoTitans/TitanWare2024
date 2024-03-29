@@ -120,8 +120,7 @@ public class HardwareConstants {
             RobotMap.CanivoreCANBus,
             14,
             15,
-            //TODO: Do we change all other ids so that this is in order. Or do we just add this one out of order?
-            19,
+            16,
             112.5,
             0.221,
             0.05,
@@ -140,11 +139,11 @@ public class HardwareConstants {
 
     public static final ShooterConstants SHOOTER = new ShooterConstants(
             RobotMap.RioCANBus,
-            16,
-            0.5,
             17,
             0.5,
             18,
+            0.5,
+            19,
             0.5
     );
 }
