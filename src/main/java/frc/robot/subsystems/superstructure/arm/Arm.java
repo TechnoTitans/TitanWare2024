@@ -132,19 +132,15 @@ public class Arm extends SubsystemBase {
     }
 
     private boolean atPositionSetpoint() {
-        return setpoint.atSetpoint(inputs.leftPivotPositionRots, inputs.leftPivotVelocityRotsPerSec)
-                && setpoint.atSetpoint(inputs.rightPivotPositionRots, inputs.rightPivotVelocityRotsPerSec);
+        return setpoint.atSetpoint(inputs.leftPivotPositionRots, inputs.leftPivotVelocityRotsPerSec);
     }
 
     private boolean atPivotLowerLimit() {
-        return inputs.leftPivotPositionRots <= pivotSoftLowerLimit.pivotPositionRots
-                || inputs.rightPivotPositionRots <= pivotSoftLowerLimit.pivotPositionRots;
+        return inputs.leftPivotPositionRots <= pivotSoftLowerLimit.pivotPositionRots;
     }
 
     private boolean atPivotUpperLimit() {
-        return inputs.pivotUpperLimitSwitch
-                || inputs.leftPivotPositionRots >= pivotSoftUpperLimit.pivotPositionRots
-                || inputs.rightPivotPositionRots >= pivotSoftUpperLimit.pivotPositionRots;
+        return inputs.leftPivotPositionRots >= pivotSoftUpperLimit.pivotPositionRots;
     }
 
     public Command toGoal(final Goal goal) {
@@ -162,22 +158,6 @@ public class Arm extends SubsystemBase {
 
     public Command runPivotVoltageCommand(final double pivotVoltageVolts) {
         return run(() -> armIO.toPivotVoltage(pivotVoltageVolts));
-    }
-
-    public Command homePivotCommand() {
-        // TODO: this could probably be improved to be more robust, and potentially do a 2nd,
-        //  slower, pass to be more accurate
-        // TODO: this probably should un-configure the soft limit, in case we want to zero twice for some reason, lol
-        return Commands.sequence(
-                startEnd(
-                        () -> armIO.toPivotVoltage(2),
-                        () -> armIO.toPivotVoltage(0)
-                ).until(() -> inputs.pivotUpperLimitSwitch),
-                runOnce(() -> {
-                    armIO.setPivotPosition(armConstants.pivotUpperLimitSwitchPositionRots());
-                    armIO.configureSoftLimits(pivotSoftLowerLimit, pivotSoftUpperLimit);
-                })
-        );
     }
 
     @SuppressWarnings("unused")

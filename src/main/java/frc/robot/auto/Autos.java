@@ -151,12 +151,7 @@ public class Autos {
     public EventLoop doNothing() {
         final EventLoop doNothingEventLoop = new EventLoop();
         new Trigger(doNothingEventLoop, DriverStation::isAutonomousEnabled)
-                .whileTrue(
-                        Commands.sequence(
-                                superstructure.home(),
-                                Commands.waitUntil(() -> !DriverStation.isAutonomousEnabled())
-                        )
-                );
+                .whileTrue(Commands.waitUntil(() -> !DriverStation.isAutonomousEnabled()));
 
         return doNothingEventLoop;
     }
@@ -172,7 +167,6 @@ public class Autos {
         autoTriggers.autoEnabled().whileTrue(
                 Commands.sequence(
                         resetPose(trajectory.getInitialState()),
-                        superstructure.home().asProxy(),
                         shoot().asProxy(),
                         followPath(trajectoryGroup.get(0), timer)
                 ).withName("PreloadAndFollow0")
@@ -205,7 +199,6 @@ public class Autos {
         autoTriggers.autoEnabled().whileTrue(
                 Commands.sequence(
                         resetPose(trajectory.getInitialState()),
-                        superstructure.home().asProxy(),
                         shoot().withName("ShootPreload").asProxy(),
                         followPath(trajectoryGroup.get(0), timer)
                 ).withName("PreloadAndFollow0")
@@ -237,7 +230,6 @@ public class Autos {
         autoTriggers.autoEnabled().whileTrue(
                 Commands.sequence(
                         resetPose(trajectory.getInitialState()),
-                        superstructure.home(),
                         Commands.print("shoot preload"),
                         shoot(),
                         followPath(trajectoryGroup.get(0), timer)
@@ -287,7 +279,6 @@ public class Autos {
         autoTriggers.autoEnabled().whileTrue(
                 Commands.sequence(
                         resetPose(trajectory.getInitialState()),
-                        superstructure.home(),
                         Commands.print("shoot preload"),
                         shoot(),
                         followPath(trajectoryGroup.get(0), timer)
@@ -353,7 +344,6 @@ public class Autos {
         autoTriggers.autoEnabled().whileTrue(
                 Commands.sequence(
                         resetPose(trajectory.getInitialState()),
-                        superstructure.home(),
                         Commands.print("shoot preload"),
                         shoot(),
                         followPath(trajectoryGroup.get(0), timer)
@@ -374,7 +364,6 @@ public class Autos {
         autoTriggers.autoEnabled().whileTrue(
                 Commands.sequence(
                         resetPose(trajectory.getInitialState()),
-                        superstructure.home().asProxy(),
                         shoot().withName("ShootPreload").asProxy(),
                         followPath(trajectoryGroup.get(0), timer)
                 ).withName("ShootPreloadAndFollow0")
@@ -435,7 +424,6 @@ public class Autos {
         autoTriggers.autoEnabled().whileTrue(
                 Commands.sequence(
                         resetPose(trajectory.getInitialState()),
-                        superstructure.home().asProxy(),
                         shoot().withName("ShootPreload").asProxy(),
                         followPath(trajectoryGroup.get(0), timer)
                 ).withName("PreloadAndFollow0")
@@ -506,7 +494,6 @@ public class Autos {
                 .whileTrue(
                         Commands.sequence(
                                 resetPose(trajectory.getInitialState()),
-                                superstructure.home().asProxy(),
                                 shoot().withName("ShootPreload").asProxy(),
                                 followPath(trajectoryGroup.get(0), timer)
                         ).withName("ShootPreloadAndFollow0")
@@ -526,7 +513,6 @@ public class Autos {
         autoTriggers.autoEnabled().whileTrue(
                 Commands.sequence(
                         resetPose(trajectory.getInitialState()),
-                        superstructure.home().asProxy(),
                         shoot().withName("ShootPreload").asProxy(),
                         followPath(trajectoryGroup.get(0), timer)
                 ).withName("PreloadAndFollow0")
@@ -577,7 +563,6 @@ public class Autos {
         autoTriggers.autoEnabled().whileTrue(
                 Commands.sequence(
                         resetPose(trajectory.getInitialState()),
-                        superstructure.home().asProxy(),
                         shoot().withName("ShootPreload").asProxy(),
                         followPath(trajectoryGroup.get(0), timer)
                 ).withName("PreloadAndFollow0")
@@ -628,7 +613,6 @@ public class Autos {
         autoTriggers.autoEnabled().whileTrue(
                 Commands.sequence(
                         resetPose(trajectory.getInitialState()),
-                        superstructure.home().asProxy(),
                         shoot().withName("ShootPreload").asProxy(),
                         followPath(trajectoryGroup.get(0), timer)
                 ).withName("PreloadAndFollow0")
