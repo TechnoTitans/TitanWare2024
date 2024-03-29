@@ -19,7 +19,7 @@ public interface ShooterIO {
 
         double rightPositionRots = 0.0;
         double rightVelocityRotsPerSec = 0.0;
-        double rightVoltage = 0.0;
+        double rightVoltageVolts = 0.0;
         double rightCurrentAmps = 0.0;
         double rightTempCelsius = 0.0;
     }

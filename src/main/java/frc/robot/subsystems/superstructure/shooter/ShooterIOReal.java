@@ -191,7 +191,7 @@ public class ShooterIOReal implements ShooterIO {
         inputs.leftTempCelsius = _leftDeviceTemp.getValue();
         inputs.rightPositionRots = _rightPosition.getValue();
         inputs.rightVelocityRotsPerSec = _rightVelocity.getValue();
-        inputs.rightVoltage = _rightVoltage.getValue();
+        inputs.rightVoltageVolts = _rightVoltage.getValue();
         inputs.rightCurrentAmps = _rightTorqueCurrent.getValue();
         inputs.rightTempCelsius = _rightDeviceTemp.getValue();
     }

@@ -59,6 +59,7 @@ public class Arm extends SubsystemBase {
 
     public enum Goal {
         NONE(0),
+        ZERO(0),
         STOW(Units.degreesToRotations(10)),
         AMP(Units.degreesToRotations(95)),
         SUBWOOFER(Units.degreesToRotations(56.5));
@@ -131,15 +132,15 @@ public class Arm extends SubsystemBase {
     }
 
     private boolean atPositionSetpoint() {
-        return setpoint.atSetpoint(inputs.pivotEncoderPositionRots, inputs.pivotEncoderVelocityRotsPerSec);
+        return setpoint.atSetpoint(inputs.leftPivotPositionRots, inputs.pivotEncoderVelocityRotsPerSec);
     }
 
     private boolean atPivotLowerLimit() {
-        return inputs.pivotEncoderPositionRots <= pivotSoftLowerLimit.pivotPositionRots;
+        return inputs.leftPivotPositionRots <= pivotSoftLowerLimit.pivotPositionRots;
     }
 
     private boolean atPivotUpperLimit() {
-        return inputs.pivotEncoderPositionRots >= pivotSoftUpperLimit.pivotPositionRots;
+        return inputs.leftPivotPositionRots >= pivotSoftUpperLimit.pivotPositionRots;
     }
 
     public Command toGoal(final Goal goal) {
