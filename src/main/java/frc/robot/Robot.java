@@ -88,11 +88,6 @@ public class Robot extends LoggedRobot {
     private final EventLoop teleopEventLoop = new EventLoop();
     private final EventLoop testEventLoop = new EventLoop();
 
-    public Robot() {
-        powerDistribution.clearStickyFaults();
-        powerDistribution.setSwitchableChannel(true);
-    }
-
     @Override
     public void robotInit() {
         if ((RobotBase.isReal() && Constants.CURRENT_MODE != Constants.RobotMode.REAL)
@@ -168,6 +163,9 @@ public class Robot extends LoggedRobot {
                 Logger.addDataReceiver(new WPILOGWriter(LogFileUtil.addPathSuffix(logPath, "_sim")));
             }
         }
+
+        powerDistribution.clearStickyFaults();
+        powerDistribution.setSwitchableChannel(true);
 
         configureAutos();
         configureButtonBindings(teleopEventLoop);
