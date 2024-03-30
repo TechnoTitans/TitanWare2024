@@ -9,7 +9,6 @@ import edu.wpi.first.wpilibj2.command.CommandScheduler;
 import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.Subsystem;
 import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
-import edu.wpi.first.wpilibj2.command.sysid.SysIdRoutine;
 import frc.robot.auto.AutoChooser;
 import frc.robot.auto.AutoOption;
 import frc.robot.auto.Autos;
@@ -290,18 +289,20 @@ public class Robot extends LoggedRobot {
         coDriverController.leftBumper(testEventLoop)
                 .onTrue(Commands.runOnce(SignalLogger::stop));
 
-        coDriverController.y(testEventLoop)
-                .whileTrue(swerve
-                        .angularVoltageSysIdQuasistaticCommand(SysIdRoutine.Direction.kForward));
-        coDriverController.a(testEventLoop)
-                .whileTrue(swerve
-                        .angularVoltageSysIdQuasistaticCommand(SysIdRoutine.Direction.kReverse));
-        coDriverController.b(testEventLoop)
-                .whileTrue(swerve
-                        .angularVoltageSysIdDynamicCommand(SysIdRoutine.Direction.kForward));
-        coDriverController.x(testEventLoop)
-                .whileTrue(swerve
-                        .angularVoltageSysIdDynamicCommand(SysIdRoutine.Direction.kReverse));
+        coDriverController.rightBumper(testEventLoop).whileTrue(shooter.torqueCurrentSysIdCommand());
+
+//        coDriverController.y(testEventLoop)
+//                .whileTrue(swerve
+//                        .angularVoltageSysIdQuasistaticCommand(SysIdRoutine.Direction.kForward));
+//        coDriverController.a(testEventLoop)
+//                .whileTrue(swerve
+//                        .angularVoltageSysIdQuasistaticCommand(SysIdRoutine.Direction.kReverse));
+//        coDriverController.b(testEventLoop)
+//                .whileTrue(swerve
+//                        .angularVoltageSysIdDynamicCommand(SysIdRoutine.Direction.kForward));
+//        coDriverController.x(testEventLoop)
+//                .whileTrue(swerve
+//                        .angularVoltageSysIdDynamicCommand(SysIdRoutine.Direction.kReverse));
     }
 
     @Override

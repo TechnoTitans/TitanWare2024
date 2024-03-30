@@ -85,7 +85,7 @@ public class Arm extends SubsystemBase {
         this.inputs = new ArmIOInputsAutoLogged();
         this.voltageSysIdRoutine = makeVoltageSysIdRoutine(
                 Volts.of(4).per(Second),
-                Volts.of(10),
+                Volts.of(8),
                 Seconds.of(6)
         );
         this.torqueCurrentSysIdRoutine = makeTorqueCurrentSysIdRoutine(
