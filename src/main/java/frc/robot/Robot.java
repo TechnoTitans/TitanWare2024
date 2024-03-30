@@ -9,6 +9,7 @@ import edu.wpi.first.wpilibj2.command.CommandScheduler;
 import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.Subsystem;
 import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
+import edu.wpi.first.wpilibj2.command.button.Trigger;
 import frc.robot.auto.AutoChooser;
 import frc.robot.auto.AutoOption;
 import frc.robot.auto.Autos;
@@ -67,6 +68,7 @@ public class Robot extends LoggedRobot {
     public final Shooter shooter = new Shooter(Constants.CURRENT_MODE, HardwareConstants.SHOOTER);
     public final Superstructure superstructure = new Superstructure(arm, shooter);
 
+    @SuppressWarnings("unused")
     public final PhotonVision photonVision = new PhotonVision(Constants.CURRENT_MODE, swerve, swerve.getPoseEstimator());
 
     public final NoteState noteState = new NoteState(intake, superstructure);
@@ -87,6 +89,7 @@ public class Robot extends LoggedRobot {
     private final EventLoop teleopEventLoop = new EventLoop();
     private final EventLoop testEventLoop = new EventLoop();
 
+    private final Trigger teleopEnabled = new Trigger(DriverStation::isTeleopEnabled);
     @Override
     public void robotInit() {
         if ((RobotBase.isReal() && Constants.CURRENT_MODE != Constants.RobotMode.REAL)
@@ -166,6 +169,7 @@ public class Robot extends LoggedRobot {
         powerDistribution.clearStickyFaults();
         powerDistribution.setSwitchableChannel(true);
 
+        configureStateTriggers();
         configureAutos();
         configureButtonBindings(teleopEventLoop);
 
@@ -210,7 +214,6 @@ public class Robot extends LoggedRobot {
 
         Logger.start();
     }
-
     @Override
     public void robotPeriodic() {
         CommandScheduler.getInstance().run();
@@ -231,25 +234,20 @@ public class Robot extends LoggedRobot {
         final NoteState.State state = noteState.getState();
         Logger.recordOutput("NoteState", state.toString());
     }
-
     @Override
     public void disabledInit() {}
-
     @Override
     public void disabledPeriodic() {}
-
     @Override
     public void autonomousInit() {
         autonomousEventLoop = autoChooser.getSelected().autoEventLoop();
     }
-
     @Override
     public void autonomousPeriodic() {
         if (autonomousEventLoop != null) {
             autonomousEventLoop.poll();
         }
     }
-
     @Override
     public void teleopInit() {
         // TODO: superstructure to IDLE state on teleop init
@@ -274,14 +272,12 @@ public class Robot extends LoggedRobot {
                 )
         );
     }
-
     @Override
     public void teleopPeriodic() {
         if (teleopEventLoop != null) {
             teleopEventLoop.poll();
         }
     }
-
     @Override
     public void testInit() {
         CommandScheduler.getInstance().cancelAll();
@@ -304,27 +300,22 @@ public class Robot extends LoggedRobot {
 //                .whileTrue(swerve
 //                        .angularVoltageSysIdDynamicCommand(SysIdRoutine.Direction.kReverse));
     }
-
     @Override
     public void testPeriodic() {
         if (testEventLoop != null) {
             testEventLoop.poll();
         }
     }
-
     @Override
     public void simulationInit() {}
-
     @Override
     public void simulationPeriodic() {}
-
     public Command runEjectShooter() {
         return Commands.parallel(
                 intake.runEjectInCommand(),
                 superstructure.toGoal(Superstructure.Goal.EJECT)
         );
     }
-
     public Command runEjectIntake() {
         return Commands.deadline(
                 intake.runEjectOutCommand(),
@@ -332,6 +323,9 @@ public class Robot extends LoggedRobot {
         );
     }
 
+    public void configureStateTriggers() {
+        teleopEnabled.onTrue(superstructure.toGoal(Superstructure.Goal.IDLE));
+    }
     public void configureAutos() {
         autoChooser.addAutoOption(new AutoOption(
                 "SourceSpeaker0",
@@ -388,8 +382,12 @@ public class Robot extends LoggedRobot {
                 autos.ampCenter4_3(),
                 Constants.CompetitionType.COMPETITION
         ));
+        autoChooser.addAutoOption(new AutoOption(
+                "Speaker2_1_0Center4_3",
+                autos.speaker2_1_0Center4_3(),
+                Constants.CompetitionType.COMPETITION
+        ));
     }
-
     public void configureButtonBindings(final EventLoop teleopEventLoop) {
         final XboxController driverHID = driverController.getHID();
         this.driverController.leftTrigger(0.5, teleopEventLoop).whileTrue(

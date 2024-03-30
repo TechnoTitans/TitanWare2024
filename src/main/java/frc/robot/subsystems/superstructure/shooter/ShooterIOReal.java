@@ -73,9 +73,9 @@ public class ShooterIOReal implements ShooterIO {
     public void config() {
         final TalonFXConfiguration ampTalonFXConfiguration = new TalonFXConfiguration();
         ampTalonFXConfiguration.Slot0 = new Slot0Configs()
-                .withKS(9.4242)
-                .withKV(0.065377)
-                .withKA(0.10034)
+                .withKS(2.732)
+                .withKV(0.038323)
+                .withKA(0.15474)
                 .withKP(6.246);
         ampTalonFXConfiguration.TorqueCurrent.PeakForwardTorqueCurrent = 80;
         ampTalonFXConfiguration.TorqueCurrent.PeakReverseTorqueCurrent = -80;
@@ -92,9 +92,9 @@ public class ShooterIOReal implements ShooterIO {
 
         final TalonFXConfiguration leftTalonFXConfiguration = new TalonFXConfiguration();
         leftTalonFXConfiguration.Slot0 = new Slot0Configs()
-                .withKS(7.7976)
-                .withKV(0.10021)
-                .withKA(0.38814)
+                .withKS(10.669)
+                .withKV(0.1978)
+                .withKA(0.40341)
                 .withKP(6.7163);
         leftTalonFXConfiguration.TorqueCurrent.PeakForwardTorqueCurrent = 80;
         leftTalonFXConfiguration.TorqueCurrent.PeakReverseTorqueCurrent = -80;
@@ -111,10 +111,10 @@ public class ShooterIOReal implements ShooterIO {
 
         final TalonFXConfiguration rightTalonFXConfiguration = new TalonFXConfiguration();
         rightTalonFXConfiguration.Slot0 = new Slot0Configs()
-                .withKS(8.0581)
-                .withKV(0.1144)
-                .withKA(0.4075)
-                .withKP(6.7113);
+                .withKS(10.712)
+                .withKV(0.15193)
+                .withKA(0.43766)
+                .withKP(6.7163);
         rightTalonFXConfiguration.TorqueCurrent.PeakForwardTorqueCurrent = 80;
         rightTalonFXConfiguration.TorqueCurrent.PeakReverseTorqueCurrent = -80;
         rightTalonFXConfiguration.CurrentLimits.StatorCurrentLimit = 60;

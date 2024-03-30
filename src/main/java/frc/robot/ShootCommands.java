@@ -66,7 +66,7 @@ public class ShootCommands {
                 intake.feedHalfCommand(),
                 Commands.deadline(
                         Commands.waitUntil(superstructure.atSetpoint)
-//                                .andThen(Commands.waitSeconds(0.5))
+                                .andThen(Commands.waitSeconds(0.5))
                                 .andThen(intake.feedCommand())
                                 .andThen(Commands.waitSeconds(0.5)),
                         superstructure.toGoal(Superstructure.Goal.AMP)
@@ -107,11 +107,22 @@ public class ShootCommands {
                         intake
                                 .runStopCommand()
                                 .until(superstructure.atSetpoint.and(swerve.atHeadingSetpoint))
-                                .withTimeout(1) // TODO: fixme
+                                .withTimeout(1.5) // TODO: fixme
                                 .andThen(intake.feedCommand()),
                         superstructure.runState(ShootCommands.shotParametersSupplier(swerve::getPose))
                 ),
                 swerve.faceAngle(ShootCommands.angleToSpeakerSupplier(swerve::getPose))
+        );
+    }
+
+    public Command shoot() {
+        return Commands.deadline(
+                intake
+                        .runStopCommand()
+                        .until(superstructure.atSetpoint)
+                        .withTimeout(1) // TODO: fixme
+                        .andThen(intake.feedCommand()),
+                superstructure.runState(ShootCommands.shotParametersSupplier(swerve::getPose))
         );
     }
 
@@ -121,7 +132,7 @@ public class ShootCommands {
                         intake
                                 .runStopCommand()
                                 .until(superstructure.atSetpoint.and(swerve.atHeadingSetpoint))
-                                .withTimeout(1) // TODO: fixme
+                                .withTimeout(1.5) // TODO: fixme
                                 .andThen(intake.feedCommand()),
                         Commands.defer(() ->
                                 superstructure.runState(() -> ShootCommands.shotParameters(swerve.getPose())),

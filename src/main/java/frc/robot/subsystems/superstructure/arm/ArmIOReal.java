@@ -86,24 +86,23 @@ public class ArmIOReal implements ArmIO {
         leftTalonFXConfiguration.Slot0 = new Slot0Configs()
 //                .withKS(0.011965)
                 .withKS(0.040477)
-                .withKG(0.33872)
+                .withKG(0.23872)
                 .withGravityType(GravityTypeValue.Arm_Cosine)
                 .withKV(13.941)
                 .withKA(0.17656 * 0.5)
-                .withKP(65.808)
-                .withKD(19.745); // TODO: tune Kp
+                .withKP(65.808);
         leftTalonFXConfiguration.MotionMagic.MotionMagicCruiseVelocity = 0;
-        leftTalonFXConfiguration.MotionMagic.MotionMagicExpo_kV = 14.053;
+        leftTalonFXConfiguration.MotionMagic.MotionMagicExpo_kV = 13.941;
 //        leftTalonFXConfiguration.MotionMagic.MotionMagicExpo_kA = 0.17176;
-        leftTalonFXConfiguration.MotionMagic.MotionMagicExpo_kA = 1;
+        leftTalonFXConfiguration.MotionMagic.MotionMagicExpo_kA = 1.5;
         leftTalonFXConfiguration.TorqueCurrent.PeakForwardTorqueCurrent = 80;
         leftTalonFXConfiguration.TorqueCurrent.PeakReverseTorqueCurrent = -80;
         leftTalonFXConfiguration.CurrentLimits.StatorCurrentLimit = 60;
         leftTalonFXConfiguration.CurrentLimits.StatorCurrentLimitEnable = true;
-        leftTalonFXConfiguration.Feedback.FeedbackSensorSource = FeedbackSensorSourceValue.RotorSensor;
-//        leftTalonFXConfiguration.Feedback.FeedbackRemoteSensorID = pivotCANCoder.getDeviceID();
-//        leftTalonFXConfiguration.Feedback.RotorToSensorRatio = armConstants.pivotGearing();
-        leftTalonFXConfiguration.Feedback.SensorToMechanismRatio = armConstants.pivotGearing();
+        leftTalonFXConfiguration.Feedback.FeedbackSensorSource = FeedbackSensorSourceValue.FusedCANcoder;
+        leftTalonFXConfiguration.Feedback.FeedbackRemoteSensorID = pivotCANCoder.getDeviceID();
+        leftTalonFXConfiguration.Feedback.RotorToSensorRatio = armConstants.pivotGearing();
+//        leftTalonFXConfiguration.Feedback.SensorToMechanismRatio = armConstants.pivotGearing();
         leftTalonFXConfiguration.MotorOutput.Inverted = leftTalonFXInverted;
         leftTalonFXConfiguration.MotorOutput.NeutralMode = NeutralModeValue.Brake;
         leftPivotMotor.getConfigurator().apply(leftTalonFXConfiguration);
@@ -113,29 +112,32 @@ public class ArmIOReal implements ArmIO {
         rightTalonFXConfiguration.Slot0 = new Slot0Configs()
 //                .withKS(0.011965)
                 .withKS(0.040477)
-                .withKG(0.33872)
+                .withKG(0.23872)
                 .withGravityType(GravityTypeValue.Arm_Cosine)
                 .withKV(13.941)
                 .withKA(0.17656 * 0.5)
-                .withKP(65.808)
-                .withKD(19.745); // TODO: tune Kp
+                .withKP(65.808);
         rightTalonFXConfiguration.MotionMagic.MotionMagicCruiseVelocity = 0;
-        rightTalonFXConfiguration.MotionMagic.MotionMagicExpo_kV = 14.053;
+        rightTalonFXConfiguration.MotionMagic.MotionMagicExpo_kV = 13.941;
 //        rightTalonFXConfiguration.MotionMagic.MotionMagicExpo_kA = 0.17176;
-        rightTalonFXConfiguration.MotionMagic.MotionMagicExpo_kA = 1;
+        rightTalonFXConfiguration.MotionMagic.MotionMagicExpo_kA = 1.5;
         rightTalonFXConfiguration.TorqueCurrent.PeakForwardTorqueCurrent = 80;
         rightTalonFXConfiguration.TorqueCurrent.PeakReverseTorqueCurrent = -80;
         rightTalonFXConfiguration.CurrentLimits.StatorCurrentLimit = 60;
         rightTalonFXConfiguration.CurrentLimits.StatorCurrentLimitEnable = true;
-        // TODO: figure out the problem with FusedCANcoder and the CANcoder velocity noise
-        rightTalonFXConfiguration.Feedback.FeedbackSensorSource = FeedbackSensorSourceValue.RotorSensor;
-//        rightTalonFXConfiguration.Feedback.FeedbackRemoteSensorID = pivotCANCoder.getDeviceID();
-//        rightTalonFXConfiguration.Feedback.RotorToSensorRatio = armConstants.pivotGearing();
-        leftTalonFXConfiguration.Feedback.SensorToMechanismRatio = armConstants.pivotGearing();
+        rightTalonFXConfiguration.Feedback.FeedbackSensorSource = FeedbackSensorSourceValue.FusedCANcoder;
+        rightTalonFXConfiguration.Feedback.FeedbackRemoteSensorID = pivotCANCoder.getDeviceID();
+        rightTalonFXConfiguration.Feedback.RotorToSensorRatio = armConstants.pivotGearing();
+//        rightTalonFXConfiguration.Feedback.SensorToMechanismRatio = armConstants.pivotGearing();
         rightTalonFXConfiguration.MotorOutput.Inverted = rightTalonFXInverted;
         rightTalonFXConfiguration.MotorOutput.NeutralMode = NeutralModeValue.Brake;
         rightPivotMotor.getConfigurator().apply(rightTalonFXConfiguration);
 
+        BaseStatusSignal.setUpdateFrequencyForAll(
+                1000,
+                _encoderPosition,
+                _encoderVelocity
+        );
         BaseStatusSignal.setUpdateFrequencyForAll(
                 250,
                 _leftPosition,
@@ -145,9 +147,7 @@ public class ArmIOReal implements ArmIO {
                 _rightPosition,
                 _rightVelocity,
                 _rightVoltage,
-                _rightTorqueCurrent,
-                _encoderPosition,
-                _encoderVelocity
+                _rightTorqueCurrent
         );
         BaseStatusSignal.setUpdateFrequencyForAll(
                 4,

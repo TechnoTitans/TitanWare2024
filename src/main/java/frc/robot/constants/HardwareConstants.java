@@ -100,11 +100,9 @@ public class HardwareConstants {
             15,
             16,
             112.5,
-            0.51171875,
-            0.05,
-//            0.01,
-            0.25
-//            0.264
+            0.5009765625,
+            0.01,
+            0.264
     );
 
     public record ShooterConstants(

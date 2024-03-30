@@ -110,9 +110,9 @@ public class SwerveModuleIOTalonFX implements SwerveModuleIO {
         driveTalonFXConfiguration.TorqueCurrent.PeakReverseTorqueCurrent = -Modules.SLIP_CURRENT_A;
         driveTalonFXConfiguration.CurrentLimits.StatorCurrentLimit = Modules.SLIP_CURRENT_A;
         driveTalonFXConfiguration.CurrentLimits.StatorCurrentLimitEnable = true;
-        driveTalonFXConfiguration.CurrentLimits.SupplyCurrentLimit = 40;
-        driveTalonFXConfiguration.CurrentLimits.SupplyCurrentThreshold = 50;
-        driveTalonFXConfiguration.CurrentLimits.SupplyTimeThreshold = 0.5;
+        driveTalonFXConfiguration.CurrentLimits.SupplyCurrentLimit = 50;
+        driveTalonFXConfiguration.CurrentLimits.SupplyCurrentThreshold = 60;
+        driveTalonFXConfiguration.CurrentLimits.SupplyTimeThreshold = 1.0;
         driveTalonFXConfiguration.CurrentLimits.SupplyCurrentLimitEnable = true;
         driveTalonFXConfiguration.ClosedLoopRamps.TorqueClosedLoopRampPeriod = 0.2;
         driveTalonFXConfiguration.Feedback.SensorToMechanismRatio = Modules.DRIVER_GEAR_RATIO;
@@ -123,8 +123,8 @@ public class SwerveModuleIOTalonFX implements SwerveModuleIO {
         turnTalonFXConfiguration.Slot0 = new Slot0Configs()
                 .withKP(45)
                 .withKS(0.5);
-        turnTalonFXConfiguration.TorqueCurrent.PeakForwardTorqueCurrent = 40;
-        turnTalonFXConfiguration.TorqueCurrent.PeakReverseTorqueCurrent = -40;
+        turnTalonFXConfiguration.TorqueCurrent.PeakForwardTorqueCurrent = 60;
+        turnTalonFXConfiguration.TorqueCurrent.PeakReverseTorqueCurrent = -60;
         turnTalonFXConfiguration.CurrentLimits.StatorCurrentLimit = 60;
         turnTalonFXConfiguration.CurrentLimits.StatorCurrentLimitEnable = true;
         turnTalonFXConfiguration.CurrentLimits.SupplyCurrentLimit = 40;

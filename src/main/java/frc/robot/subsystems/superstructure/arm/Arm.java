@@ -20,10 +20,8 @@ import static edu.wpi.first.units.Units.*;
 
 public class Arm extends SubsystemBase {
     protected static final String LogKey = "Arm";
-    private static final double PositionToleranceRots = 0.005;
-    private static final double VelocityToleranceRotsPerSec = 0.02;
-
-    private final HardwareConstants.ArmConstants armConstants;
+    private static final double PositionToleranceRots = 0.0025;
+    private static final double VelocityToleranceRotsPerSec = 0.01;
 
     private final ArmIO armIO;
     private final ArmIOInputsAutoLogged inputs;
@@ -75,7 +73,6 @@ public class Arm extends SubsystemBase {
     }
 
     public Arm(final Constants.RobotMode mode, final HardwareConstants.ArmConstants armConstants) {
-        this.armConstants = armConstants;
         this.armIO = switch (mode) {
             case REAL -> new ArmIOReal(armConstants);
             case SIM -> new ArmIOSim(armConstants);
