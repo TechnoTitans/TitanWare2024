@@ -38,11 +38,14 @@ public class Gyro {
         this.gyroIO.config();
     }
 
+    public void updateInputs() {
+        gyroIO.updateInputs(inputs);
+    }
+
     public void periodic() {
         final double gyroPeriodicUpdateStart = Logger.getRealTimestamp();
 
         gyroIO.periodic();
-        gyroIO.updateInputs(inputs);
         Logger.processInputs(logKey, inputs);
 
         Logger.recordOutput(
