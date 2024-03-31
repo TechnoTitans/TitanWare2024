@@ -10,6 +10,7 @@ import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.Subsystem;
 import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
 import edu.wpi.first.wpilibj2.command.button.Trigger;
+import edu.wpi.first.wpilibj2.command.sysid.SysIdRoutine;
 import frc.robot.auto.AutoChooser;
 import frc.robot.auto.AutoOption;
 import frc.robot.auto.Autos;
@@ -41,6 +42,7 @@ import java.nio.file.Paths;
 import java.util.Optional;
 import java.util.function.BooleanSupplier;
 
+@SuppressWarnings("RedundantMethodOverride")
 public class Robot extends LoggedRobot {
     private static final String AKitLogPath = "/U/logs";
     private static final String HootLogPath = "/U/logs";
@@ -69,19 +71,19 @@ public class Robot extends LoggedRobot {
     public final Superstructure superstructure = new Superstructure(arm, shooter);
 
     @SuppressWarnings("unused")
-    public final PhotonVision photonVision = new PhotonVision(Constants.CURRENT_MODE, swerve, swerve.getPoseEstimator());
+    public final PhotonVision photonVision = new PhotonVision(Constants.RobotMode.REPLAY, swerve, swerve.getPoseEstimator());
 
     public final NoteState noteState = new NoteState(intake, superstructure);
     public final ShootCommands shootCommands = new ShootCommands(swerve, intake, superstructure);
     public final Autos autos = new Autos(swerve, intake, superstructure, noteState, shootCommands);
     public final AutoChooser<String, AutoOption> autoChooser = new AutoChooser<>(
             new AutoOption(
-                        "DoNothing",
-                        autos.doNothing(),
+                    "DoNothing",
+                    autos.doNothing(),
                     Constants.CompetitionType.COMPETITION
-                )
-            );
-    
+            )
+    );
+
     public final CommandXboxController driverController = new CommandXboxController(RobotMap.MainController);
     public final CommandXboxController coDriverController = new CommandXboxController(RobotMap.CoController);
 
@@ -89,7 +91,9 @@ public class Robot extends LoggedRobot {
     private final EventLoop teleopEventLoop = new EventLoop();
     private final EventLoop testEventLoop = new EventLoop();
 
+    private final Trigger autoEnabled = new Trigger(DriverStation::isAutonomousEnabled);
     private final Trigger teleopEnabled = new Trigger(DriverStation::isTeleopEnabled);
+
     @Override
     public void robotInit() {
         if ((RobotBase.isReal() && Constants.CURRENT_MODE != Constants.RobotMode.REAL)
@@ -185,6 +189,7 @@ public class Robot extends LoggedRobot {
                 command -> Logger.recordOutput("Commands/Finished", command.getName())
         );
 
+        // TODO: don't use streams
         CommandScheduler.getInstance().onCommandInterrupt(
                 (interrupted, interrupting) -> {
                     Logger.recordOutput("Commands/Interrupted", interrupted.getName());
@@ -214,6 +219,7 @@ public class Robot extends LoggedRobot {
 
         Logger.start();
     }
+
     @Override
     public void robotPeriodic() {
         CommandScheduler.getInstance().run();
@@ -234,35 +240,27 @@ public class Robot extends LoggedRobot {
         final NoteState.State state = noteState.getState();
         Logger.recordOutput("NoteState", state.toString());
     }
+
     @Override
     public void disabledInit() {}
+
     @Override
     public void disabledPeriodic() {}
+
     @Override
     public void autonomousInit() {
         autonomousEventLoop = autoChooser.getSelected().autoEventLoop();
     }
+
     @Override
     public void autonomousPeriodic() {
         if (autonomousEventLoop != null) {
             autonomousEventLoop.poll();
         }
     }
+
     @Override
     public void teleopInit() {
-        // TODO: superstructure to IDLE state on teleop init
-        // TODO: bonus points if it homes/zeros itself if it isn't already zeroed,
-        //  although, if we have an absolute encoder on it, we won't need to zero anymore
-//        if (!superstructure.isHomed()) {
-//            // TODO: do this better
-//            Commands.sequence(
-//                    superstructure.home(),
-//                    superstructure.toGoal(Superstructure.Goal.IDLE)
-//            ).schedule();
-//        } else {
-//            superstructure.toGoal(Superstructure.Goal.IDLE).schedule();
-//        }
-
         //noinspection SuspiciousNameCombination
         swerve.setDefaultCommand(
                 swerve.teleopDriveCommand(
@@ -272,12 +270,14 @@ public class Robot extends LoggedRobot {
                 )
         );
     }
+
     @Override
     public void teleopPeriodic() {
         if (teleopEventLoop != null) {
             teleopEventLoop.poll();
         }
     }
+
     @Override
     public void testInit() {
         CommandScheduler.getInstance().cancelAll();
@@ -285,47 +285,44 @@ public class Robot extends LoggedRobot {
         coDriverController.leftBumper(testEventLoop)
                 .onTrue(Commands.runOnce(SignalLogger::stop));
 
-        coDriverController.rightBumper(testEventLoop).whileTrue(shooter.torqueCurrentSysIdCommand());
+        coDriverController.rightBumper(testEventLoop).and(coDriverController.y(testEventLoop))
+                .whileTrue(shooter.torqueCurrentSysIdCommand());
 
-//        coDriverController.y(testEventLoop)
-//                .whileTrue(swerve
-//                        .angularVoltageSysIdQuasistaticCommand(SysIdRoutine.Direction.kForward));
-//        coDriverController.a(testEventLoop)
-//                .whileTrue(swerve
-//                        .angularVoltageSysIdQuasistaticCommand(SysIdRoutine.Direction.kReverse));
-//        coDriverController.b(testEventLoop)
-//                .whileTrue(swerve
-//                        .angularVoltageSysIdDynamicCommand(SysIdRoutine.Direction.kForward));
-//        coDriverController.x(testEventLoop)
-//                .whileTrue(swerve
-//                        .angularVoltageSysIdDynamicCommand(SysIdRoutine.Direction.kReverse));
+        coDriverController.rightBumper(testEventLoop).and(coDriverController.a(testEventLoop))
+                .whileTrue(arm.voltageSysIdCommand());
+
+        coDriverController.y(testEventLoop)
+                .whileTrue(swerve.angularVoltageSysIdQuasistaticCommand(SysIdRoutine.Direction.kForward));
+        coDriverController.a(testEventLoop)
+                .whileTrue(swerve.angularVoltageSysIdQuasistaticCommand(SysIdRoutine.Direction.kReverse));
+        coDriverController.b(testEventLoop)
+                .whileTrue(swerve.angularVoltageSysIdDynamicCommand(SysIdRoutine.Direction.kForward));
+        coDriverController.x(testEventLoop)
+                .whileTrue(swerve.angularVoltageSysIdDynamicCommand(SysIdRoutine.Direction.kReverse));
     }
+
     @Override
     public void testPeriodic() {
         if (testEventLoop != null) {
             testEventLoop.poll();
         }
     }
+
     @Override
     public void simulationInit() {}
+
     @Override
     public void simulationPeriodic() {}
-    public Command runEjectShooter() {
-        return Commands.parallel(
-                intake.runEjectInCommand(),
-                superstructure.toGoal(Superstructure.Goal.EJECT)
-        );
-    }
-    public Command runEjectIntake() {
-        return Commands.deadline(
-                intake.runEjectOutCommand(),
-                superstructure.toGoal(Superstructure.Goal.BACK_FEED)
-        );
-    }
 
     public void configureStateTriggers() {
         teleopEnabled.onTrue(superstructure.toGoal(Superstructure.Goal.IDLE));
+        autoEnabled.whileTrue(Commands.repeatingSequence(
+                superstructure.toGoal(Superstructure.Goal.SUBWOOFER)
+                        .withTimeout(4),
+                Commands.waitSeconds(4)
+        ));
     }
+
     public void configureAutos() {
         autoChooser.addAutoOption(new AutoOption(
                 "SourceSpeaker0",
@@ -388,6 +385,21 @@ public class Robot extends LoggedRobot {
                 Constants.CompetitionType.COMPETITION
         ));
     }
+
+    public Command runEjectShooter() {
+        return Commands.parallel(
+                intake.runEjectInCommand(),
+                superstructure.toGoal(Superstructure.Goal.EJECT)
+        );
+    }
+
+    public Command runEjectIntake() {
+        return Commands.deadline(
+                intake.runEjectOutCommand(),
+                superstructure.toGoal(Superstructure.Goal.BACK_FEED)
+        );
+    }
+
     public void configureButtonBindings(final EventLoop teleopEventLoop) {
         final XboxController driverHID = driverController.getHID();
         this.driverController.leftTrigger(0.5, teleopEventLoop).whileTrue(

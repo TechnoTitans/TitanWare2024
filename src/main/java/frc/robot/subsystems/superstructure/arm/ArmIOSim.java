@@ -15,9 +15,11 @@ import com.ctre.phoenix6.hardware.TalonFX;
 import com.ctre.phoenix6.signals.*;
 import edu.wpi.first.math.system.plant.DCMotor;
 import edu.wpi.first.math.system.plant.LinearSystemId;
+import edu.wpi.first.math.util.Units;
 import edu.wpi.first.wpilibj.Notifier;
 import edu.wpi.first.wpilibj.simulation.SingleJointedArmSim;
 import frc.robot.constants.HardwareConstants;
+import frc.robot.constants.SimConstants;
 import frc.robot.utils.closeables.ToClose;
 import frc.robot.utils.control.DeltaTime;
 import frc.robot.utils.ctre.Phoenix6Utils;
@@ -64,7 +66,8 @@ public class ArmIOSim implements ArmIO {
         this.deltaTime = new DeltaTime(true);
         this.armConstants = armConstants;
 
-        final double pivotUpperLimitRots = armConstants.pivotSoftUpperLimitRots();
+        final double pivotLowerLimitRads = Units.rotationsToRadians(armConstants.pivotSoftLowerLimitRots());
+        final double pivotUpperLimitRads = Units.rotationsToRadians(armConstants.pivotSoftUpperLimitRots());
         this.armPivotSim = new SingleJointedArmSim(
                 LinearSystemId.identifyPositionSystem(
                         13.97 / (2d * Math.PI),
@@ -72,14 +75,12 @@ public class ArmIOSim implements ArmIO {
                 ),
                 DCMotor.getKrakenX60Foc(2),
                 armConstants.pivotGearing(),
-                0.508,
-                0,
+                SimConstants.Arm.LENGTH_METERS,
+                pivotLowerLimitRads,
                 Math.PI,
                 true,
-                ThreadLocalRandom.current().nextDouble(
-                        armConstants.pivotSoftLowerLimitRots(),
-                        pivotUpperLimitRots
-                )
+                ThreadLocalRandom.current()
+                        .nextDouble(pivotLowerLimitRads, pivotUpperLimitRads)
         );
 
         this.leftPivotMotor = new TalonFX(armConstants.leftPivotMotorId(), armConstants.CANBus());
@@ -94,7 +95,6 @@ public class ArmIOSim implements ArmIO {
                 armPivotSim::getAngleRads,
                 armPivotSim::getVelocityRadPerSec
         );
-
         this.pivotMotorsSim.attachFeedbackSensor(new SimPhoenix6CANCoder(pivotCANCoder));
 
         this.motionMagicExpoVoltage = new MotionMagicExpoVoltage(0);
@@ -131,6 +131,7 @@ public class ArmIOSim implements ArmIO {
     @SuppressWarnings("DuplicatedCode")
     @Override
     public void config() {
+        final SensorDirectionValue pivotCANCoderSensorDirection = SensorDirectionValue.Clockwise_Positive;
         final CANcoderConfiguration pivotCANCoderConfiguration = new CANcoderConfiguration();
         pivotCANCoderConfiguration.MagnetSensor.MagnetOffset = armConstants.pivotCANCoderOffset();
         pivotCANCoderConfiguration.MagnetSensor.SensorDirection = SensorDirectionValue.Clockwise_Positive;
@@ -150,9 +151,10 @@ public class ArmIOSim implements ArmIO {
         leftTalonFXConfiguration.MotionMagic.MotionMagicExpo_kA = 0.015;
         leftTalonFXConfiguration.CurrentLimits.StatorCurrentLimit = 60;
         leftTalonFXConfiguration.CurrentLimits.StatorCurrentLimitEnable = true;
-        leftTalonFXConfiguration.Feedback.FeedbackSensorSource = FeedbackSensorSourceValue.FusedCANcoder;
+        leftTalonFXConfiguration.Feedback.FeedbackSensorSource = FeedbackSensorSourceValue.RotorSensor;
         leftTalonFXConfiguration.Feedback.FeedbackRemoteSensorID = pivotCANCoder.getDeviceID();
         leftTalonFXConfiguration.Feedback.RotorToSensorRatio = armConstants.pivotGearing();
+        leftTalonFXConfiguration.Feedback.SensorToMechanismRatio = armConstants.pivotGearing();
         leftTalonFXConfiguration.MotorOutput.Inverted = leftTalonFXInverted;
         leftTalonFXConfiguration.MotorOutput.NeutralMode = NeutralModeValue.Brake;
         leftPivotMotor.getConfigurator().apply(leftTalonFXConfiguration);
@@ -171,9 +173,10 @@ public class ArmIOSim implements ArmIO {
         rightTalonFXConfiguration.MotionMagic.MotionMagicExpo_kA = 0.015;
         rightTalonFXConfiguration.CurrentLimits.StatorCurrentLimit = 60;
         rightTalonFXConfiguration.CurrentLimits.StatorCurrentLimitEnable = true;
-        leftTalonFXConfiguration.Feedback.FeedbackSensorSource = FeedbackSensorSourceValue.FusedCANcoder;
-        leftTalonFXConfiguration.Feedback.FeedbackRemoteSensorID = pivotCANCoder.getDeviceID();
-        leftTalonFXConfiguration.Feedback.RotorToSensorRatio = armConstants.pivotGearing();
+        rightTalonFXConfiguration.Feedback.FeedbackSensorSource = FeedbackSensorSourceValue.RotorSensor;
+        rightTalonFXConfiguration.Feedback.FeedbackRemoteSensorID = pivotCANCoder.getDeviceID();
+        rightTalonFXConfiguration.Feedback.RotorToSensorRatio = armConstants.pivotGearing();
+        rightTalonFXConfiguration.Feedback.SensorToMechanismRatio = armConstants.pivotGearing();
         rightTalonFXConfiguration.MotorOutput.Inverted = rightTalonFXInverted;
         rightTalonFXConfiguration.MotorOutput.NeutralMode = NeutralModeValue.Brake;
         rightPivotMotor.getConfigurator().apply(rightTalonFXConfiguration);
@@ -198,11 +201,13 @@ public class ArmIOSim implements ArmIO {
         );
         ParentDevice.optimizeBusUtilizationForAll(
                 leftPivotMotor,
-                rightPivotMotor
+                rightPivotMotor,
+                pivotCANCoder
         );
 
         SimUtils.setCTRETalonFXSimStateMotorInverted(leftPivotMotor, leftTalonFXInverted);
         SimUtils.setCTRETalonFXSimStateMotorInverted(rightPivotMotor, rightTalonFXInverted);
+        SimUtils.setCTRECANCoderSimStateSensorDirection(pivotCANCoder, pivotCANCoderSensorDirection);
     }
 
     @SuppressWarnings("DuplicatedCode")
