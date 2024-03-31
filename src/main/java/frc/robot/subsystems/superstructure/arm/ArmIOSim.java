@@ -12,10 +12,7 @@ import com.ctre.phoenix6.controls.VoltageOut;
 import com.ctre.phoenix6.hardware.CANcoder;
 import com.ctre.phoenix6.hardware.ParentDevice;
 import com.ctre.phoenix6.hardware.TalonFX;
-import com.ctre.phoenix6.signals.FeedbackSensorSourceValue;
-import com.ctre.phoenix6.signals.GravityTypeValue;
-import com.ctre.phoenix6.signals.InvertedValue;
-import com.ctre.phoenix6.signals.NeutralModeValue;
+import com.ctre.phoenix6.signals.*;
 import edu.wpi.first.math.system.plant.DCMotor;
 import edu.wpi.first.math.system.plant.LinearSystemId;
 import edu.wpi.first.wpilibj.Notifier;
@@ -136,6 +133,7 @@ public class ArmIOSim implements ArmIO {
     public void config() {
         final CANcoderConfiguration pivotCANCoderConfiguration = new CANcoderConfiguration();
         pivotCANCoderConfiguration.MagnetSensor.MagnetOffset = armConstants.pivotCANCoderOffset();
+        pivotCANCoderConfiguration.MagnetSensor.SensorDirection = SensorDirectionValue.Clockwise_Positive;
         pivotCANCoder.getConfigurator().apply(pivotCANCoderConfiguration);
 
         final TalonFXConfiguration leftTalonFXConfiguration = new TalonFXConfiguration();

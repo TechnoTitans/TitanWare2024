@@ -12,10 +12,7 @@ import com.ctre.phoenix6.controls.VoltageOut;
 import com.ctre.phoenix6.hardware.CANcoder;
 import com.ctre.phoenix6.hardware.ParentDevice;
 import com.ctre.phoenix6.hardware.TalonFX;
-import com.ctre.phoenix6.signals.FeedbackSensorSourceValue;
-import com.ctre.phoenix6.signals.GravityTypeValue;
-import com.ctre.phoenix6.signals.InvertedValue;
-import com.ctre.phoenix6.signals.NeutralModeValue;
+import com.ctre.phoenix6.signals.*;
 import frc.robot.constants.HardwareConstants;
 import frc.robot.utils.ctre.Phoenix6Utils;
 
@@ -81,22 +78,23 @@ public class ArmIOReal implements ArmIO {
     public void config() {
         final CANcoderConfiguration pivotCANCoderConfiguration = new CANcoderConfiguration();
         pivotCANCoderConfiguration.MagnetSensor.MagnetOffset = armConstants.pivotCANCoderOffset();
+        pivotCANCoderConfiguration.MagnetSensor.SensorDirection = SensorDirectionValue.Clockwise_Positive;
         pivotCANCoder.getConfigurator().apply(pivotCANCoderConfiguration);
 
         final TalonFXConfiguration leftTalonFXConfiguration = new TalonFXConfiguration();
         final InvertedValue leftTalonFXInverted = InvertedValue.Clockwise_Positive;
         leftTalonFXConfiguration.Slot0 = new Slot0Configs()
 //                .withKS(0.011965)
-                .withKS(0.15)
-                .withKG(0.22)
+                .withKS(0.040477)
+                .withKG(0.23872)
                 .withGravityType(GravityTypeValue.Arm_Cosine)
-                .withKV(14.053)
-                .withKA(0.17176 * 0.5)
-                .withKP(16.658); // TODO: tune Kp
+                .withKV(13.941)
+                .withKA(0.17656 * 0.5)
+                .withKP(65.808);
         leftTalonFXConfiguration.MotionMagic.MotionMagicCruiseVelocity = 0;
-        leftTalonFXConfiguration.MotionMagic.MotionMagicExpo_kV = 14.053;
+        leftTalonFXConfiguration.MotionMagic.MotionMagicExpo_kV = 13.941;
 //        leftTalonFXConfiguration.MotionMagic.MotionMagicExpo_kA = 0.17176;
-        leftTalonFXConfiguration.MotionMagic.MotionMagicExpo_kA = 1;
+        leftTalonFXConfiguration.MotionMagic.MotionMagicExpo_kA = 1.5;
         leftTalonFXConfiguration.TorqueCurrent.PeakForwardTorqueCurrent = 80;
         leftTalonFXConfiguration.TorqueCurrent.PeakReverseTorqueCurrent = -80;
         leftTalonFXConfiguration.CurrentLimits.StatorCurrentLimit = 60;
@@ -104,6 +102,7 @@ public class ArmIOReal implements ArmIO {
         leftTalonFXConfiguration.Feedback.FeedbackSensorSource = FeedbackSensorSourceValue.FusedCANcoder;
         leftTalonFXConfiguration.Feedback.FeedbackRemoteSensorID = pivotCANCoder.getDeviceID();
         leftTalonFXConfiguration.Feedback.RotorToSensorRatio = armConstants.pivotGearing();
+//        leftTalonFXConfiguration.Feedback.SensorToMechanismRatio = armConstants.pivotGearing();
         leftTalonFXConfiguration.MotorOutput.Inverted = leftTalonFXInverted;
         leftTalonFXConfiguration.MotorOutput.NeutralMode = NeutralModeValue.Brake;
         leftPivotMotor.getConfigurator().apply(leftTalonFXConfiguration);
@@ -112,29 +111,35 @@ public class ArmIOReal implements ArmIO {
         final InvertedValue rightTalonFXInverted = InvertedValue.CounterClockwise_Positive;
         rightTalonFXConfiguration.Slot0 = new Slot0Configs()
 //                .withKS(0.011965)
-                .withKS(0.15)
-                .withKG(0.22)
+                .withKS(0.040477)
+                .withKG(0.23872)
                 .withGravityType(GravityTypeValue.Arm_Cosine)
-                .withKV(14.053)
-                .withKA(0.17176 * 0.5)
-                .withKP(16.658); // TODO: tune Kp
+                .withKV(13.941)
+                .withKA(0.17656 * 0.5)
+                .withKP(65.808);
         rightTalonFXConfiguration.MotionMagic.MotionMagicCruiseVelocity = 0;
-        rightTalonFXConfiguration.MotionMagic.MotionMagicExpo_kV = 14.053;
+        rightTalonFXConfiguration.MotionMagic.MotionMagicExpo_kV = 13.941;
 //        rightTalonFXConfiguration.MotionMagic.MotionMagicExpo_kA = 0.17176;
-        rightTalonFXConfiguration.MotionMagic.MotionMagicExpo_kA = 1;
+        rightTalonFXConfiguration.MotionMagic.MotionMagicExpo_kA = 1.5;
         rightTalonFXConfiguration.TorqueCurrent.PeakForwardTorqueCurrent = 80;
         rightTalonFXConfiguration.TorqueCurrent.PeakReverseTorqueCurrent = -80;
         rightTalonFXConfiguration.CurrentLimits.StatorCurrentLimit = 60;
         rightTalonFXConfiguration.CurrentLimits.StatorCurrentLimitEnable = true;
-        leftTalonFXConfiguration.Feedback.FeedbackSensorSource = FeedbackSensorSourceValue.FusedCANcoder;
-        leftTalonFXConfiguration.Feedback.FeedbackRemoteSensorID = pivotCANCoder.getDeviceID();
-        leftTalonFXConfiguration.Feedback.RotorToSensorRatio = armConstants.pivotGearing();
+        rightTalonFXConfiguration.Feedback.FeedbackSensorSource = FeedbackSensorSourceValue.FusedCANcoder;
+        rightTalonFXConfiguration.Feedback.FeedbackRemoteSensorID = pivotCANCoder.getDeviceID();
+        rightTalonFXConfiguration.Feedback.RotorToSensorRatio = armConstants.pivotGearing();
+//        rightTalonFXConfiguration.Feedback.SensorToMechanismRatio = armConstants.pivotGearing();
         rightTalonFXConfiguration.MotorOutput.Inverted = rightTalonFXInverted;
         rightTalonFXConfiguration.MotorOutput.NeutralMode = NeutralModeValue.Brake;
         rightPivotMotor.getConfigurator().apply(rightTalonFXConfiguration);
 
         BaseStatusSignal.setUpdateFrequencyForAll(
-                100,
+                1000,
+                _encoderPosition,
+                _encoderVelocity
+        );
+        BaseStatusSignal.setUpdateFrequencyForAll(
+                250,
                 _leftPosition,
                 _leftVelocity,
                 _leftVoltage,
@@ -142,9 +147,7 @@ public class ArmIOReal implements ArmIO {
                 _rightPosition,
                 _rightVelocity,
                 _rightVoltage,
-                _rightTorqueCurrent,
-                _encoderPosition,
-                _encoderVelocity
+                _rightTorqueCurrent
         );
         BaseStatusSignal.setUpdateFrequencyForAll(
                 4,

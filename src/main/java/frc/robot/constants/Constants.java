@@ -10,7 +10,7 @@ import edu.wpi.first.math.util.Units;
 import org.photonvision.PhotonPoseEstimator;
 
 public interface Constants {
-    RobotMode CURRENT_MODE = RobotMode.SIM;
+    RobotMode CURRENT_MODE = RobotMode.REAL;
     CompetitionType CURRENT_COMPETITION_TYPE = CompetitionType.COMPETITION;
     double LOOP_PERIOD_SECONDS = 0.02;
 
@@ -84,7 +84,7 @@ public interface Constants {
          */
         Vector<N3> STATE_STD_DEVS = VecBuilder.fill(0.1, 0.1, Units.degreesToRadians(1));
         double VISION_CAMERA_DEFAULT_STD_DEV_FACTOR = 1.0;
-        Vector<N3> VISION_STD_DEV_COEFFS = VecBuilder.fill(0.005, 0.005, 0.01);
+        Vector<N3> VISION_STD_DEV_COEFFS = VecBuilder.fill(0.02, 0.02, 0.02);
         double MULTI_TAG_MAX_AMBIGUITY = 0.4;
         double SINGLE_TAG_MAX_AMBIGUITY = 0.2;
     }
