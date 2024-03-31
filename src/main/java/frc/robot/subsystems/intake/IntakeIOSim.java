@@ -14,6 +14,7 @@ import com.ctre.phoenix6.signals.InvertedValue;
 import com.ctre.phoenix6.signals.NeutralModeValue;
 import edu.wpi.first.math.system.plant.DCMotor;
 import edu.wpi.first.math.system.plant.LinearSystemId;
+import edu.wpi.first.wpilibj.AsynchronousInterrupt;
 import edu.wpi.first.wpilibj.DigitalInput;
 import edu.wpi.first.wpilibj.Notifier;
 import edu.wpi.first.wpilibj.simulation.DCMotorSim;
@@ -36,6 +37,7 @@ public class IntakeIOSim implements IntakeIO {
 
     private final DigitalInput shooterBeamBreak;
     private final DIOSim shooterBeamBreakSim;
+    private final AsynchronousInterrupt shooterBeamBreakInterrupt;
 
     private final TalonFXSim rightRollerSim;
     private final TalonFXSim leftRollerSim;
@@ -73,7 +75,14 @@ public class IntakeIOSim implements IntakeIO {
 
         this.shooterBeamBreak = new DigitalInput(intakeConstants.sensorDigitalInput());
         this.shooterBeamBreakSim = new DIOSim(shooterBeamBreak);
-
+        this.shooterBeamBreakInterrupt = new AsynchronousInterrupt(
+                shooterBeamBreak,
+                (final Boolean rising, final Boolean falling) -> {
+                    if (falling) {
+                        toVoltage(0, 0, 0);
+                    }
+                });
+        
         final DCMotorSim rightRollerMotorSim = new DCMotorSim(
                 LinearSystemId.createDCMotorSystem(
                         0.18121 / (2 * Math.PI),

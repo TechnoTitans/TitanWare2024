@@ -12,7 +12,10 @@ import com.ctre.phoenix6.hardware.TalonFX;
 import com.ctre.phoenix6.signals.FeedbackSensorSourceValue;
 import com.ctre.phoenix6.signals.InvertedValue;
 import com.ctre.phoenix6.signals.NeutralModeValue;
+import edu.wpi.first.wpilibj.AsynchronousInterrupt;
+import edu.wpi.first.wpilibj.DMA;
 import edu.wpi.first.wpilibj.DigitalInput;
+import edu.wpi.first.wpilibj.SynchronousInterrupt;
 import frc.robot.constants.HardwareConstants;
 
 public class IntakeIOReal implements IntakeIO {
@@ -23,6 +26,7 @@ public class IntakeIOReal implements IntakeIO {
     private final TalonFX shooterFeederRoller;
 
     private final DigitalInput shooterBeamBreak;
+    private final AsynchronousInterrupt shooterBeamBreakInterrupt;
 
     private final VelocityTorqueCurrentFOC velocityTorqueCurrentFOC;
     private final TorqueCurrentFOC torqueCurrentFOC;
@@ -54,6 +58,13 @@ public class IntakeIOReal implements IntakeIO {
         this.shooterFeederRoller = new TalonFX(intakeConstants.shooterFeederRollerMotor(), intakeConstants.CANBus());
 
         this.shooterBeamBreak = new DigitalInput(intakeConstants.sensorDigitalInput());
+        this.shooterBeamBreakInterrupt = new AsynchronousInterrupt(
+                shooterBeamBreak,
+                (final Boolean rising, final Boolean falling) -> {
+                    if (falling) {
+                        toVoltage(0, 0, 0);
+                    }
+                });
 
         this.velocityTorqueCurrentFOC = new VelocityTorqueCurrentFOC(0);
         this.torqueCurrentFOC = new TorqueCurrentFOC(0);
