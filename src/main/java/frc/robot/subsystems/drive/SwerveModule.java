@@ -39,9 +39,12 @@ public class SwerveModule {
 
     public String getName() { return name; }
 
+    public void updateInputs() {
+        moduleIO.updateInputs(inputs);
+    }
+
     public void periodic() {
         final double modulePeriodicUpdateStart = Logger.getRealTimestamp();
-        moduleIO.updateInputs(inputs);
 
         final int samples = inputs.odometryTimestampsSec.length;
         odometryPositions = new SwerveModulePosition[samples];

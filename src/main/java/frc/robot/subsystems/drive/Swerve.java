@@ -265,15 +265,22 @@ public class Swerve extends SubsystemBase {
         final double swervePeriodicUpdateStart = Logger.getRealTimestamp();
         try {
             signalQueueReadWriteLock.writeLock().lock();
-            gyro.periodic();
+            gyro.updateInputs();
 
-            frontLeft.periodic();
-            frontRight.periodic();
-            backLeft.periodic();
-            backRight.periodic();
+            frontLeft.updateInputs();
+            frontRight.updateInputs();
+            backLeft.updateInputs();
+            backRight.updateInputs();
+
         } finally {
             signalQueueReadWriteLock.writeLock().unlock();
         }
+
+        gyro.periodic();
+        frontLeft.periodic();
+        frontRight.periodic();
+        backLeft.periodic();
+        backRight.periodic();
 
         Logger.recordOutput(
                 LogKey + "/PeriodicIOPeriodMs",
