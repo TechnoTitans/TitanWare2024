@@ -41,6 +41,7 @@ import java.nio.file.Paths;
 import java.util.Optional;
 import java.util.function.BooleanSupplier;
 
+@SuppressWarnings("RedundantMethodOverride")
 public class Robot extends LoggedRobot {
     private static final String AKitLogPath = "/U/logs";
     private static final String HootLogPath = "/U/logs";
@@ -71,17 +72,17 @@ public class Robot extends LoggedRobot {
     @SuppressWarnings("unused")
     public final PhotonVision photonVision = new PhotonVision(Constants.CURRENT_MODE, swerve, swerve.getPoseEstimator());
 
-    public final NoteState noteState = new NoteState(intake, superstructure);
+    public final NoteState noteState = new NoteState(Constants.CURRENT_MODE, intake);
     public final ShootCommands shootCommands = new ShootCommands(swerve, intake, superstructure);
     public final Autos autos = new Autos(swerve, intake, superstructure, noteState, shootCommands);
     public final AutoChooser<String, AutoOption> autoChooser = new AutoChooser<>(
             new AutoOption(
-                        "DoNothing",
-                        autos.doNothing(),
+                    "DoNothing",
+                    autos.doNothing(),
                     Constants.CompetitionType.COMPETITION
-                )
-            );
-    
+            )
+    );
+
     public final CommandXboxController driverController = new CommandXboxController(RobotMap.MainController);
     public final CommandXboxController coDriverController = new CommandXboxController(RobotMap.CoController);
 
@@ -90,6 +91,7 @@ public class Robot extends LoggedRobot {
     private final EventLoop testEventLoop = new EventLoop();
 
     private final Trigger teleopEnabled = new Trigger(DriverStation::isTeleopEnabled);
+
     @Override
     public void robotInit() {
         if ((RobotBase.isReal() && Constants.CURRENT_MODE != Constants.RobotMode.REAL)
@@ -214,6 +216,7 @@ public class Robot extends LoggedRobot {
 
         Logger.start();
     }
+
     @Override
     public void robotPeriodic() {
         CommandScheduler.getInstance().run();
@@ -234,35 +237,27 @@ public class Robot extends LoggedRobot {
         final NoteState.State state = noteState.getState();
         Logger.recordOutput("NoteState", state.toString());
     }
+
     @Override
     public void disabledInit() {}
+
     @Override
     public void disabledPeriodic() {}
+
     @Override
     public void autonomousInit() {
         autonomousEventLoop = autoChooser.getSelected().autoEventLoop();
     }
+
     @Override
     public void autonomousPeriodic() {
         if (autonomousEventLoop != null) {
             autonomousEventLoop.poll();
         }
     }
+
     @Override
     public void teleopInit() {
-        // TODO: superstructure to IDLE state on teleop init
-        // TODO: bonus points if it homes/zeros itself if it isn't already zeroed,
-        //  although, if we have an absolute encoder on it, we won't need to zero anymore
-//        if (!superstructure.isHomed()) {
-//            // TODO: do this better
-//            Commands.sequence(
-//                    superstructure.home(),
-//                    superstructure.toGoal(Superstructure.Goal.IDLE)
-//            ).schedule();
-//        } else {
-//            superstructure.toGoal(Superstructure.Goal.IDLE).schedule();
-//        }
-
         //noinspection SuspiciousNameCombination
         swerve.setDefaultCommand(
                 swerve.teleopDriveCommand(
@@ -272,12 +267,14 @@ public class Robot extends LoggedRobot {
                 )
         );
     }
+
     @Override
     public void teleopPeriodic() {
         if (teleopEventLoop != null) {
             teleopEventLoop.poll();
         }
     }
+
     @Override
     public void testInit() {
         CommandScheduler.getInstance().cancelAll();
@@ -300,22 +297,27 @@ public class Robot extends LoggedRobot {
 //                .whileTrue(swerve
 //                        .angularVoltageSysIdDynamicCommand(SysIdRoutine.Direction.kReverse));
     }
+
     @Override
     public void testPeriodic() {
         if (testEventLoop != null) {
             testEventLoop.poll();
         }
     }
+
     @Override
     public void simulationInit() {}
+
     @Override
     public void simulationPeriodic() {}
+
     public Command runEjectShooter() {
         return Commands.parallel(
                 intake.runEjectInCommand(),
                 superstructure.toGoal(Superstructure.Goal.EJECT)
         );
     }
+
     public Command runEjectIntake() {
         return Commands.deadline(
                 intake.runEjectOutCommand(),
@@ -326,6 +328,7 @@ public class Robot extends LoggedRobot {
     public void configureStateTriggers() {
         teleopEnabled.onTrue(superstructure.toGoal(Superstructure.Goal.IDLE));
     }
+
     public void configureAutos() {
         autoChooser.addAutoOption(new AutoOption(
                 "SourceSpeaker0",
@@ -388,6 +391,7 @@ public class Robot extends LoggedRobot {
                 Constants.CompetitionType.COMPETITION
         ));
     }
+
     public void configureButtonBindings(final EventLoop teleopEventLoop) {
         final XboxController driverHID = driverController.getHID();
         this.driverController.leftTrigger(0.5, teleopEventLoop).whileTrue(

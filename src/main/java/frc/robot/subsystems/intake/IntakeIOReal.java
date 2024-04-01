@@ -200,7 +200,6 @@ public class IntakeIOReal implements IntakeIO {
                 _shooterFeederVelocity,
                 _shooterFeederVoltage,
                 _shooterFeederTorqueCurrent
-
         );
         BaseStatusSignal.setUpdateFrequencyForAll(
                 4,
