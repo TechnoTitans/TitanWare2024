@@ -70,7 +70,7 @@ public class NoteState {
                         setState(State.STORING_FORWARD),
                         intake.storeCommand()
                 ));
-        isIntaking.and(intake.shooterBeamBreakBroken)
+        intake.intaking.and(intake.shooterBeamBreakBroken)
                 .onTrue(Commands.sequence(
                         setState(State.STORING_BACKWARD),
                         intake.storeCommand()

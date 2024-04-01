@@ -124,12 +124,11 @@ public class IntakeIOReal implements IntakeIO {
     @Override
     public void config() {
         final TalonFXConfiguration rightRollerConfig = new TalonFXConfiguration();
-        // TODO: needs FF and tuned PID
         rightRollerConfig.Slot0 = new Slot0Configs()
-                .withKP(12)
-                .withKA(0)
-                .withKV(0)
-                .withKS(0);
+                .withKS(3.3326)
+                .withKV(0.15104)
+                .withKA(0.2004)
+                .withKP(10.746);
         rightRollerConfig.TorqueCurrent.PeakForwardTorqueCurrent = 80;
         rightRollerConfig.TorqueCurrent.PeakReverseTorqueCurrent = -80;
         rightRollerConfig.CurrentLimits.StatorCurrentLimit = 60;
@@ -145,12 +144,11 @@ public class IntakeIOReal implements IntakeIO {
         rightRoller.getConfigurator().apply(rightRollerConfig);
 
         final TalonFXConfiguration leftRollerConfig = new TalonFXConfiguration();
-        // TODO: needs FF and tuned PID
         leftRollerConfig.Slot0 = new Slot0Configs()
-                .withKP(12)
-                .withKA(0)
-                .withKV(0)
-                .withKS(0);
+                .withKS(8.747)
+                .withKV(0.12886)
+                .withKA(0.27559)
+                .withKP(10.901);
         leftRollerConfig.TorqueCurrent.PeakForwardTorqueCurrent = 80;
         leftRollerConfig.TorqueCurrent.PeakReverseTorqueCurrent = -80;
         leftRollerConfig.CurrentLimits.StatorCurrentLimit = 60;
@@ -166,12 +164,11 @@ public class IntakeIOReal implements IntakeIO {
         leftRoller.getConfigurator().apply(leftRollerConfig);
 
         final TalonFXConfiguration shooterFeederConfig = new TalonFXConfiguration();
-        // TODO: needs FF and tuned PID
         shooterFeederConfig.Slot0 = new Slot0Configs()
-                .withKP(12)
-                .withKA(0)
-                .withKV(0)
-                .withKS(0);
+                .withKS(1.1402)
+                .withKV(0.089219)
+                .withKA(0.059295)
+                .withKP(10.585);
         shooterFeederConfig.TorqueCurrent.PeakForwardTorqueCurrent = 80;
         shooterFeederConfig.TorqueCurrent.PeakReverseTorqueCurrent = -80;
         shooterFeederConfig.CurrentLimits.StatorCurrentLimit = 60;

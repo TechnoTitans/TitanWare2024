@@ -282,7 +282,14 @@ public class Robot extends LoggedRobot {
         coDriverController.leftBumper(testEventLoop)
                 .onTrue(Commands.runOnce(SignalLogger::stop));
 
-        coDriverController.rightBumper(testEventLoop).whileTrue(shooter.torqueCurrentSysIdCommand());
+        coDriverController.y(testEventLoop).and(coDriverController.rightBumper(testEventLoop))
+                .whileTrue(shooter.torqueCurrentSysIdCommand());
+
+        coDriverController.x(testEventLoop).and(coDriverController.rightBumper(testEventLoop))
+                .whileTrue(arm.voltageSysIdCommand());
+
+        coDriverController.a(testEventLoop).and(coDriverController.rightBumper(testEventLoop))
+                .whileTrue(intake.torqueCurrentSysIdCommand());
 
 //        coDriverController.y(testEventLoop)
 //                .whileTrue(swerve
@@ -394,14 +401,15 @@ public class Robot extends LoggedRobot {
 
     public void configureButtonBindings(final EventLoop teleopEventLoop) {
         final XboxController driverHID = driverController.getHID();
-        this.driverController.leftTrigger(0.5, teleopEventLoop).whileTrue(
-                intake.intakeCommand(
-                        Commands.startEnd(
-                                () -> driverHID.setRumble(GenericHID.RumbleType.kBothRumble, 0.5),
-                                () -> driverHID.setRumble(GenericHID.RumbleType.kBothRumble, 0)
-                        ).withTimeout(0.5)
-                )
+        this.driverController.leftTrigger(0.5, teleopEventLoop).whileTrue(intake.intakeCommand());
+        // TODO: does this rumble fast enough?
+        this.noteState.hasNote.onTrue(
+                Commands.startEnd(
+                        () -> driverHID.setRumble(GenericHID.RumbleType.kBothRumble, 0.5),
+                        () -> driverHID.setRumble(GenericHID.RumbleType.kBothRumble, 0)
+                ).withTimeout(0.5)
         );
+
         this.driverController.rightTrigger(0.5, teleopEventLoop)
 //                .whileTrue(shootCommands.stopAimAndShoot())
                 .whileTrue(shootCommands.deferredStopAimAndShoot())
@@ -409,6 +417,8 @@ public class Robot extends LoggedRobot {
 
         this.driverController.a(teleopEventLoop).whileTrue(shootCommands.amp());
         this.driverController.y(teleopEventLoop).onTrue(swerve.zeroRotationCommand());
+
+        this.driverController.b(teleopEventLoop).whileTrue(intake.feedCommand());
 
         this.driverController.leftBumper(teleopEventLoop).whileTrue(
                 Commands.startEnd(

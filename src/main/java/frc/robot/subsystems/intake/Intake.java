@@ -105,19 +105,14 @@ public class Intake extends SubsystemBase {
                 .andThen(instantStopCommand());
     }
 
-    public Command intakeCommand(final Command runOnHasNote) {
+    public Command intakeCommand() {
         return Commands.sequence(
                 runOnce(() -> this.intakingActive = true),
                 runVelocityCommand(22, 22, 22)
                         .until(shooterBeamBreakBroken),
-                instantStopCommand(),
-//                storeCommand(),
-                runOnHasNote.asProxy()
+                instantStopCommand()
+//                storeCommand()
         ).finallyDo(() -> this.intakingActive = false);
-    }
-
-    public Command intakeCommand() {
-        return intakeCommand(Commands.none());
     }
 
     public Command feedHalfCommand() {
@@ -152,11 +147,16 @@ public class Intake extends SubsystemBase {
     }
 
     public Command instantStopCommand() {
-        return runOnce(() -> intakeIO.toVoltage(
-                0,
-                0,
-                0
-        ));
+        return runOnce(() -> {
+            setpoint.rightRollerVelocityRotsPerSec = 0;
+            setpoint.leftRollerVelocityRotsPerSec = 0;
+            setpoint.shooterFeederRotsPerSec = 0;
+            intakeIO.toVoltage(
+                    0,
+                    0,
+                    0
+            );
+        });
     }
 
     public Command runStopCommand() {
@@ -178,7 +178,13 @@ public class Intake extends SubsystemBase {
                     leftRollerVelocityRotsPerSec,
                     shooterFeederRotsPerSec
             );
-        }, () -> intakeIO.toVelocity(0, 0, 0));
+        }, () -> {
+            setpoint.rightRollerVelocityRotsPerSec = 0;
+            setpoint.leftRollerVelocityRotsPerSec = 0;
+            setpoint.shooterFeederRotsPerSec = 0;
+
+            intakeIO.toVelocity(0, 0, 0);
+        });
     }
 
     public Command runVoltageCommand(
@@ -228,7 +234,7 @@ public class Intake extends SubsystemBase {
     }
 
     @SuppressWarnings("unused")
-    public Command runSysIDRoutineTorqueCurrent() {
+    public Command torqueCurrentSysIdCommand() {
         return Commands.sequence(
                 torqueCurrentSysIdRoutine.quasistatic(SysIdRoutine.Direction.kForward),
                 Commands.waitSeconds(4),

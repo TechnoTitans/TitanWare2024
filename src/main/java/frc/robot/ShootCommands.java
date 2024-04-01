@@ -101,6 +101,17 @@ public class ShootCommands {
         return superstructure.runState(ShootCommands.shotParametersSupplier(swerve::getPose));
     }
 
+    public Command shoot() {
+        return Commands.deadline(
+                intake
+                        .runStopCommand()
+                        .until(superstructure.atSetpoint)
+                        .withTimeout(1) // TODO: fixme
+                        .andThen(intake.feedCommand()),
+                superstructure.runState(ShootCommands.shotParametersSupplier(swerve::getPose))
+        );
+    }
+
     public Command stopAimAndShoot() {
         return Commands.deadline(
                 Commands.deadline(
@@ -112,17 +123,6 @@ public class ShootCommands {
                         superstructure.runState(ShootCommands.shotParametersSupplier(swerve::getPose))
                 ),
                 swerve.faceAngle(ShootCommands.angleToSpeakerSupplier(swerve::getPose))
-        );
-    }
-
-    public Command shoot() {
-        return Commands.deadline(
-                intake
-                        .runStopCommand()
-                        .until(superstructure.atSetpoint)
-                        .withTimeout(1) // TODO: fixme
-                        .andThen(intake.feedCommand()),
-                superstructure.runState(ShootCommands.shotParametersSupplier(swerve::getPose))
         );
     }
 
