@@ -20,6 +20,7 @@ import frc.robot.constants.RobotMap;
 import frc.robot.state.NoteState;
 import frc.robot.subsystems.drive.Swerve;
 import frc.robot.subsystems.intake.Intake;
+import frc.robot.subsystems.superstructure.ShootOnTheMove;
 import frc.robot.subsystems.superstructure.ShotParameters;
 import frc.robot.subsystems.superstructure.Superstructure;
 import frc.robot.subsystems.superstructure.arm.Arm;
@@ -234,6 +235,14 @@ public class Robot extends LoggedRobot {
         Logger.recordOutput("ShotParameters/RightVelocityRotsPerSec", shotParameters.rightVelocityRotsPerSec());
         Logger.recordOutput("ShotParameters/AmpVelocityRotsPerSec", shotParameters.ampVelocityRotsPerSec());
 
+        final ShootOnTheMove.Shot shotWhileMoving = ShootOnTheMove.calculate(
+                swerve.getPose(),
+                swerve.getRobotRelativeSpeeds(),
+                currentPose -> shotParameters
+        );
+
+        Logger.recordOutput("ShootWhileMoving/FuturePose", shotWhileMoving.futurePose());
+
         final NoteState.State state = noteState.getState();
         Logger.recordOutput("NoteState", state.toString());
     }
@@ -411,8 +420,11 @@ public class Robot extends LoggedRobot {
         );
 
         this.driverController.rightTrigger(0.5, teleopEventLoop)
-//                .whileTrue(shootCommands.stopAimAndShoot())
                 .whileTrue(shootCommands.deferredStopAimAndShoot())
+//                .whileTrue(shootCommands.teleopDriveAimAndShoot(
+//                        driverController::getLeftY,
+//                        driverController::getLeftX
+//                ))
                 .onFalse(superstructure.toGoal(Superstructure.Goal.IDLE));
 
         this.driverController.a(teleopEventLoop).whileTrue(shootCommands.amp());

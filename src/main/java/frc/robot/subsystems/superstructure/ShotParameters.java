@@ -52,7 +52,7 @@ public class ShotParameters {
         ));
 
         shotDataMap.put(2.5d, new Parameters(
-                Rotation2d.fromDegrees(38.5),
+                Rotation2d.fromDegrees(37),
                 84.433,
                 128.883,
                 84.433,
@@ -68,7 +68,7 @@ public class ShotParameters {
         ));
 
         shotDataMap.put(3.5d, new Parameters(
-                Rotation2d.fromDegrees(28.5),
+                Rotation2d.fromDegrees(30),
                 84.433,
                 128.883,
                 84.433,
@@ -84,7 +84,7 @@ public class ShotParameters {
         ));
 
         shotDataMap.put(4.5d, new Parameters(
-                Rotation2d.fromDegrees(25),
+                Rotation2d.fromDegrees(25.5),
                 84.433,
                 128.883,
                 84.433,
@@ -92,7 +92,7 @@ public class ShotParameters {
         ));
 
         shotDataMap.put(5d, new Parameters(
-                Rotation2d.fromDegrees(23.75),
+                Rotation2d.fromDegrees(24.75),
                 84.433,
                 128.883,
                 84.433,
@@ -100,42 +100,42 @@ public class ShotParameters {
         ));
 
         shotDataMap.put(5.5d, new Parameters(
-                Rotation2d.fromDegrees(21.5),
-                84.433,
-                128.883,
-                84.433,
+                Rotation2d.fromDegrees(22),
+                100,
+                133.3,
+                100,
                 0
         ));
 
         shotDataMap.put(6d, new Parameters(
-                Rotation2d.fromDegrees(19.5),
-                84.433,
-                128.883,
-                84.433,
+                Rotation2d.fromDegrees(21),
+                100,
+                133.3,
+                100,
                 0
         ));
 
         shotDataMap.put(6.5d, new Parameters(
-                Rotation2d.fromDegrees(14.5),
-                84.433,
-                128.883,
-                84.433,
+                Rotation2d.fromDegrees(18.5),
+                100,
+                133.3,
+                100,
                 0
         ));
 
         shotDataMap.put(7d, new Parameters(
-                Rotation2d.fromDegrees(14.5),
-                84.433,
-                128.883,
-                84.433,
+                Rotation2d.fromDegrees(17.5),
+                100,
+                133.3,
+                100,
                 0
         ));
 
         shotDataMap.put(7.5d, new Parameters(
-                Rotation2d.fromDegrees(13.5),
-                84.433,
-                128.883,
-                84.433,
+                Rotation2d.fromDegrees(16.5),
+                100,
+                133.3,
+                100,
                 0
         ));
     }

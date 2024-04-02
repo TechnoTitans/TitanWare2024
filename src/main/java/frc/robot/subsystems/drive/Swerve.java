@@ -120,8 +120,8 @@ public class Swerve extends SubsystemBase {
                 )
         );
         this.headingController.enableContinuousInput(-Math.PI, Math.PI);
-        this.headingController.setTolerance(Units.degreesToRadians(3), Units.degreesToRadians(6));
-        this.atHeadingSetpoint = new Trigger(headingController::atGoal);
+        this.headingController.setTolerance(Units.degreesToRadians(3));
+        this.atHeadingSetpoint = new Trigger(headingController::atSetpoint);
 
         this.holonomicDriveWithPIDController = new HolonomicDriveWithPIDController(
                 new PIDController(5, 0, 0),
@@ -265,13 +265,12 @@ public class Swerve extends SubsystemBase {
         final double swervePeriodicUpdateStart = Logger.getRealTimestamp();
         try {
             signalQueueReadWriteLock.writeLock().lock();
-            gyro.updateInputs();
 
+            gyro.updateInputs();
             frontLeft.updateInputs();
             frontRight.updateInputs();
             backLeft.updateInputs();
             backRight.updateInputs();
-
         } finally {
             signalQueueReadWriteLock.writeLock().unlock();
         }
@@ -355,6 +354,8 @@ public class Swerve extends SubsystemBase {
                 getPose(),
                 GyroUtils.rpyToRotation3d(getRoll(), getPitch(), getYaw())
         ));
+
+        Logger.recordOutput(LogKey + "/HeadingController/AtHeadingSetpoint", atHeadingSetpoint.getAsBoolean());
     }
 
     public SwerveDriveKinematics getKinematics() {
@@ -574,6 +575,10 @@ public class Swerve extends SubsystemBase {
 
                     final Rotation2d rotationTarget = rotationTargetSupplier.get();
                     Logger.recordOutput(LogKey + "/HeadingController/TargetHeading", rotationTarget);
+                    Logger.recordOutput(LogKey + "/HeadingController/TargetPose", new Pose2d(
+                            getPose().getTranslation(),
+                            rotationTarget
+                    ));
 
                     drive(
                             leftStickSpeeds.getX(),
@@ -601,6 +606,11 @@ public class Swerve extends SubsystemBase {
                 run(() -> {
                     final Rotation2d targetHeading = rotationTargetSupplier.get();
                     Logger.recordOutput(LogKey + "/HeadingController/TargetHeading", targetHeading);
+                    Logger.recordOutput(LogKey + "/HeadingController/TargetPose", new Pose2d(
+                            getPose().getTranslation(),
+                            targetHeading
+                    ));
+
                     drive(
                             0,
                             0,

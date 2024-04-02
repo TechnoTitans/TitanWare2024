@@ -63,7 +63,7 @@ public class SwerveModule {
                 logKey + "/DriveDesiredVelocityRotsPerSec",
                 computeDesiredDriverVelocity(
                         lastDesiredState,
-                        Rotation2d.fromRotations(inputs.turnAbsolutePositionRots)
+                        Rotation2d.fromRotations(inputs.turnPositionRots)
                 )
         );
 
@@ -84,7 +84,7 @@ public class SwerveModule {
      * @see Rotation2d
      */
     public Rotation2d getAngle() {
-        return Rotation2d.fromRotations(inputs.turnAbsolutePositionRots);
+        return Rotation2d.fromRotations(inputs.turnPositionRots);
     }
 
     /**

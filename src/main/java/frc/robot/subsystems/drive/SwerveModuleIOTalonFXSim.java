@@ -53,12 +53,10 @@ public class SwerveModuleIOTalonFXSim implements SwerveModuleIO {
     private final StatusSignal<Double> _drivePosition;
     private final StatusSignal<Double> _driveVelocity;
     private final StatusSignal<Double> _driveTorqueCurrent;
-    private final StatusSignal<Double> _driveStatorCurrent;
     private final StatusSignal<Double> _driveDeviceTemp;
     private final StatusSignal<Double> _turnPosition;
     private final StatusSignal<Double> _turnVelocity;
     private final StatusSignal<Double> _turnTorqueCurrent;
-    private final StatusSignal<Double> _turnStatorCurrent;
     private final StatusSignal<Double> _turnDeviceTemp;
 
     // Odometry StatusSignal update buffers
@@ -121,12 +119,10 @@ public class SwerveModuleIOTalonFXSim implements SwerveModuleIO {
         this._drivePosition = driveMotor.getPosition();
         this._driveVelocity = driveMotor.getVelocity();
         this._driveTorqueCurrent = driveMotor.getTorqueCurrent();
-        this._driveStatorCurrent = driveMotor.getStatorCurrent();
         this._driveDeviceTemp = driveMotor.getDeviceTemp();
         this._turnPosition = turnEncoder.getAbsolutePosition();
         this._turnVelocity = turnEncoder.getVelocity();
         this._turnTorqueCurrent = turnMotor.getTorqueCurrent();
-        this._turnStatorCurrent = turnMotor.getStatorCurrent();
         this._turnDeviceTemp = turnMotor.getDeviceTemp();
 
         this.timestampBuffer = odometryThreadRunner.makeTimestampBuffer();
@@ -202,25 +198,21 @@ public class SwerveModuleIOTalonFXSim implements SwerveModuleIO {
                 _drivePosition,
                 _driveVelocity,
                 _driveTorqueCurrent,
-                _driveStatorCurrent,
                 _driveDeviceTemp,
                 _turnPosition,
                 _turnVelocity,
                 _turnTorqueCurrent,
-                _turnStatorCurrent,
                 _turnDeviceTemp
         );
 
         inputs.drivePositionRots = getDrivePosition();
         inputs.driveVelocityRotsPerSec = _driveVelocity.getValue();
         inputs.driveTorqueCurrentAmps = _driveTorqueCurrent.getValue();
-        inputs.driveStatorCurrentAmps = _driveStatorCurrent.getValue();
         inputs.driveTempCelsius = _driveDeviceTemp.getValue();
 
-        inputs.turnAbsolutePositionRots = getRawAngle();
+        inputs.turnPositionRots = getRawAngle();
         inputs.turnVelocityRotsPerSec = _turnVelocity.getValue();
         inputs.turnTorqueCurrentAmps = _turnTorqueCurrent.getValue();
-        inputs.turnStatorCurrentAmps = _turnStatorCurrent.getValue();
         inputs.turnTempCelsius = _turnDeviceTemp.getValue();
 
         inputs.odometryTimestampsSec = OdometryThreadRunner.writeBufferToArray(timestampBuffer);

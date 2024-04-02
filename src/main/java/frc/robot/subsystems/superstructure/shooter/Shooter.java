@@ -48,6 +48,7 @@ public class Shooter extends SubsystemBase {
         EJECT(80, 80, 80),
         BACK_FEED(-60, -60, -60),
         AMP(60, -60, -60),
+        SHOOT_AMP(15, 15, 15),
         TEST(84.433, 84.433, 128.883),
         SUBWOOFER(80, 80, 80);
 

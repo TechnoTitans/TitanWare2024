@@ -108,7 +108,7 @@ public class Intake extends SubsystemBase {
     public Command intakeCommand() {
         return Commands.sequence(
                 runOnce(() -> this.intakingActive = true),
-                runVelocityCommand(22, 22, 22)
+                runVelocityCommand(22, 22, 16)
                         .until(shooterBeamBreakBroken),
                 instantStopCommand()
 //                storeCommand()

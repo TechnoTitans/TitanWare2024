@@ -129,15 +129,15 @@ public class IntakeIOReal implements IntakeIO {
                 .withKV(0.15104)
                 .withKA(0.2004)
                 .withKP(10.746);
-        rightRollerConfig.TorqueCurrent.PeakForwardTorqueCurrent = 80;
-        rightRollerConfig.TorqueCurrent.PeakReverseTorqueCurrent = -80;
+        rightRollerConfig.TorqueCurrent.PeakForwardTorqueCurrent = 60;
+        rightRollerConfig.TorqueCurrent.PeakReverseTorqueCurrent = -60;
         rightRollerConfig.CurrentLimits.StatorCurrentLimit = 60;
         rightRollerConfig.CurrentLimits.StatorCurrentLimitEnable = true;
         rightRollerConfig.CurrentLimits.SupplyCurrentLimit = 40;
         rightRollerConfig.CurrentLimits.SupplyCurrentThreshold = 55;
-        rightRollerConfig.CurrentLimits.SupplyTimeThreshold = 1.5;
+        rightRollerConfig.CurrentLimits.SupplyTimeThreshold = 0.25;
         rightRollerConfig.CurrentLimits.SupplyCurrentLimitEnable = true;
-        rightRollerConfig.MotorOutput.NeutralMode = NeutralModeValue.Coast;
+        rightRollerConfig.MotorOutput.NeutralMode = NeutralModeValue.Brake;
         rightRollerConfig.MotorOutput.Inverted = InvertedValue.CounterClockwise_Positive;
         rightRollerConfig.Feedback.FeedbackSensorSource = FeedbackSensorSourceValue.RotorSensor;
         rightRollerConfig.Feedback.SensorToMechanismRatio = intakeConstants.rightMotorGearing();
@@ -149,15 +149,15 @@ public class IntakeIOReal implements IntakeIO {
                 .withKV(0.12886)
                 .withKA(0.27559)
                 .withKP(10.901);
-        leftRollerConfig.TorqueCurrent.PeakForwardTorqueCurrent = 80;
-        leftRollerConfig.TorqueCurrent.PeakReverseTorqueCurrent = -80;
+        leftRollerConfig.TorqueCurrent.PeakForwardTorqueCurrent = 60;
+        leftRollerConfig.TorqueCurrent.PeakReverseTorqueCurrent = -60;
         leftRollerConfig.CurrentLimits.StatorCurrentLimit = 60;
         leftRollerConfig.CurrentLimits.StatorCurrentLimitEnable = true;
         leftRollerConfig.CurrentLimits.SupplyCurrentLimit = 40;
         leftRollerConfig.CurrentLimits.SupplyCurrentThreshold = 55;
-        leftRollerConfig.CurrentLimits.SupplyTimeThreshold = 1.5;
+        leftRollerConfig.CurrentLimits.SupplyTimeThreshold = 0.25;
         leftRollerConfig.CurrentLimits.SupplyCurrentLimitEnable = true;
-        leftRollerConfig.MotorOutput.NeutralMode = NeutralModeValue.Coast;
+        leftRollerConfig.MotorOutput.NeutralMode = NeutralModeValue.Brake;
         leftRollerConfig.MotorOutput.Inverted = InvertedValue.CounterClockwise_Positive;
         leftRollerConfig.Feedback.FeedbackSensorSource = FeedbackSensorSourceValue.RotorSensor;
         leftRollerConfig.Feedback.SensorToMechanismRatio = intakeConstants.leftMotorGearing();
@@ -169,9 +169,9 @@ public class IntakeIOReal implements IntakeIO {
                 .withKV(0.089219)
                 .withKA(0.059295)
                 .withKP(10.585);
-        shooterFeederConfig.TorqueCurrent.PeakForwardTorqueCurrent = 80;
-        shooterFeederConfig.TorqueCurrent.PeakReverseTorqueCurrent = -80;
-        shooterFeederConfig.CurrentLimits.StatorCurrentLimit = 60;
+        shooterFeederConfig.TorqueCurrent.PeakForwardTorqueCurrent = 40;
+        shooterFeederConfig.TorqueCurrent.PeakReverseTorqueCurrent = -40;
+        shooterFeederConfig.CurrentLimits.StatorCurrentLimit = 40;
         shooterFeederConfig.CurrentLimits.StatorCurrentLimitEnable = true;
         shooterFeederConfig.CurrentLimits.SupplyCurrentLimit = 40;
         shooterFeederConfig.CurrentLimits.SupplyCurrentThreshold = 55;
