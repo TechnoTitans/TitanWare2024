@@ -19,6 +19,7 @@ import frc.robot.constants.HardwareConstants;
 import frc.robot.constants.RobotMap;
 import frc.robot.state.NoteState;
 import frc.robot.subsystems.drive.Swerve;
+import frc.robot.subsystems.drive.constants.SwerveConstants;
 import frc.robot.subsystems.intake.Intake;
 import frc.robot.subsystems.superstructure.ShootOnTheMove;
 import frc.robot.subsystems.superstructure.ShotParameters;
@@ -60,10 +61,10 @@ public class Robot extends LoggedRobot {
     public final Swerve swerve = new Swerve(
             Constants.CURRENT_MODE,
             HardwareConstants.GYRO,
-            HardwareConstants.FRONT_LEFT_MODULE,
-            HardwareConstants.FRONT_RIGHT_MODULE,
-            HardwareConstants.BACK_LEFT_MODULE,
-            HardwareConstants.BACK_RIGHT_MODULE
+            SwerveConstants.FrontLeftModule,
+            SwerveConstants.FrontRightModule,
+            SwerveConstants.BackLeftModule,
+            SwerveConstants.BackRightModule
     );
     public final Intake intake = new Intake(Constants.CURRENT_MODE, HardwareConstants.INTAKE);
     public final Arm arm = new Arm(Constants.CURRENT_MODE, HardwareConstants.ARM);
