@@ -52,36 +52,15 @@ public class ControllerUtils {
         return MathUtil.applyDeadband(Math.copySign(input * input, input), deadband);
     }
 
-    public static double applyDeadband(final double input, final double deadband) {
-        // yes, this negative sign does need to exist because controller stick up is -1 not 1
-        return -MathUtil.applyDeadband(input, Math.abs(deadband));
-    }
-
-    public static double applyWeights(
-            final double input,
-            final double scalar,
-            final double sensitivity,
-            final double weight
-    ) {
-        return input * scalar * sensitivity * weight;
-    }
-
-    public static Rotation2d getFieldRelativeAngleFromStickInputs(final double xInput, final double yInput) {
-        return Rotation2d.fromRadians(Math.atan2(yInput, xInput))
-                .rotateBy(STICK_TO_FIELD_RELATIVE_ROTATION)
-                .times(STICK_TO_GYRO_ROTATION);
-    }
-
-    public static Command getRumbleForDurationCommand(
+    public static Command rumbleForDurationCommand(
             final GenericHID controller,
             final GenericHID.RumbleType rumbleType,
             final double value,
             final double timeSeconds
     ) {
-        return Commands.sequence(
-                Commands.runOnce(() -> controller.setRumble(rumbleType, value)),
-                Commands.waitSeconds(timeSeconds),
-                Commands.runOnce(() -> controller.setRumble(rumbleType, 0))
-        );
+        return Commands.startEnd(
+                () -> controller.setRumble(rumbleType, value),
+                () -> controller.setRumble(rumbleType, 0)
+        ).withTimeout(timeSeconds);
     }
 }

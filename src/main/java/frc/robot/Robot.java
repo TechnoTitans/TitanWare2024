@@ -29,6 +29,7 @@ import frc.robot.subsystems.superstructure.shooter.Shooter;
 import frc.robot.subsystems.vision.PhotonVision;
 import frc.robot.utils.closeables.ToClose;
 import frc.robot.utils.subsystems.VirtualSubsystem;
+import frc.robot.utils.teleop.ControllerUtils;
 import frc.robot.utils.teleop.Profiler;
 import org.littletonrobotics.junction.LogFileUtil;
 import org.littletonrobotics.junction.LoggedRobot;
@@ -412,12 +413,14 @@ public class Robot extends LoggedRobot {
     public void configureButtonBindings(final EventLoop teleopEventLoop) {
         final XboxController driverHID = driverController.getHID();
         this.driverController.leftTrigger(0.5, teleopEventLoop).whileTrue(intake.intakeCommand());
-        // TODO: does this rumble fast enough?
+        // TODO: does this rumble fast/early enough?
         this.noteState.hasNote.onTrue(
-                Commands.startEnd(
-                        () -> driverHID.setRumble(GenericHID.RumbleType.kBothRumble, 0.5),
-                        () -> driverHID.setRumble(GenericHID.RumbleType.kBothRumble, 0)
-                ).withTimeout(0.5)
+                ControllerUtils.rumbleForDurationCommand(
+                        driverController.getHID(),
+                        GenericHID.RumbleType.kBothRumble,
+                        0.5,
+                        0.5
+                )
         );
 
         this.driverController.rightTrigger(0.5, teleopEventLoop)

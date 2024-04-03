@@ -32,6 +32,7 @@ import java.util.stream.Stream;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
+@SuppressWarnings("unused")
 @Disabled // TODO: make this better, until then, these tests are all pretty useless
 @ExtendWith(MockitoExtension.class)
 public class SwerveTest {
