@@ -94,7 +94,6 @@ public class Robot extends LoggedRobot {
     private final EventLoop teleopEventLoop = new EventLoop();
     private final EventLoop testEventLoop = new EventLoop();
 
-    private final Trigger autoEnabled = new Trigger(DriverStation::isAutonomousEnabled);
     private final Trigger teleopEnabled = new Trigger(DriverStation::isTeleopEnabled);
 
     @Override
@@ -348,11 +347,6 @@ public class Robot extends LoggedRobot {
 
     public void configureStateTriggers() {
         teleopEnabled.onTrue(superstructure.toGoal(Superstructure.Goal.IDLE));
-        autoEnabled.whileTrue(Commands.repeatingSequence(
-                superstructure.toGoal(Superstructure.Goal.SUBWOOFER)
-                        .withTimeout(4),
-                Commands.waitSeconds(4)
-        ));
     }
 
     public void configureAutos() {
