@@ -2,6 +2,12 @@ package frc.robot.subsystems.superstructure.arm;
 
 import com.ctre.phoenix6.SignalLogger;
 import edu.wpi.first.math.MathUtil;
+import edu.wpi.first.math.VecBuilder;
+import edu.wpi.first.math.Vector;
+import edu.wpi.first.math.geometry.Pose3d;
+import edu.wpi.first.math.geometry.Rotation3d;
+import edu.wpi.first.math.geometry.Transform3d;
+import edu.wpi.first.math.numbers.N3;
 import edu.wpi.first.math.util.Units;
 import edu.wpi.first.units.*;
 import edu.wpi.first.wpilibj2.command.Command;
@@ -11,6 +17,7 @@ import edu.wpi.first.wpilibj2.command.button.Trigger;
 import edu.wpi.first.wpilibj2.command.sysid.SysIdRoutine;
 import frc.robot.constants.Constants;
 import frc.robot.constants.HardwareConstants;
+import frc.robot.constants.SimConstants;
 import frc.robot.utils.logging.LogUtils;
 import org.littletonrobotics.junction.Logger;
 
@@ -73,6 +80,9 @@ public class Arm extends SubsystemBase {
         }
     }
 
+    private final Vector<N3> RotationAxis = VecBuilder.fill(0, 1, 0);
+    private final Pose3d RootPose = new Pose3d().transformBy(SimConstants.Arm.ROBOT_TO_PIVOT_TRANSFORM);
+
     public Arm(final Constants.RobotMode mode, final HardwareConstants.ArmConstants armConstants) {
         this.armIO = switch (mode) {
             case REAL -> new ArmIOReal(armConstants);
@@ -101,6 +111,16 @@ public class Arm extends SubsystemBase {
         this.armIO.config();
     }
 
+    private Pose3d armPoseFromAngle(final double angleRads) {
+        return RootPose.transformBy(
+                new Transform3d(
+                        SimConstants.Arm.PIVOT_SHAFT_TO_CENTER_TRANSFORM
+                                .rotateBy(new Rotation3d(RotationAxis, angleRads)),
+                        new Rotation3d(0, angleRads, 0)
+                )
+        );
+    }
+
     @Override
     public void periodic() {
         final double armPeriodicUpdateStart = Logger.getRealTimestamp();
@@ -127,6 +147,16 @@ public class Arm extends SubsystemBase {
         Logger.recordOutput(LogKey + "/AtPositionSetpoint", atPositionSetpoint());
         Logger.recordOutput(LogKey + "/AtPivotLowerLimit", atPivotLowerLimit());
         Logger.recordOutput(LogKey + "/AtPivotUpperLimit", atPivotUpperLimit());
+
+        Logger.recordOutput(
+                LogKey + "/Pose",
+                armPoseFromAngle(Units.rotationsToRadians(-inputs.leftPivotPositionRots))
+        );
+
+        Logger.recordOutput(
+                LogKey + "/GoalPose",
+                armPoseFromAngle(Units.rotationsToRadians(-setpoint.pivotPositionRots))
+        );
     }
 
     private boolean atPositionSetpoint() {

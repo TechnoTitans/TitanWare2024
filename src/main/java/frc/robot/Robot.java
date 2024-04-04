@@ -190,6 +190,7 @@ public class Robot extends LoggedRobot {
                 command -> Logger.recordOutput("Commands/Finished", command.getName())
         );
 
+        // TODO: don't use streams
         CommandScheduler.getInstance().onCommandInterrupt(
                 (interrupted, interrupting) -> {
                     Logger.recordOutput("Commands/Interrupted", interrupted.getName());
