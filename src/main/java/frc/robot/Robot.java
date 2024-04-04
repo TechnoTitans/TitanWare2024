@@ -20,7 +20,9 @@ import frc.robot.constants.HardwareConstants;
 import frc.robot.constants.RobotMap;
 import frc.robot.state.NoteState;
 import frc.robot.subsystems.drive.Swerve;
+import frc.robot.subsystems.drive.constants.SwerveConstants;
 import frc.robot.subsystems.intake.Intake;
+import frc.robot.subsystems.superstructure.ShootOnTheMove;
 import frc.robot.subsystems.superstructure.ShotParameters;
 import frc.robot.subsystems.superstructure.Superstructure;
 import frc.robot.subsystems.superstructure.arm.Arm;
@@ -28,6 +30,7 @@ import frc.robot.subsystems.superstructure.shooter.Shooter;
 import frc.robot.subsystems.vision.PhotonVision;
 import frc.robot.utils.closeables.ToClose;
 import frc.robot.utils.subsystems.VirtualSubsystem;
+import frc.robot.utils.teleop.ControllerUtils;
 import frc.robot.utils.teleop.Profiler;
 import org.littletonrobotics.junction.LogFileUtil;
 import org.littletonrobotics.junction.LoggedRobot;
@@ -60,10 +63,10 @@ public class Robot extends LoggedRobot {
     public final Swerve swerve = new Swerve(
             Constants.CURRENT_MODE,
             HardwareConstants.GYRO,
-            HardwareConstants.FRONT_LEFT_MODULE,
-            HardwareConstants.FRONT_RIGHT_MODULE,
-            HardwareConstants.BACK_LEFT_MODULE,
-            HardwareConstants.BACK_RIGHT_MODULE
+            SwerveConstants.FrontLeftModule,
+            SwerveConstants.FrontRightModule,
+            SwerveConstants.BackLeftModule,
+            SwerveConstants.BackRightModule
     );
     public final Intake intake = new Intake(Constants.CURRENT_MODE, HardwareConstants.INTAKE);
     public final Arm arm = new Arm(Constants.CURRENT_MODE, HardwareConstants.ARM);
@@ -73,7 +76,7 @@ public class Robot extends LoggedRobot {
     @SuppressWarnings("unused")
     public final PhotonVision photonVision = new PhotonVision(Constants.RobotMode.REPLAY, swerve, swerve.getPoseEstimator());
 
-    public final NoteState noteState = new NoteState(intake, superstructure);
+    public final NoteState noteState = new NoteState(Constants.CURRENT_MODE, intake);
     public final ShootCommands shootCommands = new ShootCommands(swerve, intake, superstructure);
     public final Autos autos = new Autos(swerve, intake, superstructure, noteState, shootCommands);
     public final AutoChooser<String, AutoOption> autoChooser = new AutoChooser<>(
@@ -237,6 +240,14 @@ public class Robot extends LoggedRobot {
         Logger.recordOutput("ShotParameters/RightVelocityRotsPerSec", shotParameters.rightVelocityRotsPerSec());
         Logger.recordOutput("ShotParameters/AmpVelocityRotsPerSec", shotParameters.ampVelocityRotsPerSec());
 
+        final ShootOnTheMove.Shot shotWhileMoving = ShootOnTheMove.calculate(
+                swerve.getPose(),
+                swerve.getRobotRelativeSpeeds(),
+                currentPose -> shotParameters
+        );
+
+        Logger.recordOutput("ShootWhileMoving/FuturePose", shotWhileMoving.futurePose());
+
         final NoteState.State state = noteState.getState();
         Logger.recordOutput("NoteState", state.toString());
     }
@@ -285,20 +296,27 @@ public class Robot extends LoggedRobot {
         coDriverController.leftBumper(testEventLoop)
                 .onTrue(Commands.runOnce(SignalLogger::stop));
 
-        coDriverController.rightBumper(testEventLoop).and(coDriverController.y(testEventLoop))
+        coDriverController.y(testEventLoop).and(coDriverController.rightBumper(testEventLoop))
                 .whileTrue(shooter.torqueCurrentSysIdCommand());
 
-        coDriverController.rightBumper(testEventLoop).and(coDriverController.a(testEventLoop))
+        coDriverController.x(testEventLoop).and(coDriverController.rightBumper(testEventLoop))
                 .whileTrue(arm.voltageSysIdCommand());
 
-        coDriverController.y(testEventLoop)
-                .whileTrue(swerve.angularVoltageSysIdQuasistaticCommand(SysIdRoutine.Direction.kForward));
-        coDriverController.a(testEventLoop)
-                .whileTrue(swerve.angularVoltageSysIdQuasistaticCommand(SysIdRoutine.Direction.kReverse));
-        coDriverController.b(testEventLoop)
-                .whileTrue(swerve.angularVoltageSysIdDynamicCommand(SysIdRoutine.Direction.kForward));
-        coDriverController.x(testEventLoop)
-                .whileTrue(swerve.angularVoltageSysIdDynamicCommand(SysIdRoutine.Direction.kReverse));
+        coDriverController.a(testEventLoop).and(coDriverController.rightBumper(testEventLoop))
+                .whileTrue(intake.torqueCurrentSysIdCommand());
+
+//        coDriverController.y(testEventLoop)
+//                .whileTrue(swerve
+//                        .angularVoltageSysIdQuasistaticCommand(SysIdRoutine.Direction.kForward));
+//        coDriverController.a(testEventLoop)
+//                .whileTrue(swerve
+//                        .angularVoltageSysIdQuasistaticCommand(SysIdRoutine.Direction.kReverse));
+//        coDriverController.b(testEventLoop)
+//                .whileTrue(swerve
+//                        .angularVoltageSysIdDynamicCommand(SysIdRoutine.Direction.kForward));
+//        coDriverController.x(testEventLoop)
+//                .whileTrue(swerve
+//                        .angularVoltageSysIdDynamicCommand(SysIdRoutine.Direction.kReverse));
     }
 
     @Override
@@ -313,6 +331,20 @@ public class Robot extends LoggedRobot {
 
     @Override
     public void simulationPeriodic() {}
+
+    public Command runEjectShooter() {
+        return Commands.parallel(
+                intake.runEjectInCommand(),
+                superstructure.toGoal(Superstructure.Goal.EJECT)
+        );
+    }
+
+    public Command runEjectIntake() {
+        return Commands.deadline(
+                intake.runEjectOutCommand(),
+                superstructure.toGoal(Superstructure.Goal.BACK_FEED)
+        );
+    }
 
     public void configureStateTriggers() {
         teleopEnabled.onTrue(superstructure.toGoal(Superstructure.Goal.IDLE));
@@ -386,37 +418,31 @@ public class Robot extends LoggedRobot {
         ));
     }
 
-    public Command runEjectShooter() {
-        return Commands.parallel(
-                intake.runEjectInCommand(),
-                superstructure.toGoal(Superstructure.Goal.EJECT)
-        );
-    }
-
-    public Command runEjectIntake() {
-        return Commands.deadline(
-                intake.runEjectOutCommand(),
-                superstructure.toGoal(Superstructure.Goal.BACK_FEED)
-        );
-    }
-
     public void configureButtonBindings(final EventLoop teleopEventLoop) {
         final XboxController driverHID = driverController.getHID();
-        this.driverController.leftTrigger(0.5, teleopEventLoop).whileTrue(
-                intake.intakeCommand(
-                        Commands.startEnd(
-                                () -> driverHID.setRumble(GenericHID.RumbleType.kBothRumble, 0.5),
-                                () -> driverHID.setRumble(GenericHID.RumbleType.kBothRumble, 0)
-                        ).withTimeout(0.5)
+        this.driverController.leftTrigger(0.5, teleopEventLoop).whileTrue(intake.intakeCommand());
+        // TODO: does this rumble fast/early enough?
+        this.noteState.hasNote.onTrue(
+                ControllerUtils.rumbleForDurationCommand(
+                        driverController.getHID(),
+                        GenericHID.RumbleType.kBothRumble,
+                        0.5,
+                        0.5
                 )
         );
+
         this.driverController.rightTrigger(0.5, teleopEventLoop)
-//                .whileTrue(shootCommands.stopAimAndShoot())
                 .whileTrue(shootCommands.deferredStopAimAndShoot())
+//                .whileTrue(shootCommands.teleopDriveAimAndShoot(
+//                        driverController::getLeftY,
+//                        driverController::getLeftX
+//                ))
                 .onFalse(superstructure.toGoal(Superstructure.Goal.IDLE));
 
         this.driverController.a(teleopEventLoop).whileTrue(shootCommands.amp());
         this.driverController.y(teleopEventLoop).onTrue(swerve.zeroRotationCommand());
+
+        this.driverController.b(teleopEventLoop).whileTrue(intake.feedCommand());
 
         this.driverController.leftBumper(teleopEventLoop).whileTrue(
                 Commands.startEnd(

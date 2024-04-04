@@ -27,7 +27,7 @@ import static edu.wpi.first.units.Units.*;
 
 public class Arm extends SubsystemBase {
     protected static final String LogKey = "Arm";
-    private static final double PositionToleranceRots = 0.0025;
+    private static final double PositionToleranceRots = 0.005;
     private static final double VelocityToleranceRotsPerSec = 0.01;
 
     private final ArmIO armIO;
@@ -66,7 +66,8 @@ public class Arm extends SubsystemBase {
         NONE(0),
         ZERO(0),
         STOW(Units.degreesToRotations(10)),
-        AMP(Units.degreesToRotations(95)),
+        AMP(Units.degreesToRotations(91)),
+        TEST(Units.degreesToRotations(19)),
         SUBWOOFER(Units.degreesToRotations(56.5));
 
         private final double pivotPositionGoal;

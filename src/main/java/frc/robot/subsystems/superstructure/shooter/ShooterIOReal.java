@@ -82,8 +82,8 @@ public class ShooterIOReal implements ShooterIO {
         ampTalonFXConfiguration.CurrentLimits.StatorCurrentLimit = 60;
         ampTalonFXConfiguration.CurrentLimits.StatorCurrentLimitEnable = true;
         ampTalonFXConfiguration.CurrentLimits.SupplyCurrentLimit = 40;
-        ampTalonFXConfiguration.CurrentLimits.SupplyCurrentThreshold = 50;
-        ampTalonFXConfiguration.CurrentLimits.SupplyTimeThreshold = 0.5;
+        ampTalonFXConfiguration.CurrentLimits.SupplyCurrentThreshold = 60;
+        ampTalonFXConfiguration.CurrentLimits.SupplyTimeThreshold = 1.5;
         ampTalonFXConfiguration.CurrentLimits.SupplyCurrentLimitEnable = true;
         ampTalonFXConfiguration.Feedback.SensorToMechanismRatio = shooterConstants.ampMotorGearing();
         ampTalonFXConfiguration.MotorOutput.Inverted = InvertedValue.Clockwise_Positive;
@@ -95,9 +95,9 @@ public class ShooterIOReal implements ShooterIO {
                 .withKS(10.669)
                 .withKV(0.1978)
                 .withKA(0.40341)
-                .withKP(6.7163);
-        leftTalonFXConfiguration.TorqueCurrent.PeakForwardTorqueCurrent = 80;
-        leftTalonFXConfiguration.TorqueCurrent.PeakReverseTorqueCurrent = -80;
+                .withKP(5);
+        leftTalonFXConfiguration.TorqueCurrent.PeakForwardTorqueCurrent = 60;
+        leftTalonFXConfiguration.TorqueCurrent.PeakReverseTorqueCurrent = -60;
         leftTalonFXConfiguration.CurrentLimits.StatorCurrentLimit = 60;
         leftTalonFXConfiguration.CurrentLimits.StatorCurrentLimitEnable = true;
         leftTalonFXConfiguration.CurrentLimits.SupplyCurrentLimit = 40;
@@ -114,9 +114,9 @@ public class ShooterIOReal implements ShooterIO {
                 .withKS(10.712)
                 .withKV(0.15193)
                 .withKA(0.43766)
-                .withKP(6.7163);
-        rightTalonFXConfiguration.TorqueCurrent.PeakForwardTorqueCurrent = 80;
-        rightTalonFXConfiguration.TorqueCurrent.PeakReverseTorqueCurrent = -80;
+                .withKP(5);
+        rightTalonFXConfiguration.TorqueCurrent.PeakForwardTorqueCurrent = 60;
+        rightTalonFXConfiguration.TorqueCurrent.PeakReverseTorqueCurrent = -60;
         rightTalonFXConfiguration.CurrentLimits.StatorCurrentLimit = 60;
         rightTalonFXConfiguration.CurrentLimits.StatorCurrentLimitEnable = true;
         rightTalonFXConfiguration.CurrentLimits.SupplyCurrentLimit = 40;

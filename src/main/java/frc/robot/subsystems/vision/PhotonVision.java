@@ -14,6 +14,7 @@ import edu.wpi.first.math.numbers.N3;
 import edu.wpi.first.wpilibj.DriverStation;
 import frc.robot.constants.Constants;
 import frc.robot.subsystems.drive.Swerve;
+import frc.robot.subsystems.drive.constants.SwerveConstants;
 import frc.robot.utils.PoseUtils;
 import frc.robot.utils.gyro.GyroUtils;
 import frc.robot.utils.subsystems.VirtualSubsystem;
@@ -32,8 +33,11 @@ import java.util.stream.Collectors;
 public class PhotonVision extends VirtualSubsystem {
     public static final String PhotonLogKey = "PhotonVision";
 
-    public static final double TRANSLATION_VELOCITY_TOLERANCE = 0.1;
-    public static final double ANGULAR_VELOCITY_TOLERANCE = 0.1;
+    public static final double TranslationalVelocityTolerance = 1;
+    public static final double AngularVelocityTolerance = 1;
+
+    private final double maxLinearVelocity = SwerveConstants.Config.maxLinearVelocity();
+    private final double maxAngularVelocity = SwerveConstants.Config.maxAngularVelocity();
 
     public static final AprilTagFieldLayout apriltagFieldLayout;
 
@@ -207,9 +211,8 @@ public class PhotonVision extends VirtualSubsystem {
         );
 
         // assume hypot is positive (>= 0)
-        if ((translationVel >= Constants.Swerve.ROBOT_MAX_SPEED_MPS + PhotonVision.TRANSLATION_VELOCITY_TOLERANCE)
-                || (Math.abs(thetaVel) >= Constants.Swerve.ROBOT_MAX_ANGULAR_SPEED_RAD_PER_SEC
-                    + PhotonVision.ANGULAR_VELOCITY_TOLERANCE)) {
+        if ((translationVel >= maxLinearVelocity + PhotonVision.TranslationalVelocityTolerance)
+                || (Math.abs(thetaVel) >= maxAngularVelocity + PhotonVision.AngularVelocityTolerance)) {
             // reject sudden pose changes resulting in an impossible velocity (cannot reach)
             return EstimationRejectionReason.POSE_IMPOSSIBLE_VELOCITY;
         }

@@ -3,38 +3,43 @@ package frc.robot.state;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.button.Trigger;
+import frc.robot.constants.Constants;
 import frc.robot.subsystems.intake.Intake;
-import frc.robot.subsystems.superstructure.Superstructure;
 
-// TODO: get this working before district champs
+import java.util.concurrent.ThreadLocalRandom;
+
 public class NoteState {
     private final Intake intake;
-    private final Superstructure superstructure;
 
     public enum State {
         NONE,
-        INVALID,
         INTAKING,
-        STORING,
+        STORING_FORWARD,
+        STORING_BACKWARD,
         STORED,
         FEEDING
     }
 
+    private final ThreadLocalRandom random = ThreadLocalRandom.current();
+
     private State state = State.NONE;
     public final Trigger isNone = isStateTrigger(State.NONE);
-    public final Trigger isInvalid = isStateTrigger(State.INVALID);
     public final Trigger isIntaking = isStateTrigger(State.INTAKING);
-    public final Trigger isStoring = isStateTrigger(State.STORING);
+    public final Trigger isStoringForward = isStateTrigger(State.STORING_FORWARD);
+    public final Trigger isStoringBackward = isStateTrigger(State.STORING_BACKWARD);
     public final Trigger isStored = isStateTrigger(State.STORED);
     public final Trigger isFeeding = isStateTrigger(State.FEEDING);
 
+    public final Trigger isStoring = isStoringForward.or(isStoringBackward);
     public final Trigger hasNote = isStoring.or(isStored).or(isFeeding);
 
-    public NoteState(final Intake intake, final Superstructure superstructure) {
+    public NoteState(final Constants.RobotMode mode, final Intake intake) {
         this.intake = intake;
-        this.superstructure = superstructure;
 
-//        configureStateBindings();
+        configureStateTriggers();
+        if (mode != Constants.RobotMode.REAL) {
+            configureSimTriggers();
+        }
     }
 
     public Trigger isStateTrigger(final State state) {
@@ -49,25 +54,70 @@ public class NoteState {
         return state;
     }
 
-    public void configureStateBindings() {
+    public void configureStateTriggers() {
         intake.intaking.and(hasNote.negate())
                 .onTrue(setState(State.INTAKING));
-        intake.intaking.and(hasNote)
-                .onTrue(setState(State.INVALID));
+        intake.intaking.negate().and(isIntaking)
+                .onTrue(setState(State.NONE));
 
         intake.feeding.and(isStored).and(intake.shooterBeamBreakBroken)
                 .onTrue(setState(State.FEEDING));
         isFeeding.and(intake.shooterBeamBreakBroken.negate())
                 .onTrue(setState(State.NONE));
 
-        isIntaking.and(isInvalid.negate()).and(intake.shooterBeamBreakBroken)
+        intake.intaking.and(isStored).and(isStoring.negate()).and(intake.shooterBeamBreakBroken.negate())
                 .onTrue(Commands.sequence(
-                        setState(State.STORING),
-                        intake.storeCommand(),
-                        setState(State.STORED)
+                        setState(State.STORING_FORWARD),
+                        intake.storeCommand()
+                ));
+        intake.intaking.and(intake.shooterBeamBreakBroken)
+                .onTrue(Commands.sequence(
+                        setState(State.STORING_BACKWARD),
+                        intake.storeCommand()
+                ));
+        isStoringForward.and(intake.shooterBeamBreakBroken)
+                .onTrue(setState(State.STORING_BACKWARD));
+        isStoringBackward.and(intake.shooterBeamBreakBroken.negate())
+                .onTrue(setState(State.STORED));
+    }
+
+    private Command waitRand(final double lowerInclusiveSeconds, final double upperExclusiveSeconds) {
+        return Commands.waitSeconds(random.nextDouble(lowerInclusiveSeconds, upperExclusiveSeconds));
+    }
+
+    private Command setIntakeSensorState(final boolean shooterBeamBroken) {
+        return Commands.runOnce(() -> intake.setBeamBreakSensorState(shooterBeamBroken));
+    }
+
+    public void configureSimTriggers() {
+        intake.intaking.and(hasNote.negate()).and(intake.shooterBeamBreakBroken.negate())
+                .whileTrue(Commands.sequence(
+                        waitRand(0.1, 2),
+                        Commands.waitSeconds(0.15),
+                        setIntakeSensorState(true)
+                ));
+        intake.intaking.and(hasNote).and(intake.shooterBeamBreakBroken.negate())
+                .whileTrue(Commands.sequence(
+                        Commands.waitSeconds(0.15),
+                        setIntakeSensorState(true)
+                ));
+        isStoringForward.and(intake.shooterBeamBreakBroken.negate())
+                .whileTrue(Commands.sequence(
+                        waitRand(0.05, 0.1),
+                        setIntakeSensorState(true)
+                ));
+        isStoringBackward.and(intake.shooterBeamBreakBroken)
+                .whileTrue(Commands.sequence(
+                        waitRand(0.05, 0.1),
+                        setIntakeSensorState(false)
                 ));
 
-//        intake.shooterBeamBreakBroken.negate().and(isFeeding.negate()).and(isStoring.negate())
-//                .onTrue(setState(State.NONE));
+        intake.feeding.and(isStored)
+                .onTrue(Commands.sequence(
+                        waitRand(0.01, 0.1),
+                        setIntakeSensorState(true),
+                        waitRand(0.02, 0.1),
+                        setIntakeSensorState(false)
+                ));
     }
 }

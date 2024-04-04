@@ -23,6 +23,7 @@ public class Superstructure {
         SUBWOOFER(Arm.Goal.SUBWOOFER, Shooter.Goal.SUBWOOFER),
         AMP(Arm.Goal.AMP, Shooter.Goal.AMP),
         EJECT(Arm.Goal.STOW, Shooter.Goal.EJECT),
+        TEST(Arm.Goal.TEST, Shooter.Goal.TEST),
         BACK_FEED(Arm.Goal.STOW, Shooter.Goal.BACK_FEED);
 
         private final Arm.Goal armGoal;
