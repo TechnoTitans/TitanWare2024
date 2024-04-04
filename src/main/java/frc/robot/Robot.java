@@ -19,6 +19,7 @@ import frc.robot.constants.HardwareConstants;
 import frc.robot.constants.RobotMap;
 import frc.robot.state.NoteState;
 import frc.robot.subsystems.drive.Swerve;
+import frc.robot.subsystems.drive.constants.SwerveConstants;
 import frc.robot.subsystems.intake.Intake;
 import frc.robot.subsystems.superstructure.ShootOnTheMove;
 import frc.robot.subsystems.superstructure.ShotParameters;
@@ -28,6 +29,7 @@ import frc.robot.subsystems.superstructure.shooter.Shooter;
 import frc.robot.subsystems.vision.PhotonVision;
 import frc.robot.utils.closeables.ToClose;
 import frc.robot.utils.subsystems.VirtualSubsystem;
+import frc.robot.utils.teleop.ControllerUtils;
 import frc.robot.utils.teleop.Profiler;
 import org.littletonrobotics.junction.LogFileUtil;
 import org.littletonrobotics.junction.LoggedRobot;
@@ -60,10 +62,10 @@ public class Robot extends LoggedRobot {
     public final Swerve swerve = new Swerve(
             Constants.CURRENT_MODE,
             HardwareConstants.GYRO,
-            HardwareConstants.FRONT_LEFT_MODULE,
-            HardwareConstants.FRONT_RIGHT_MODULE,
-            HardwareConstants.BACK_LEFT_MODULE,
-            HardwareConstants.BACK_RIGHT_MODULE
+            SwerveConstants.FrontLeftModule,
+            SwerveConstants.FrontRightModule,
+            SwerveConstants.BackLeftModule,
+            SwerveConstants.BackRightModule
     );
     public final Intake intake = new Intake(Constants.CURRENT_MODE, HardwareConstants.INTAKE);
     public final Arm arm = new Arm(Constants.CURRENT_MODE, HardwareConstants.ARM);
@@ -411,12 +413,14 @@ public class Robot extends LoggedRobot {
     public void configureButtonBindings(final EventLoop teleopEventLoop) {
         final XboxController driverHID = driverController.getHID();
         this.driverController.leftTrigger(0.5, teleopEventLoop).whileTrue(intake.intakeCommand());
-        // TODO: does this rumble fast enough?
+        // TODO: does this rumble fast/early enough?
         this.noteState.hasNote.onTrue(
-                Commands.startEnd(
-                        () -> driverHID.setRumble(GenericHID.RumbleType.kBothRumble, 0.5),
-                        () -> driverHID.setRumble(GenericHID.RumbleType.kBothRumble, 0)
-                ).withTimeout(0.5)
+                ControllerUtils.rumbleForDurationCommand(
+                        driverController.getHID(),
+                        GenericHID.RumbleType.kBothRumble,
+                        0.5,
+                        0.5
+                )
         );
 
         this.driverController.rightTrigger(0.5, teleopEventLoop)

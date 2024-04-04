@@ -2,11 +2,14 @@ package frc.robot.utils.gyro;
 
 import edu.wpi.first.math.MathUtil;
 import edu.wpi.first.math.geometry.*;
-import frc.robot.constants.Constants;
+import frc.robot.subsystems.drive.constants.SwerveConstants;
 
 import java.util.function.Supplier;
 
 public class GyroUtils {
+    private static final double wheelBaseMeters = SwerveConstants.Config.wheelBaseMeters();
+    private static final double trackWidthMeters = SwerveConstants.Config.trackWidthMeters();
+
     public static Rotation2d withAngleModulus(final Supplier<Rotation2d> rotation2dSupplier) {
         return Rotation2d.fromRadians(MathUtil.angleModulus(rotation2dSupplier.get().getRadians()));
     }
@@ -26,11 +29,11 @@ public class GyroUtils {
     public static Pose3d robotPose2dToPose3dWithGyro(final Pose2d pose2d, final Rotation3d gyroRotation) {
         return new Pose3d(pose2d)
                 .exp(new Twist3d(
-                        0, 0, Math.abs(gyroRotation.getY()) * Constants.Swerve.WHEEL_BASE_M * 0.5,
+                        0, 0, Math.abs(gyroRotation.getY()) * wheelBaseMeters * 0.5,
                         0, gyroRotation.getY(), 0
                 ))
                 .exp(new Twist3d(
-                        0, 0, Math.abs(gyroRotation.getX()) * Constants.Swerve.TRACK_WIDTH_M * 0.5,
+                        0, 0, Math.abs(gyroRotation.getX()) * trackWidthMeters * 0.5,
                         gyroRotation.getX(), 0, 0
                 ));
     }

@@ -1,7 +1,7 @@
 package frc.robot.utils.teleop;
 
+import edu.wpi.first.math.MathUtil;
 import edu.wpi.first.math.util.Units;
-import frc.robot.constants.Constants;
 
 public class Profiler {
     private static DriverProfile driverProfile = DriverProfile.DEFAULT;
@@ -27,20 +27,21 @@ public class Profiler {
         Profiler.swerveSpeed = swerveSpeed;
     }
 
+    @SuppressWarnings("unused")
     public enum DriverProfile {
         DRIVER1(1, 1),
-        DRIVER2(1.1, 1.1),
+        DRIVER2(0.9, 0.9),
         DEFAULT(1, 1);
 
         final double throttleSensitivity;
         final double rotationalSensitivity;
 
         DriverProfile(final double throttleSensitivity, final double rotationalSensitivity) {
-            this.throttleSensitivity = throttleSensitivity;
-            this.rotationalSensitivity = rotationalSensitivity;
+            this.throttleSensitivity = MathUtil.clamp(throttleSensitivity, 0, 1);
+            this.rotationalSensitivity = MathUtil.clamp(rotationalSensitivity, 0, 1);
         }
 
-        public double getThrottleSensitivity() {
+        public double getTranslationSensitivity() {
             return throttleSensitivity;
         }
 
@@ -50,24 +51,24 @@ public class Profiler {
     }
 
     public enum SwerveSpeed {
-        FAST(Units.feetToMeters(16.5), Math.PI),
+        FAST(Units.feetToMeters(15), Math.PI),
         NORMAL(Units.feetToMeters(12), 0.4 * Math.PI),
         SLOW(Units.feetToMeters(3), 0.1 * Math.PI);
 
-        final double throttleWeight;
-        final double rotateWeight;
+        private final double translationSpeed;
+        private final double rotationSpeed;
 
-        SwerveSpeed(final double throttleWeight, final double rotateWeight) {
-            this.throttleWeight = throttleWeight / Constants.Swerve.TELEOP_MAX_SPEED_MPS;
-            this.rotateWeight = (Math.PI * rotateWeight) / Constants.Swerve.TELEOP_MAX_ANGULAR_SPEED_RAD_PER_SEC;
+        SwerveSpeed(final double translationSpeed, final double rotationSpeed) {
+            this.translationSpeed = translationSpeed;
+            this.rotationSpeed = rotationSpeed;
         }
 
-        public double getThrottleWeight() {
-            return throttleWeight;
+        public double getTranslationSpeed() {
+            return translationSpeed;
         }
 
-        public double getRotateWeight() {
-            return rotateWeight;
+        public double getRotationSpeed() {
+            return rotationSpeed;
         }
     }
 }
