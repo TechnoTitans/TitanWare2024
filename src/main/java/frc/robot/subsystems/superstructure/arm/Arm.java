@@ -67,7 +67,7 @@ public class Arm extends SubsystemBase {
         ZERO(0),
         STOW(Units.degreesToRotations(10)),
         AMP(Units.degreesToRotations(91)),
-        TEST(Units.degreesToRotations(19)),
+        FERRY_CENTERLINE(Units.degreesToRotations(19)),
         SUBWOOFER(Units.degreesToRotations(56.5));
 
         private final double pivotPositionGoal;

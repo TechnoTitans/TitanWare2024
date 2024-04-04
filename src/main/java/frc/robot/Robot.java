@@ -4,12 +4,12 @@ import com.ctre.phoenix6.SignalLogger;
 import edu.wpi.first.wpilibj.*;
 import edu.wpi.first.wpilibj.event.EventLoop;
 import edu.wpi.first.wpilibj.livewindow.LiveWindow;
-import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.CommandScheduler;
 import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.Subsystem;
 import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
 import edu.wpi.first.wpilibj2.command.button.Trigger;
+import edu.wpi.first.wpilibj2.command.sysid.SysIdRoutine;
 import frc.robot.auto.AutoChooser;
 import frc.robot.auto.AutoOption;
 import frc.robot.auto.Autos;
@@ -303,18 +303,14 @@ public class Robot extends LoggedRobot {
         coDriverController.a(testEventLoop).and(coDriverController.rightBumper(testEventLoop))
                 .whileTrue(intake.torqueCurrentSysIdCommand());
 
-//        coDriverController.y(testEventLoop)
-//                .whileTrue(swerve
-//                        .angularVoltageSysIdQuasistaticCommand(SysIdRoutine.Direction.kForward));
-//        coDriverController.a(testEventLoop)
-//                .whileTrue(swerve
-//                        .angularVoltageSysIdQuasistaticCommand(SysIdRoutine.Direction.kReverse));
-//        coDriverController.b(testEventLoop)
-//                .whileTrue(swerve
-//                        .angularVoltageSysIdDynamicCommand(SysIdRoutine.Direction.kForward));
-//        coDriverController.x(testEventLoop)
-//                .whileTrue(swerve
-//                        .angularVoltageSysIdDynamicCommand(SysIdRoutine.Direction.kReverse));
+        coDriverController.y(testEventLoop)
+                .whileTrue(swerve.angularVoltageSysIdQuasistaticCommand(SysIdRoutine.Direction.kForward));
+        coDriverController.a(testEventLoop)
+                .whileTrue(swerve.angularVoltageSysIdQuasistaticCommand(SysIdRoutine.Direction.kReverse));
+        coDriverController.b(testEventLoop)
+                .whileTrue(swerve.angularVoltageSysIdDynamicCommand(SysIdRoutine.Direction.kForward));
+        coDriverController.x(testEventLoop)
+                .whileTrue(swerve.angularVoltageSysIdDynamicCommand(SysIdRoutine.Direction.kReverse));
     }
 
     @Override
@@ -330,20 +326,6 @@ public class Robot extends LoggedRobot {
     @Override
     public void simulationPeriodic() {}
 
-    public Command runEjectShooter() {
-        return Commands.parallel(
-                intake.runEjectInCommand(),
-                superstructure.toGoal(Superstructure.Goal.EJECT)
-        );
-    }
-
-    public Command runEjectIntake() {
-        return Commands.deadline(
-                intake.runEjectOutCommand(),
-                superstructure.toGoal(Superstructure.Goal.BACK_FEED)
-        );
-    }
-
     public void configureStateTriggers() {
         teleopEnabled.onTrue(superstructure.toGoal(Superstructure.Goal.IDLE));
     }
@@ -357,7 +339,7 @@ public class Robot extends LoggedRobot {
         autoChooser.addAutoOption(new AutoOption(
                 "AmpSpeaker2",
                 autos.ampSpeaker2(),
-                Constants.CompetitionType.COMPETITION
+                Constants.CompetitionType.TESTING
         ));
         autoChooser.addAutoOption(new AutoOption(
                 "SourceSpeaker0Center1",
@@ -405,14 +387,28 @@ public class Robot extends LoggedRobot {
                 Constants.CompetitionType.COMPETITION
         ));
         autoChooser.addAutoOption(new AutoOption(
-                "Speaker2_1_0Center4_3",
-                autos.speaker2_1_0Center4_3(),
+                "Speaker0_1_2Center4_3",
+                autos.speaker0_1_2Center4_3(),
+                Constants.CompetitionType.COMPETITION
+        ));
+        autoChooser.addAutoOption(new AutoOption(
+                "AmpSpeaker2_1Center2_3_4",
+                autos.ampSpeaker2_1Center2_3_4(),
+                Constants.CompetitionType.COMPETITION
+        ));
+        autoChooser.addAutoOption(new AutoOption(
+                "Speaker0_1_2Center4_3_2",
+                autos.speaker0_1_2Center4_3_2(),
+                Constants.CompetitionType.COMPETITION
+        ));
+        autoChooser.addAutoOption(new AutoOption(
+                "SourceCenter0_1_2",
+                autos.sourceCenter0_1_2(),
                 Constants.CompetitionType.COMPETITION
         ));
     }
 
     public void configureButtonBindings(final EventLoop teleopEventLoop) {
-        final XboxController driverHID = driverController.getHID();
         this.driverController.leftTrigger(0.5, teleopEventLoop).whileTrue(intake.intakeCommand());
         // TODO: does this rumble fast/early enough?
         this.noteState.hasNote.onTrue(
@@ -432,9 +428,10 @@ public class Robot extends LoggedRobot {
 //                ))
                 .onFalse(superstructure.toGoal(Superstructure.Goal.IDLE));
 
-        this.driverController.a(teleopEventLoop).whileTrue(shootCommands.amp());
+//        this.driverController.a(teleopEventLoop)
+//                .whileTrue(shootCommands.readyAmp())
+//                .onFalse(shootCommands.amp());
         this.driverController.y(teleopEventLoop).onTrue(swerve.zeroRotationCommand());
-
         this.driverController.b(teleopEventLoop).whileTrue(intake.feedCommand());
 
         this.driverController.leftBumper(teleopEventLoop).whileTrue(
@@ -451,9 +448,22 @@ public class Robot extends LoggedRobot {
                 )
         );
 
-        this.coDriverController.y(teleopEventLoop).whileTrue(runEjectShooter());
-        this.coDriverController.a(teleopEventLoop).whileTrue(runEjectIntake());
-        this.coDriverController.b().whileTrue(shootCommands.lineupAndAmp());
+        this.coDriverController.y(teleopEventLoop)
+                .whileTrue(shootCommands.runEjectShooter())
+                .onFalse(intake.instantStopCommand());
+        this.coDriverController.a(teleopEventLoop)
+                .whileTrue(shootCommands.runEjectIntake())
+                .onFalse(intake.instantStopCommand());
+        //noinspection SuspiciousNameCombination
+        this.coDriverController.a(teleopEventLoop)
+                .whileTrue(shootCommands.angleAndReadyAmp(
+                        driverController::getLeftY,
+                        driverController::getLeftX
+                ))
+                .onFalse(shootCommands.amp());
+
+        this.coDriverController.leftTrigger(0.5, teleopEventLoop)
+                .whileTrue(shootCommands.ferryCenterToAmp());
         this.coDriverController.rightTrigger(0.5, teleopEventLoop)
                 .whileTrue(shootCommands.shootSubwoofer());
     }

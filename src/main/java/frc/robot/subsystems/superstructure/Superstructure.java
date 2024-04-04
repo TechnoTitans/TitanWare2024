@@ -16,6 +16,7 @@ public class Superstructure {
     private final Arm arm;
     private final Shooter shooter;
 
+    private Goal goal;
     public final Trigger atSetpoint;
 
     public enum Goal {
@@ -23,7 +24,7 @@ public class Superstructure {
         SUBWOOFER(Arm.Goal.SUBWOOFER, Shooter.Goal.SUBWOOFER),
         AMP(Arm.Goal.AMP, Shooter.Goal.AMP),
         EJECT(Arm.Goal.STOW, Shooter.Goal.EJECT),
-        TEST(Arm.Goal.TEST, Shooter.Goal.TEST),
+        FERRY_CENTERLINE(Arm.Goal.FERRY_CENTERLINE, Shooter.Goal.FERRY_CENTERLINE),
         BACK_FEED(Arm.Goal.STOW, Shooter.Goal.BACK_FEED);
 
         private final Arm.Goal armGoal;
@@ -41,11 +42,16 @@ public class Superstructure {
         this.atSetpoint = arm.atPivotSetpoint.and(shooter.atVelocitySetpoint);
     }
 
+    public Goal getGoal() {
+        return goal;
+    }
+
     public Command toGoal(final Goal goal) {
         return Commands.parallel(
-                arm.toGoal(goal.armGoal),
-                shooter.toGoal(goal.shooterGoal)
-        );
+                        arm.toGoal(goal.armGoal),
+                        shooter.toGoal(goal.shooterGoal))
+                .beforeStarting(() -> this.goal = goal)
+                .finallyDo(() -> this.goal = Goal.IDLE);
     }
 
     public Command runState(final Supplier<ShotParameters.Parameters> parametersSupplier) {

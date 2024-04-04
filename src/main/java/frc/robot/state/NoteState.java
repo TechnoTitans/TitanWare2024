@@ -7,6 +7,7 @@ import frc.robot.constants.Constants;
 import frc.robot.subsystems.intake.Intake;
 
 import java.util.concurrent.ThreadLocalRandom;
+import java.util.function.BooleanSupplier;
 
 public class NoteState {
     private final Intake intake;
@@ -33,6 +34,9 @@ public class NoteState {
     public final Trigger isStoring = isStoringForward.or(isStoringBackward);
     public final Trigger hasNote = isStoring.or(isStored).or(isFeeding);
 
+    private boolean storeNotes = true;
+    public BooleanSupplier shouldStoreNotes = () -> this.storeNotes;
+
     public NoteState(final Constants.RobotMode mode, final Intake intake) {
         this.intake = intake;
 
@@ -54,6 +58,10 @@ public class NoteState {
         return state;
     }
 
+    public void setShouldStoreNotes(final boolean storeNotes) {
+        this.storeNotes = storeNotes;
+    }
+
     public void configureStateTriggers() {
         intake.intaking.and(hasNote.negate())
                 .onTrue(setState(State.INTAKING));
@@ -66,14 +74,22 @@ public class NoteState {
                 .onTrue(setState(State.NONE));
 
         intake.intaking.and(isStored).and(isStoring.negate()).and(intake.shooterBeamBreakBroken.negate())
-                .onTrue(Commands.sequence(
-                        setState(State.STORING_FORWARD),
-                        intake.storeCommand()
+                .onTrue(Commands.either(
+                        Commands.sequence(
+                                setState(State.STORING_FORWARD),
+                                intake.storeCommand()
+                        ),
+                        setState(State.STORED),
+                        shouldStoreNotes
                 ));
         intake.intaking.and(intake.shooterBeamBreakBroken)
-                .onTrue(Commands.sequence(
-                        setState(State.STORING_BACKWARD),
-                        intake.storeCommand()
+                .onTrue(Commands.either(
+                        Commands.sequence(
+                                setState(State.STORING_BACKWARD),
+                                intake.storeCommand()
+                        ),
+                        setState(State.STORED),
+                        shouldStoreNotes
                 ));
         isStoringForward.and(intake.shooterBeamBreakBroken)
                 .onTrue(setState(State.STORING_BACKWARD));

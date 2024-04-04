@@ -115,10 +115,21 @@ public class Intake extends SubsystemBase {
         ).finallyDo(() -> this.intakingActive = false);
     }
 
+    public Command intakeAndFeedCommand() {
+        return Commands.sequence(
+                runOnce(() -> this.intakingActive = true),
+                runVelocityCommand(22, 22, 22)
+                        .until(shooterBeamBreakBroken),
+                Commands.idle()
+                        .until(shooterBeamBreakBroken.negate()),
+                instantStopCommand()
+        ).finallyDo(() -> this.intakingActive = false);
+    }
+
     public Command feedHalfCommand() {
         return storeCommand()
-                .andThen(runOnce(() -> this.feedingActive = true))
                 .onlyIf(shooterBeamBreakBroken)
+                .andThen(runOnce(() -> this.feedingActive = true))
                 .andThen(Commands.deadline(
                         Commands.waitUntil(shooterBeamBreakBroken),
                         runVelocityCommand(6, 6, 6)
@@ -161,6 +172,24 @@ public class Intake extends SubsystemBase {
 
     public Command runStopCommand() {
         return runVoltageCommand(0, 0, 0);
+    }
+
+    public Command toVelocityCommand(
+            final double rightRollerVelocityRotsPerSec,
+            final double leftRollerVelocityRotsPerSec,
+            final double shooterFeederRotsPerSec
+    ) {
+        return run(() -> {
+            setpoint.rightRollerVelocityRotsPerSec = rightRollerVelocityRotsPerSec;
+            setpoint.leftRollerVelocityRotsPerSec = leftRollerVelocityRotsPerSec;
+            setpoint.shooterFeederRotsPerSec = shooterFeederRotsPerSec;
+
+            intakeIO.toVelocity(
+                    rightRollerVelocityRotsPerSec,
+                    leftRollerVelocityRotsPerSec,
+                    shooterFeederRotsPerSec
+            );
+        });
     }
 
     public Command runVelocityCommand(

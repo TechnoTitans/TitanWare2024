@@ -1,7 +1,5 @@
 package frc.robot.subsystems.drive;
 
-import com.choreo.lib.Choreo;
-import com.choreo.lib.ChoreoControlFunction;
 import com.choreo.lib.ChoreoTrajectory;
 import com.choreo.lib.ChoreoTrajectoryState;
 import com.ctre.phoenix6.SignalLogger;
@@ -38,6 +36,7 @@ import frc.robot.auto.Autos;
 import frc.robot.constants.Constants;
 import frc.robot.constants.HardwareConstants;
 import frc.robot.subsystems.drive.constants.SwerveConstants;
+import frc.robot.subsystems.drive.trajectory.HolonomicChoreoController;
 import frc.robot.subsystems.drive.trajectory.HolonomicDriveWithPIDController;
 import frc.robot.subsystems.gyro.Gyro;
 import frc.robot.utils.gyro.GyroUtils;
@@ -82,6 +81,8 @@ public class Swerve extends SubsystemBase {
     private final double maxAngularVelocity = Config.maxAngularVelocity();
 
     public final Trigger atHeadingSetpoint;
+    private boolean overridePathHeading = false;
+    private Supplier<Rotation2d> headingOverrideSupplier = Rotation2d::new;
     private boolean headingControllerActive = false;
     private Rotation2d headingTarget = new Rotation2d();
     private final ProfiledPIDController headingController;
@@ -90,6 +91,8 @@ public class Swerve extends SubsystemBase {
     private boolean holonomicControllerActive = false;
     private Pose2d holonomicPoseTarget = new Pose2d();
     private final HolonomicDriveWithPIDController holonomicDriveWithPIDController;
+
+    private final HolonomicChoreoController choreoController;
 
     private final SysIdRoutine linearVoltageSysIdRoutine;
     private final SysIdRoutine linearTorqueCurrentSysIdRoutine;
@@ -151,6 +154,12 @@ public class Swerve extends SubsystemBase {
                 new Pose2d(0.05, 0.05, Rotation2d.fromDegrees(3))
         );
         this.atHolonomicDrivePose = new Trigger(holonomicDriveWithPIDController::atReference);
+
+        this.choreoController = new HolonomicChoreoController(
+                new PIDController(4, 0, 0),
+                new PIDController(4, 0, 0),
+                new PIDController(2, 0, 0)
+        );
 
         this.linearVoltageSysIdRoutine = makeLinearVoltageSysIdRoutine();
         this.linearTorqueCurrentSysIdRoutine = makeLinearTorqueCurrentSysIdRoutine();
@@ -666,17 +675,20 @@ public class Swerve extends SubsystemBase {
         backRight.setNeutralMode(neutralMode);
     }
 
+    public void setPathHeadingOverride(final Supplier<Rotation2d> headingOverrideSupplier) {
+        this.overridePathHeading = true;
+        this.headingOverrideSupplier = headingOverrideSupplier;
+    }
+
+    public void clearPathHeadingOverride() {
+        this.overridePathHeading = false;
+    }
+
     public Command followChoreoPathCommand(
             final ChoreoTrajectory choreoTrajectory,
             final BooleanSupplier mirrorTrajectory
     ) {
         final Timer timer = new Timer();
-        final ChoreoControlFunction controller = Choreo.choreoSwerveController(
-                new PIDController(4, 0, 0),
-                new PIDController(4, 0, 0),
-                new PIDController(2, 0, 0)
-        );
-
         return Commands.sequence(
                 runOnce(() -> {
                     Logger.recordOutput(
@@ -686,6 +698,7 @@ public class Swerve extends SubsystemBase {
                                     : choreoTrajectory.getPoses()
                     );
 
+                    choreoController.reset();
                     timer.restart();
                 }),
                 run(() -> {
@@ -696,7 +709,11 @@ public class Swerve extends SubsystemBase {
                             mirrorTrajectory.getAsBoolean()
                     );
 
-                    final Pose2d targetPose = targetState.getPose();
+                    final Pose2d choreoTargetPose = targetState.getPose();
+                    final Rotation2d headingOverride = headingOverrideSupplier.get();
+                    final Pose2d targetPose = overridePathHeading
+                            ? new Pose2d(choreoTargetPose.getTranslation(), headingOverride)
+                            : targetState.getPose();
                     Logger.recordOutput(Autos.LogKey + "/Timestamp", time);
                     Logger.recordOutput(Autos.LogKey + "/CurrentPose", currentPose);
                     Logger.recordOutput(Autos.LogKey + "/TargetSpeeds", targetState.getChassisSpeeds());
@@ -712,7 +729,15 @@ public class Swerve extends SubsystemBase {
                             MathUtil.angleModulus(currentPose.getRotation().getRadians())
                     );
 
-                    drive(controller.apply(currentPose, targetState));
+                    if (overridePathHeading) {
+                        drive(choreoController.calculate(
+                                currentPose,
+                                targetState,
+                                headingOverride
+                        ));
+                    } else {
+                        drive(choreoController.calculate(currentPose, targetState));
+                    }
                 })
                         .until(() -> timer.hasElapsed(choreoTrajectory.getTotalTime()))
                         .finallyDo((interrupted) -> {
