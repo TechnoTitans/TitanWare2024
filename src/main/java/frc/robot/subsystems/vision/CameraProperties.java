@@ -5,6 +5,7 @@ import java.util.stream.Collectors;
 
 public enum CameraProperties {
     PERFECT_90(Resolution.R960x720, 90),
+    ARDUCAM_OV9281(Resolution.R640x480, 72.2),
     SEE3CAM_24CUG(Resolution.R1920x1080, 128.2);
 
     private final List<Resolution> resolutions;
