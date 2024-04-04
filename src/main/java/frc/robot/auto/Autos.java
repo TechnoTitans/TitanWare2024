@@ -176,7 +176,7 @@ public class Autos {
                                 intake.intakeAndFeedCommand(),
                                 superstructure.runState(ShootCommands.shotParametersSupplier(swerve::getPose))
                         )
-                )
+                ).finallyDo(swerve::clearPathHeadingOverride)
         );
     }
 
