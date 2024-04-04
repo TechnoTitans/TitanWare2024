@@ -509,7 +509,7 @@ public class Swerve extends SubsystemBase {
             );
 
             final double rotationInput = ControllerUtils.getStickSquaredInput(
-                    rotSupplier.getAsDouble(),
+                    -rotSupplier.getAsDouble(),
                     0.01
             );
 

@@ -384,8 +384,9 @@ public class Autos {
 
         autoTriggers.atTime(1.25).onTrue(
                 Commands.sequence(
-                        Commands.waitUntil(noteState.isStored)
-                                .withTimeout(2),
+//                        Commands.waitUntil(noteState.isStored)
+//                                .withTimeout(2),
+                        Commands.waitSeconds(0.5),
                         shootCommands.deferredStopAimAndShoot().withName("Shoot0").asProxy(),
                         followPath(autoTriggers.trajectories.get(1), timer).asProxy()
                 ).withName("Shoot0AndFollow1")
@@ -400,8 +401,9 @@ public class Autos {
 
         autoTriggers.atTime(3.87).onTrue(
                 Commands.sequence(
-                        Commands.waitUntil(noteState.isStored)
-                                .withTimeout(2),
+//                        Commands.waitUntil(noteState.isStored)
+//                                .withTimeout(2),
+                        Commands.waitSeconds(0.5),
                         shootCommands.deferredStopAimAndShoot().withName("Shoot1").asProxy(),
                         followPath(autoTriggers.trajectories.get(2), timer).asProxy()
                 ).withName("Shoot1AndFollow2")
@@ -416,8 +418,9 @@ public class Autos {
 
         autoTriggers.atTime(6.02).onTrue(
                 Commands.sequence(
-                        Commands.waitUntil(noteState.isStored)
-                                .withTimeout(2),
+//                        Commands.waitUntil(noteState.isStored)
+//                                .withTimeout(2),
+                        Commands.waitSeconds(0.5),
                         shootCommands.deferredStopAimAndShoot().withName("Shoot2").asProxy()
                 ).withName("Shoot2")
         );
@@ -560,7 +563,7 @@ public class Autos {
                             autoTriggers.trajectories.get(0),
                             timer,
                             0.4
-                    ).withName("Follow0AndIntakeInstantShoot0")
+                    ).withName("Follow0AndIntakeInstantShoot0").asProxy()
             ).withName("PreloadFollow0AndShoot0")
         );
 
@@ -580,7 +583,7 @@ public class Autos {
                                 autoTriggers.trajectories.get(2),
                                 timer,
                                 3
-                        ).withName("Follow2AndIntakeInstantShoot2")
+                        ).withName("Follow2AndIntakeInstantShoot2").asProxy()
                 ).withName("Follow2Intake2AndShoot2")
         );
 

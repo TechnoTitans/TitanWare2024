@@ -67,7 +67,7 @@ public class Arm extends SubsystemBase {
         ZERO(0),
         STOW(Units.degreesToRotations(10)),
         AMP(Units.degreesToRotations(91)),
-        FERRY_CENTERLINE(Units.degreesToRotations(19)),
+        FERRY_CENTERLINE(Units.degreesToRotations(50)),
         SUBWOOFER(Units.degreesToRotations(56.5));
 
         private final double pivotPositionGoal;
@@ -175,6 +175,10 @@ public class Arm extends SubsystemBase {
         // TODO: need to standardize on using runOnce vs. runEnd, i.e. whether this command,
         //  on end/interrupt should schedule the default/idle goal (in this case, STOW)
         return runEnd(() -> this.goal = goal, () -> this.goal = Goal.STOW);
+    }
+
+    public Command runGoal(final Goal goal) {
+        return run(() -> this.goal = goal);
     }
 
     public Command toPivotPositionCommand(final DoubleSupplier pivotPositionRots) {

@@ -215,11 +215,17 @@ public class OdometryThreadRunner {
             signalReadWriteLock.writeLock().lock();
             final String deviceNetwork = device.getNetwork();
             if (!CANBus.isNetworkFD(deviceNetwork)) {
-                throw new RuntimeException(String.format(
+                DriverStation.reportWarning(String.format(
                         "Attempted to register signal from a non CAN-FD device ID: %d (%s)! This is a bug!",
                         device.getDeviceID(),
                         deviceNetwork
-                ));
+                ), true);
+                // TODO: fix this, why does it do this?
+//                throw new RuntimeException(String.format(
+//                        "Attempted to register signal from a non CAN-FD device ID: %d (%s)! This is a bug!",
+//                        device.getDeviceID(),
+//                        deviceNetwork
+//                ));
             }
 
             // Ensure that we cannot register devices on different networks

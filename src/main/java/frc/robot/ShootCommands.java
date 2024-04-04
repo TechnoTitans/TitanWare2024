@@ -98,7 +98,7 @@ public class ShootCommands {
     public Command readyAmp() {
         return Commands.sequence(
                 intake.feedHalfCommand(),
-                superstructure.toGoal(Superstructure.Goal.AMP)
+                superstructure.runGoal(Superstructure.Goal.AMP)
         );
     }
 
@@ -108,7 +108,6 @@ public class ShootCommands {
                         .onlyIf(() -> superstructure.getGoal() != Superstructure.Goal.AMP),
                 Commands.deadline(
                         Commands.waitUntil(superstructure.atSetpoint)
-                                .andThen(Commands.waitSeconds(0.5))
                                 .andThen(intake.feedCommand())
                                 .andThen(Commands.waitSeconds(0.15)),
                         superstructure.toGoal(Superstructure.Goal.AMP)
@@ -145,8 +144,7 @@ public class ShootCommands {
 
     public Command shootSubwoofer() {
         return Commands.deadline(
-                intake
-                        .runStopCommand()
+                intake.runStopCommand()
                         .until(superstructure.atSetpoint)
                         .andThen(intake.feedCommand()),
                 superstructure.toGoal(Superstructure.Goal.SUBWOOFER)

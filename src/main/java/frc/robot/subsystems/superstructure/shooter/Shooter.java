@@ -166,6 +166,10 @@ public class Shooter extends SubsystemBase {
         return runEnd(() -> this.goal = goal, () -> this.goal = Goal.IDLE);
     }
 
+    public Command runGoal(final Goal goal) {
+        return run(() -> this.goal = goal);
+    }
+
     public Command toVelocityCommand(
             final DoubleSupplier ampVelocityRotsPerSec,
             final DoubleSupplier leftFlywheelVelocityRotsPerSec,

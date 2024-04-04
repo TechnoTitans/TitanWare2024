@@ -34,11 +34,11 @@ public class NoteState {
     public final Trigger isStoring = isStoringForward.or(isStoringBackward);
     public final Trigger hasNote = isStoring.or(isStored).or(isFeeding);
 
-    private boolean storeNotes = true;
-    public BooleanSupplier shouldStoreNotes = () -> this.storeNotes;
+    public final BooleanSupplier shouldStoreNotes;
 
     public NoteState(final Constants.RobotMode mode, final Intake intake) {
         this.intake = intake;
+        this.shouldStoreNotes = intake.shouldStoreNotes;
 
         configureStateTriggers();
         if (mode != Constants.RobotMode.REAL) {
@@ -56,10 +56,6 @@ public class NoteState {
 
     public State getState() {
         return state;
-    }
-
-    public void setShouldStoreNotes(final boolean storeNotes) {
-        this.storeNotes = storeNotes;
     }
 
     public void configureStateTriggers() {

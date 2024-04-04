@@ -54,6 +54,13 @@ public class Superstructure {
                 .finallyDo(() -> this.goal = Goal.IDLE);
     }
 
+    public Command runGoal(final Goal goal) {
+        return Commands.parallel(
+                        arm.runGoal(goal.armGoal),
+                        shooter.runGoal(goal.shooterGoal))
+                .beforeStarting(() -> this.goal = goal);
+    }
+
     public Command runState(final Supplier<ShotParameters.Parameters> parametersSupplier) {
         return runState(
                 () -> parametersSupplier.get().armPivotAngle(),

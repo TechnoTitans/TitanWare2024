@@ -1,6 +1,7 @@
 package frc.robot;
 
 import com.ctre.phoenix6.SignalLogger;
+import edu.wpi.first.math.MathUtil;
 import edu.wpi.first.wpilibj.*;
 import edu.wpi.first.wpilibj.event.EventLoop;
 import edu.wpi.first.wpilibj.livewindow.LiveWindow;
@@ -409,7 +410,8 @@ public class Robot extends LoggedRobot {
     }
 
     public void configureButtonBindings(final EventLoop teleopEventLoop) {
-        this.driverController.leftTrigger(0.5, teleopEventLoop).whileTrue(intake.intakeCommand());
+        this.driverController.leftTrigger(0.5, teleopEventLoop)
+                .whileTrue(intake.intakeCommand());
         // TODO: does this rumble fast/early enough?
         this.noteState.hasNote.onTrue(
                 ControllerUtils.rumbleForDurationCommand(
@@ -455,7 +457,7 @@ public class Robot extends LoggedRobot {
                 .whileTrue(shootCommands.runEjectIntake())
                 .onFalse(intake.instantStopCommand());
         //noinspection SuspiciousNameCombination
-        this.coDriverController.a(teleopEventLoop)
+        this.coDriverController.b(teleopEventLoop)
                 .whileTrue(shootCommands.angleAndReadyAmp(
                         driverController::getLeftY,
                         driverController::getLeftX

@@ -16,6 +16,8 @@ import frc.robot.constants.HardwareConstants;
 import frc.robot.utils.logging.LogUtils;
 import org.littletonrobotics.junction.Logger;
 
+import java.util.function.BooleanSupplier;
+
 import static edu.wpi.first.units.Units.*;
 
 public class Intake extends SubsystemBase {
@@ -30,6 +32,9 @@ public class Intake extends SubsystemBase {
 
     private boolean intakingActive = false;
     public final Trigger intaking;
+
+    private boolean storeNotes = true;
+    public final BooleanSupplier shouldStoreNotes = () -> this.storeNotes;
 
     private boolean feedingActive = false;
     public final Trigger feeding;
@@ -86,6 +91,7 @@ public class Intake extends SubsystemBase {
 
         Logger.recordOutput(LogKey + "/Intaking", intaking.getAsBoolean());
         Logger.recordOutput(LogKey + "/Feeding", feeding.getAsBoolean());
+        Logger.recordOutput(LogKey + "/ShouldStoreNotes", shouldStoreNotes.getAsBoolean());
 
         Logger.recordOutput(LogKey + "/Setpoint/RightRollerVelocityRotsPerSec", setpoint.rightRollerVelocityRotsPerSec);
         Logger.recordOutput(LogKey + "/Setpoint/LeftRollerVelocityRotsPerSec", setpoint.leftRollerVelocityRotsPerSec);
@@ -108,7 +114,7 @@ public class Intake extends SubsystemBase {
     public Command intakeCommand() {
         return Commands.sequence(
                 runOnce(() -> this.intakingActive = true),
-                runVelocityCommand(22, 22, 16)
+                runVelocityCommand(22, 22, 8)
                         .until(shooterBeamBreakBroken),
                 instantStopCommand()
 //                storeCommand()
@@ -117,13 +123,18 @@ public class Intake extends SubsystemBase {
 
     public Command intakeAndFeedCommand() {
         return Commands.sequence(
-                runOnce(() -> this.intakingActive = true),
+                runOnce(() -> {
+                    this.intakingActive = true;
+                    this.storeNotes = false;
+                }),
                 runVelocityCommand(22, 22, 22)
                         .until(shooterBeamBreakBroken),
-                Commands.idle()
-                        .until(shooterBeamBreakBroken.negate()),
+                Commands.waitUntil(shooterBeamBreakBroken.negate()),
                 instantStopCommand()
-        ).finallyDo(() -> this.intakingActive = false);
+        ).finallyDo(() -> {
+            this.intakingActive = false;
+            this.storeNotes = true;
+        });
     }
 
     public Command feedHalfCommand() {
