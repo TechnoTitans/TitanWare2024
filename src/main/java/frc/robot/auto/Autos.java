@@ -517,10 +517,6 @@ public class Autos {
 
         autoTriggers.autoEnabled().whileTrue(preloadSubwooferAndFollow0(autoTriggers.trajectories, timer));
 
-        autoTriggers.autoEnabled().whileTrue(
-                Commands.run(() -> Logger.recordOutput("Auto/Timer", timer.get()))
-        );
-
         autoTriggers.atTime(1.8).onTrue(
                 Commands.parallel(
                         intake.intakeCommand(),
@@ -528,23 +524,29 @@ public class Autos {
                 ).withName("Intake0")
         );
 
-        autoTriggers.atTime(4.86).onTrue(
+        autoTriggers.atTime(4.54).onTrue(
                 Commands.sequence(
-                        shootCommands.deferredStopAimAndShoot().withName("Shoot0").asProxy(),
+                        shootCommands.deferredStopAimAndShoot()
+                                .onlyIf(noteState.hasNote)
+                                .withName("Shoot0")
+                                .asProxy(),
                         followPath(autoTriggers.trajectories.get(1), timer).asProxy()
                 ).withName("Shoot0AndFollow1")
         );
 
-        autoTriggers.atTime(5.5).onTrue(
+        autoTriggers.atTime(5.2).onTrue(
                 Commands.parallel(
                         intake.intakeCommand(),
                         shootCommands.readySuperstructureForShot()
                 ).withName("Intake1")
         );
 
-        autoTriggers.atTime(8.74).onTrue(
+        autoTriggers.atTime(8.02).onTrue(
                 Commands.sequence(
-                        shootCommands.deferredStopAimAndShoot().withName("Shoot1").asProxy()
+                        shootCommands.deferredStopAimAndShoot()
+                                .onlyIf(noteState.hasNote)
+                                .withName("Shoot1")
+                                .asProxy()
                 ).withName("Shoot1AndFollow2")
         );
 
@@ -798,7 +800,10 @@ public class Autos {
 
         autoTriggers.atTime(5.04).onTrue(
                 Commands.sequence(
-                        shootCommands.deferredStopAimAndShoot().withName("Shoot0").asProxy(),
+                        shootCommands.deferredStopAimAndShoot()
+                                .onlyIf(noteState.hasNote)
+                                .withName("Shoot0")
+                                .asProxy(),
                         followPath(autoTriggers.trajectories.get(1), timer).asProxy()
                 ).withName("Shoot0AndFollow1")
         );
@@ -809,22 +814,28 @@ public class Autos {
                 ).withName("Intake1")
         );
 
-        autoTriggers.atTime(9.25).onTrue(
+        autoTriggers.atTime(9.24).onTrue(
                 Commands.sequence(
-                        shootCommands.deferredStopAimAndShoot().withName("Shoot1").asProxy(),
+                        shootCommands.deferredStopAimAndShoot()
+                                .onlyIf(noteState.hasNote)
+                                .withName("Shoot1")
+                                .asProxy(),
                         followPath(autoTriggers.trajectories.get(2), timer).asProxy()
                 ).withName("Shoot1AndFollow2")
         );
 
-        autoTriggers.atTime(10.2).onTrue(
+        autoTriggers.atTime(10).onTrue(
                 Commands.parallel(
                         intake.intakeCommand()
                 ).withName("Intake2")
         );
 
-        autoTriggers.atTime(13.04).onTrue(
+        autoTriggers.atTime(13.24).onTrue(
                 Commands.sequence(
-                        shootCommands.deferredStopAimAndShoot().withName("Shoot2").asProxy()
+                        shootCommands.deferredStopAimAndShoot()
+                                .onlyIf(noteState.hasNote)
+                                .withName("Shoot2")
+                                .asProxy()
                 ).withName("Shoot2")
         );
 
