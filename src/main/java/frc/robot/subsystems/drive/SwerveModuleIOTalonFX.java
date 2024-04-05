@@ -107,9 +107,9 @@ public class SwerveModuleIOTalonFX implements SwerveModuleIO {
                 .withKV(0)
                 .withKA(2.5488)
                 .withKP(46.391);
-        driveTalonFXConfiguration.TorqueCurrent.PeakForwardTorqueCurrent = 60;
-        driveTalonFXConfiguration.TorqueCurrent.PeakReverseTorqueCurrent = -60;
-        driveTalonFXConfiguration.CurrentLimits.StatorCurrentLimit = 60;
+        driveTalonFXConfiguration.TorqueCurrent.PeakForwardTorqueCurrent = 80;
+        driveTalonFXConfiguration.TorqueCurrent.PeakReverseTorqueCurrent = -80;
+        driveTalonFXConfiguration.CurrentLimits.StatorCurrentLimit = 80;
         driveTalonFXConfiguration.CurrentLimits.StatorCurrentLimitEnable = true;
         driveTalonFXConfiguration.CurrentLimits.SupplyCurrentLimit = 50;
         driveTalonFXConfiguration.CurrentLimits.SupplyCurrentThreshold = 60;

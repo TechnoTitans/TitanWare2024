@@ -154,6 +154,7 @@ public class Autos {
     ) {
         final ChoreoTrajectory trajectory0 = trajectories.get(0);
         return Commands.sequence(
+                noteState.setState(NoteState.State.STORED),
                 resetPose(trajectory0),
                 shootCommands.shootSubwoofer().withName("ShootPreload").asProxy(),
                 followPath(trajectory0, timer)
@@ -557,6 +558,7 @@ public class Autos {
 
         autoTriggers.autoEnabled().whileTrue(
             Commands.sequence(
+                    noteState.setState(NoteState.State.STORED),
                     resetPose(autoTriggers.trajectory),
                     shootCommands.shootSubwoofer().withName("ShootPreload").asProxy(),
                     followIntakeAndInstantShoot(
@@ -628,6 +630,7 @@ public class Autos {
 
         autoTriggers.autoEnabled().whileTrue(
                 Commands.sequence(
+                        noteState.setState(NoteState.State.STORED),
                         resetPose(autoTriggers.trajectory),
                         shootCommands.shootSubwoofer().withName("ShootPreload").asProxy(),
                         followIntakeAndInstantShoot(
@@ -702,6 +705,7 @@ public class Autos {
 
         autoTriggers.autoEnabled().whileTrue(
                 Commands.sequence(
+                        noteState.setState(NoteState.State.STORED),
                         resetPose(autoTriggers.trajectory),
                         shootCommands.shootSubwoofer().withName("ShootPreload").asProxy(),
                         followIntakeAndInstantShoot(

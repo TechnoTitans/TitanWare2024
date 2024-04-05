@@ -5,11 +5,14 @@ import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.button.Trigger;
 import frc.robot.constants.Constants;
 import frc.robot.subsystems.intake.Intake;
+import frc.robot.utils.subsystems.VirtualSubsystem;
+import org.littletonrobotics.junction.Logger;
 
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.function.BooleanSupplier;
 
-public class NoteState {
+public class NoteState extends VirtualSubsystem {
+    public static final String LogKey = "NoteState";
     private final Intake intake;
 
     public enum State {
@@ -44,6 +47,13 @@ public class NoteState {
         if (mode != Constants.RobotMode.REAL) {
             configureSimTriggers();
         }
+    }
+
+    @Override
+    public void periodic() {
+        Logger.recordOutput(LogKey + "/State", state.toString());
+        Logger.recordOutput(LogKey + "/HasNote", hasNote.getAsBoolean());
+        Logger.recordOutput(LogKey + "/IsStoring", isStored.getAsBoolean());
     }
 
     public Trigger isStateTrigger(final State state) {

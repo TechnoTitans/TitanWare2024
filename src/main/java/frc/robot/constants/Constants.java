@@ -10,7 +10,7 @@ import edu.wpi.first.math.util.Units;
 import org.photonvision.PhotonPoseEstimator;
 
 public interface Constants {
-    RobotMode CURRENT_MODE = RobotMode.REAL;
+    RobotMode CURRENT_MODE = RobotMode.SIM;
     CompetitionType CURRENT_COMPETITION_TYPE = CompetitionType.COMPETITION;
     double LOOP_PERIOD_SECONDS = 0.02;
 

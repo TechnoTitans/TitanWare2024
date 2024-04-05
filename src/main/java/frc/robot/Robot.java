@@ -1,7 +1,6 @@
 package frc.robot;
 
 import com.ctre.phoenix6.SignalLogger;
-import edu.wpi.first.math.MathUtil;
 import edu.wpi.first.wpilibj.*;
 import edu.wpi.first.wpilibj.event.EventLoop;
 import edu.wpi.first.wpilibj.livewindow.LiveWindow;
@@ -129,12 +128,15 @@ public class Robot extends LoggedRobot {
         // no need to inspect this here because BuildConstants is a dynamically changing file upon compilation
         //noinspection RedundantSuppression
         switch (BuildConstants.DIRTY) {
-            //noinspection DataFlowIssue
-            case 0 -> Logger.recordMetadata("GitDirty", "All changes committed");
-            //noinspection DataFlowIssue
-            case 1 -> Logger.recordMetadata("GitDirty", "Uncommitted changes");
-            //noinspection DataFlowIssue
-            default -> Logger.recordMetadata("GitDirty", "Unknown");
+            //noinspection DataFlowIssue,RedundantSuppression
+            case 0 -> //noinspection UnreachableCode
+                    Logger.recordMetadata("GitDirty", "All changes committed");
+            //noinspection DataFlowIssue,RedundantSuppression
+            case 1 -> //noinspection UnreachableCode
+                    Logger.recordMetadata("GitDirty", "Uncommitted changes");
+            //noinspection DataFlowIssue,RedundantSuppression
+            default -> //noinspection UnreachableCode
+                    Logger.recordMetadata("GitDirty", "Unknown");
         }
 
         switch (Constants.CURRENT_MODE) {
@@ -246,9 +248,6 @@ public class Robot extends LoggedRobot {
         );
 
         Logger.recordOutput("ShootWhileMoving/FuturePose", shotWhileMoving.futurePose());
-
-        final NoteState.State state = noteState.getState();
-        Logger.recordOutput("NoteState", state.toString());
     }
 
     @Override
@@ -451,11 +450,9 @@ public class Robot extends LoggedRobot {
         );
 
         this.coDriverController.y(teleopEventLoop)
-                .whileTrue(shootCommands.runEjectShooter())
-                .onFalse(intake.instantStopCommand());
+                .whileTrue(shootCommands.runEjectShooter());
         this.coDriverController.a(teleopEventLoop)
-                .whileTrue(shootCommands.runEjectIntake())
-                .onFalse(intake.instantStopCommand());
+                .whileTrue(shootCommands.runEjectIntake());
         //noinspection SuspiciousNameCombination
         this.coDriverController.b(teleopEventLoop)
                 .whileTrue(shootCommands.angleAndReadyAmp(

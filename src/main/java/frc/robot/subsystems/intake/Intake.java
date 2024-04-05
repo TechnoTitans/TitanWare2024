@@ -232,11 +232,14 @@ public class Intake extends SubsystemBase {
             final double leftRollerVoltage,
             final double shooterFeederVoltage
     ) {
-        return run(() -> intakeIO.toVoltage(
-                rightRollerVoltage,
-                leftRollerVoltage,
-                shooterFeederVoltage
-        ));
+        return startEnd(
+                () -> intakeIO.toVoltage(
+                        rightRollerVoltage,
+                        leftRollerVoltage,
+                        shooterFeederVoltage
+                ),
+                () -> intakeIO.toVoltage(0, 0, 0)
+        );
     }
 
     /**
