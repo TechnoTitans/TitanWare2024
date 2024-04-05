@@ -115,7 +115,7 @@ public class SwerveModuleIOTalonFX implements SwerveModuleIO {
         driveTalonFXConfiguration.CurrentLimits.SupplyCurrentThreshold = 60;
         driveTalonFXConfiguration.CurrentLimits.SupplyTimeThreshold = 0.5;
         driveTalonFXConfiguration.CurrentLimits.SupplyCurrentLimitEnable = true;
-        driveTalonFXConfiguration.ClosedLoopRamps.TorqueClosedLoopRampPeriod = 0.25;
+        driveTalonFXConfiguration.ClosedLoopRamps.TorqueClosedLoopRampPeriod = 0.2;
         driveTalonFXConfiguration.Feedback.SensorToMechanismRatio = driveReduction;
         driveTalonFXConfiguration.MotorOutput.NeutralMode = NeutralModeValue.Brake;
         driveTalonFXConfiguration.MotorOutput.Inverted = InvertedValue.Clockwise_Positive;

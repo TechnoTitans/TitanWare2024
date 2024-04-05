@@ -47,7 +47,7 @@ public class Shooter extends SubsystemBase {
         IDLE(40, 40, 40),
         EJECT(80, 80, 80),
         BACK_FEED(-60, -60, -60),
-        AMP(60, -60, -60),
+        AMP(60, -70, -70),
         FERRY_CENTERLINE(60, 60, 80),
         SUBWOOFER(80, 80, 80);
 
