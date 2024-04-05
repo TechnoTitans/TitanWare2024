@@ -156,9 +156,9 @@ public class Swerve extends SubsystemBase {
         this.atHolonomicDrivePose = new Trigger(holonomicDriveWithPIDController::atReference);
 
         this.choreoController = new HolonomicChoreoController(
-                new PIDController(4, 0, 0),
-                new PIDController(4, 0, 0),
-                new PIDController(2, 0, 0)
+                new PIDController(5, 0, 0),
+                new PIDController(5, 0, 0),
+                new PIDController(5, 0, 0)
         );
 
         this.linearVoltageSysIdRoutine = makeLinearVoltageSysIdRoutine();

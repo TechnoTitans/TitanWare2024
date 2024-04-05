@@ -7,16 +7,19 @@ import edu.wpi.first.wpilibj2.command.Subsystem;
 import edu.wpi.first.wpilibj2.command.button.Trigger;
 import frc.robot.subsystems.superstructure.arm.Arm;
 import frc.robot.subsystems.superstructure.shooter.Shooter;
+import frc.robot.utils.subsystems.VirtualSubsystem;
+import org.littletonrobotics.junction.Logger;
 
 import java.util.Set;
 import java.util.function.DoubleSupplier;
 import java.util.function.Supplier;
 
-public class Superstructure {
+public class Superstructure extends VirtualSubsystem {
+    public static final String LogKey = "Superstructure";
     private final Arm arm;
     private final Shooter shooter;
 
-    private Goal goal;
+    private Goal goal = Goal.IDLE;
     public final Trigger atSetpoint;
 
     public enum Goal {
@@ -41,6 +44,12 @@ public class Superstructure {
         this.arm = arm;
         this.shooter = shooter;
         this.atSetpoint = arm.atPivotSetpoint.and(shooter.atVelocitySetpoint);
+    }
+
+    @Override
+    public void periodic() {
+        Logger.recordOutput(LogKey + "/AtSetpoint", atSetpoint.getAsBoolean());
+        Logger.recordOutput(LogKey + "/Goal", goal.toString());
     }
 
     public Goal getGoal() {

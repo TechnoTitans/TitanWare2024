@@ -43,8 +43,8 @@ public interface Constants {
         );
 
         Transform3d ROBOT_TO_FC_APRILTAG = new Transform3d(
-                new Translation3d(Units.inchesToMeters(14.231), Units.inchesToMeters(8.52), Units.degreesToRadians(6.759)),
-                new Rotation3d(0, Units.degreesToRadians(30), 0)
+                new Translation3d(Units.inchesToMeters(13.36613), Units.inchesToMeters(8.5202), Units.inchesToMeters(6.759)),
+                new Rotation3d(0, Units.degreesToRadians(-30), 0)
         );
 
         Transform3d ROBOT_TO_FR_APRILTAG = new Transform3d(

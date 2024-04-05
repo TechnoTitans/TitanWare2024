@@ -571,56 +571,56 @@ public class Autos {
             ).withName("PreloadFollow0AndShoot0")
         );
 
-        autoTriggers.atTime(1.13).onTrue(
-                Commands.parallel(
-                        followIntakeAndInstantShoot(
-                                autoTriggers.trajectories.get(1),
-                                timer,
-                                1.5
-                        ).withName("Follow1AndIntakeInstantShoot1")
-                ).withName("Follow1Intake1AndShoot1")
-        );
-
-        autoTriggers.atTime(2.61).onTrue(
-                Commands.parallel(
-                        followIntakeAndInstantShoot(
-                                autoTriggers.trajectories.get(2),
-                                timer,
-                                3
-                        ).withName("Follow2AndIntakeInstantShoot2").asProxy()
-                ).withName("Follow2Intake2AndShoot2")
-        );
-
-        autoTriggers.atTime(4.04).onTrue(
-                Commands.sequence(
-                        followPath(autoTriggers.trajectories.get(3), timer).asProxy()
-                ).withName("Follow3")
-        );
-
-        autoTriggers.atTime(5).onTrue(
-                Commands.parallel(
-                        intake.intakeCommand()
-                ).withName("Intake3")
-        );
-
-        autoTriggers.atTime(7.82).onTrue(
-                Commands.sequence(
-                        shootCommands.deferredStopAimAndShoot().withName("Shoot3").asProxy(),
-                        followPath(autoTriggers.trajectories.get(4), timer).asProxy()
-                ).withName("Shoot3AndFollow4")
-        );
-
-        autoTriggers.atTime(8.5).onTrue(
-                Commands.parallel(
-                        intake.intakeCommand()
-                ).withName("Intake4")
-        );
-
-        autoTriggers.atTime(11.2).onTrue(
-                Commands.sequence(
-                        shootCommands.deferredStopAimAndShoot().withName("Shoot3").asProxy()
-                ).withName("Shoot4")
-        );
+//        autoTriggers.atTime(1.13).onTrue(
+//                Commands.parallel(
+//                        followIntakeAndInstantShoot(
+//                                autoTriggers.trajectories.get(1),
+//                                timer,
+//                                1.5
+//                        ).withName("Follow1AndIntakeInstantShoot1")
+//                ).withName("Follow1Intake1AndShoot1")
+//        );
+//
+//        autoTriggers.atTime(2.61).onTrue(
+//                Commands.parallel(
+//                        followIntakeAndInstantShoot(
+//                                autoTriggers.trajectories.get(2),
+//                                timer,
+//                                3
+//                        ).withName("Follow2AndIntakeInstantShoot2").asProxy()
+//                ).withName("Follow2Intake2AndShoot2")
+//        );
+//
+//        autoTriggers.atTime(4.04).onTrue(
+//                Commands.sequence(
+//                        followPath(autoTriggers.trajectories.get(3), timer).asProxy()
+//                ).withName("Follow3")
+//        );
+//
+//        autoTriggers.atTime(5).onTrue(
+//                Commands.parallel(
+//                        intake.intakeCommand()
+//                ).withName("Intake3")
+//        );
+//
+//        autoTriggers.atTime(7.82).onTrue(
+//                Commands.sequence(
+//                        shootCommands.deferredStopAimAndShoot().withName("Shoot3").asProxy(),
+//                        followPath(autoTriggers.trajectories.get(4), timer).asProxy()
+//                ).withName("Shoot3AndFollow4")
+//        );
+//
+//        autoTriggers.atTime(8.5).onTrue(
+//                Commands.parallel(
+//                        intake.intakeCommand()
+//                ).withName("Intake4")
+//        );
+//
+//        autoTriggers.atTime(11.2).onTrue(
+//                Commands.sequence(
+//                        shootCommands.deferredStopAimAndShoot().withName("Shoot3").asProxy()
+//                ).withName("Shoot4")
+//        );
 
         return autoTriggers.eventLoop;
     }
@@ -820,6 +820,7 @@ public class Autos {
                                 .onlyIf(noteState.hasNote)
                                 .withName("Shoot1")
                                 .asProxy(),
+                        superstructure.toGoal(Superstructure.Goal.IDLE),
                         followPath(autoTriggers.trajectories.get(2), timer).asProxy()
                 ).withName("Shoot1AndFollow2")
         );
