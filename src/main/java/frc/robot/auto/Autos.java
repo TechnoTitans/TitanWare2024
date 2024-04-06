@@ -798,7 +798,7 @@ public class Autos {
                 ).withName("Intake0")
         );
 
-        autoTriggers.atTime(5.04).onTrue(
+        autoTriggers.atTime(5).onTrue(
                 Commands.sequence(
                         shootCommands.deferredStopAimAndShoot()
                                 .onlyIf(noteState.hasNote)
@@ -814,24 +814,24 @@ public class Autos {
                 ).withName("Intake1")
         );
 
-        autoTriggers.atTime(9.24).onTrue(
+        autoTriggers.atTime(9.32).onTrue(
                 Commands.sequence(
                         shootCommands.deferredStopAimAndShoot()
                                 .onlyIf(noteState.hasNote)
                                 .withName("Shoot1")
                                 .asProxy(),
-                        superstructure.toGoal(Superstructure.Goal.IDLE),
+                        superstructure.toInstantGoal(Superstructure.Goal.IDLE),
                         followPath(autoTriggers.trajectories.get(2), timer).asProxy()
                 ).withName("Shoot1AndFollow2")
         );
 
-        autoTriggers.atTime(10).onTrue(
+        autoTriggers.atTime(10.2).onTrue(
                 Commands.parallel(
                         intake.intakeCommand()
                 ).withName("Intake2")
         );
 
-        autoTriggers.atTime(13.24).onTrue(
+        autoTriggers.atTime(13.35).onTrue(
                 Commands.sequence(
                         shootCommands.deferredStopAimAndShoot()
                                 .onlyIf(noteState.hasNote)

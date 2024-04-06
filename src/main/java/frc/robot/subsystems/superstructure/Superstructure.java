@@ -56,6 +56,13 @@ public class Superstructure extends VirtualSubsystem {
         return goal;
     }
 
+    public Command toInstantGoal(final Goal goal) {
+        return Commands.parallel(
+                arm.toInstantGoal(goal.armGoal),
+                shooter.toInstantGoal(goal.shooterGoal))
+                .beforeStarting(() -> this.goal = goal);
+    }
+
     public Command toGoal(final Goal goal) {
         return Commands.parallel(
                         arm.toGoal(goal.armGoal),

@@ -163,6 +163,10 @@ public class Shooter extends SubsystemBase {
         );
     }
 
+    public Command toInstantGoal(final Goal goal) {
+        return runOnce(() -> this.goal = goal);
+    }
+
     public Command toGoal(final Goal goal) {
         return runEnd(() -> this.goal = goal, () -> this.goal = Goal.IDLE);
     }

@@ -171,6 +171,10 @@ public class Arm extends SubsystemBase {
         return inputs.leftPivotPositionRots >= pivotSoftUpperLimit.pivotPositionRots;
     }
 
+    public Command toInstantGoal(final Goal goal) {
+        return runOnce(() -> this.goal = goal);
+    }
+
     public Command toGoal(final Goal goal) {
         // TODO: need to standardize on using runOnce vs. runEnd, i.e. whether this command,
         //  on end/interrupt should schedule the default/idle goal (in this case, STOW)
