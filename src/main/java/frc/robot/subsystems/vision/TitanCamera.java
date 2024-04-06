@@ -59,7 +59,7 @@ public enum TitanCamera {
             "FC_Apriltag",
             Constants.Vision.ROBOT_TO_FC_APRILTAG,
             CameraProperties.ARDUCAM_OV9281,
-            1.5,
+            2.5,
             new TitanCameraCalibration()
                     .withCalibration(
                             CameraProperties.Resolution.R640x480,

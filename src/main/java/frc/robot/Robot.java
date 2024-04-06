@@ -331,14 +331,71 @@ public class Robot extends LoggedRobot {
     }
 
     public void configureAutos() {
+        //SUBWOOFER --------
+        autoChooser.addAutoOption(new AutoOption(
+                "Front4Piece",
+                autos.speaker2_1_0(),
+                Constants.CompetitionType.COMPETITION
+        ));
+
+        //AMP -------------
+        autoChooser.addAutoOption(new AutoOption(
+                "AmpCenter3_2",
+                autos.ampCenter3_2(),
+                Constants.CompetitionType.COMPETITION
+        ));
+        autoChooser.addAutoOption(new AutoOption(
+                "AmpCenter2_3",
+                autos.ampCenter2_3(),
+                Constants.CompetitionType.COMPETITION
+        ));
+        autoChooser.addAutoOption(new AutoOption(
+                "AmpCenter4_3",
+                autos.ampCenter4_3(),
+                Constants.CompetitionType.COMPETITION
+        ));
+        autoChooser.addAutoOption(new AutoOption(
+                "AmpCenter3_4",
+                autos.ampCenter3_4(),
+                Constants.CompetitionType.COMPETITION
+        ));
+
+        //SOURCE ---------
+        autoChooser.addAutoOption(new AutoOption(
+                "SourceCenter1_0",
+                autos.sourceCenter1_0(),
+                Constants.CompetitionType.TESTING
+        ));
+        autoChooser.addAutoOption(new AutoOption(
+                "SourceCenter0_1_2",
+                autos.altSourceCenter0_1_2(),
+                Constants.CompetitionType.COMPETITION
+        ));
+        autoChooser.addAutoOption(new AutoOption(
+                "SourceCenter1_0_2",
+                autos.sourceCenter1_0_2(),
+                Constants.CompetitionType.COMPETITION
+        ));
+
+        //TESTING ----------
         autoChooser.addAutoOption(new AutoOption(
                 "SourceSpeaker0",
                 autos.sourceSpeaker0(),
-                Constants.CompetitionType.COMPETITION
+                Constants.CompetitionType.TESTING
         ));
         autoChooser.addAutoOption(new AutoOption(
                 "AmpSpeaker2",
                 autos.ampSpeaker2(),
+                Constants.CompetitionType.TESTING
+        ));
+        autoChooser.addAutoOption(new AutoOption(
+                "AmpSpeaker2Center2_3",
+                autos.ampSpeaker2Center2_3(),
+                Constants.CompetitionType.TESTING
+        ));
+        autoChooser.addAutoOption(new AutoOption(
+                "SourceMobility",
+                autos.sourceMobility(),
                 Constants.CompetitionType.TESTING
         ));
         autoChooser.addAutoOption(new AutoOption(
@@ -357,54 +414,24 @@ public class Robot extends LoggedRobot {
                 Constants.CompetitionType.TESTING
         ));
         autoChooser.addAutoOption(new AutoOption(
-                "Speaker2_1_0",
-                autos.speaker2_1_0(),
-                Constants.CompetitionType.COMPETITION
-        ));
-        autoChooser.addAutoOption(new AutoOption(
-                "AmpSpeaker2Center2_3",
-                autos.ampSpeaker2Center2_3(),
-                Constants.CompetitionType.COMPETITION
-        ));
-        autoChooser.addAutoOption(new AutoOption(
-                "SourceMobility",
-                autos.sourceMobility(),
-                Constants.CompetitionType.COMPETITION
-        ));
-        autoChooser.addAutoOption(new AutoOption(
-                "SourceCenter1_0",
-                autos.sourceCenter1_0(),
-                Constants.CompetitionType.COMPETITION
-        ));
-        autoChooser.addAutoOption(new AutoOption(
-                "AmpCenter3_2",
-                autos.ampCenter3_2(),
-                Constants.CompetitionType.COMPETITION
-        ));
-        autoChooser.addAutoOption(new AutoOption(
-                "AmpCenter4_3",
-                autos.ampCenter4_3(),
-                Constants.CompetitionType.COMPETITION
-        ));
-        autoChooser.addAutoOption(new AutoOption(
                 "Speaker0_1_2Center4_3",
                 autos.speaker0_1_2Center4_3(),
-                Constants.CompetitionType.COMPETITION
+                Constants.CompetitionType.TESTING
         ));
         autoChooser.addAutoOption(new AutoOption(
                 "AmpSpeaker2_1Center2_3_4",
                 autos.ampSpeaker2_1Center2_3_4(),
-                Constants.CompetitionType.COMPETITION
+                Constants.CompetitionType.TESTING
         ));
         autoChooser.addAutoOption(new AutoOption(
                 "Speaker0_1_2Center4_3_2",
                 autos.speaker0_1_2Center4_3_2(),
-                Constants.CompetitionType.COMPETITION
+                Constants.CompetitionType.TESTING
         ));
         autoChooser.addAutoOption(new AutoOption(
-                "SourceCenter0_1_2",
+                "OLDSourceCenter0_1_2",
                 autos.sourceCenter0_1_2(),
-                Constants.CompetitionType.COMPETITION
+                Constants.CompetitionType.TESTING
         ));
     }
 
