@@ -67,9 +67,9 @@ public class Robot extends LoggedRobot {
             SwerveConstants.BackLeftModule,
             SwerveConstants.BackRightModule
     );
-    public final Intake intake = new Intake(Constants.CURRENT_MODE, HardwareConstants.INTAKE);
-    public final Arm arm = new Arm(Constants.CURRENT_MODE, HardwareConstants.ARM);
-    public final Shooter shooter = new Shooter(Constants.CURRENT_MODE, HardwareConstants.SHOOTER);
+    public final Intake intake = new Intake(Constants.RobotMode.REPLAY, HardwareConstants.INTAKE);
+    public final Arm arm = new Arm(Constants.RobotMode.REPLAY, HardwareConstants.ARM);
+    public final Shooter shooter = new Shooter(Constants.RobotMode.REPLAY, HardwareConstants.SHOOTER);
     public final Superstructure superstructure = new Superstructure(arm, shooter);
 
     @SuppressWarnings("unused")
