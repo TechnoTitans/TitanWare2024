@@ -107,7 +107,9 @@ public class AutoChooser<I, V extends AutoOption> implements AutoCloseable, Logg
      * @return a {@link List} of currently registered {@link V}s
      */
     public List<V> getRegisteredOptions() {
-        return autoMap.values().stream().toList();
+        //dont use stream
+        return List.copyOf(autoMap.values());
+//        return autoMap.values().stream().toList();
     }
 
     @Override

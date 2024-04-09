@@ -41,6 +41,7 @@ import org.littletonrobotics.junction.wpilog.WPILOGWriter;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
+import java.util.Arrays;
 import java.util.Optional;
 import java.util.function.BooleanSupplier;
 
@@ -190,17 +191,14 @@ public class Robot extends LoggedRobot {
                 command -> Logger.recordOutput("Commands/Finished", command.getName())
         );
 
-        // TODO: don't use streams
         CommandScheduler.getInstance().onCommandInterrupt(
                 (interrupted, interrupting) -> {
                     Logger.recordOutput("Commands/Interrupted", interrupted.getName());
-                    Logger.recordOutput(
-                            "Commands/InterruptedRequirements",
-                            interrupted.getRequirements()
-                                    .stream()
-                                    .map(Subsystem::getName)
-                                    .toArray(String[]::new)
-                    );
+//                    final String[] requirements = new String[interrupted.getRequirements().size()];
+//                    for (int i = 0; i < interrupted.getRequirements().size(); i++) {
+//                        requirements[i] = interrupted.getRequirements().iterator().next().getName();
+//                    }
+                    Logger.recordOutput("Commands/Interrupted", Arrays.toString(interrupted.getRequirements().toArray()));
 
                     Logger.recordOutput("Commands/Interrupting", interrupting.isPresent()
                             ? interrupting.get().getName()
@@ -209,11 +207,9 @@ public class Robot extends LoggedRobot {
                     Logger.recordOutput(
                             "Commands/InterruptingRequirements",
                             interrupting
-                                    .map(command -> command.getRequirements()
-                                            .stream()
-                                            .map(Subsystem::getName)
-                                            .toArray(String[]::new)
-                                    ).orElseGet(() -> new String[0])
+                                    .map(
+                                            command -> Arrays.toString(command.getRequirements().toArray())
+                                    ).orElse("")
                     );
                 }
         );

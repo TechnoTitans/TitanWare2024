@@ -28,7 +28,10 @@ public record AutoOption(
         this(
                 name,
                 autoEventLoop,
-                new HashSet<>(Stream.concat(defaultCompetitionTypes.stream(), Arrays.stream(competitionTypes)).toList())
+                new HashSet<>(Stream.concat(
+                        Arrays.stream(competitionTypes),
+                        defaultCompetitionTypes.stream()
+                ).toList())
         );
     }
 

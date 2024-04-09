@@ -82,9 +82,11 @@ public class PhotonVisionApriltagsSim implements PhotonVisionRunner<PhotonVision
             if (latestPhotonPipelineResult == null) {
                 inputs.pipelineResultTargets = new double[] {};
             } else {
-                inputs.pipelineResultTargets = latestPhotonPipelineResult.targets.stream()
-                        .mapToDouble(PhotonTrackedTarget::getFiducialId)
-                        .toArray();
+                final double[] pipelineResultTargets = new double[latestPhotonPipelineResult.targets.size()];
+                for (int i = 0; i < pipelineResultTargets.length; i++) {
+                    pipelineResultTargets[i] = latestPhotonPipelineResult.targets.get(i).getFiducialId();
+                }
+                inputs.pipelineResultTargets = pipelineResultTargets;
             }
             inputs.primaryStrategy = poseEstimator.getPrimaryStrategy().toString();
 
