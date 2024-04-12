@@ -140,7 +140,6 @@ public class ShotParameters {
         ));
     }
 
-
     public static Parameters get(final double distanceMeters) {
         return shotDataMap.get(distanceMeters);
     }
