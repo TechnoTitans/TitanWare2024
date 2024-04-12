@@ -24,8 +24,6 @@ public class NoteState extends VirtualSubsystem {
         FEEDING
     }
 
-    private final ThreadLocalRandom random = ThreadLocalRandom.current();
-
     private State state = State.NONE;
     public final Trigger isNone = isStateTrigger(State.NONE);
     public final Trigger isIntaking = isStateTrigger(State.INTAKING);
@@ -103,7 +101,11 @@ public class NoteState extends VirtualSubsystem {
                 .onTrue(setState(State.STORED));
     }
 
-    private Command waitRand(final double lowerInclusiveSeconds, final double upperExclusiveSeconds) {
+    private Command waitRand(
+            final ThreadLocalRandom random,
+            final double lowerInclusiveSeconds,
+            final double upperExclusiveSeconds
+    ) {
         return Commands.waitSeconds(random.nextDouble(lowerInclusiveSeconds, upperExclusiveSeconds));
     }
 
@@ -112,9 +114,11 @@ public class NoteState extends VirtualSubsystem {
     }
 
     public void configureSimTriggers() {
+        final ThreadLocalRandom random = ThreadLocalRandom.current();
+
         intake.intaking.and(hasNote.negate()).and(intake.shooterBeamBreakBroken.negate())
                 .whileTrue(Commands.sequence(
-                        waitRand(0.1, 2),
+                        waitRand(random, 0.1, 2),
                         Commands.waitSeconds(0.15),
                         setIntakeSensorState(true)
                 ));
@@ -125,20 +129,20 @@ public class NoteState extends VirtualSubsystem {
                 ));
         isStoringForward.and(intake.shooterBeamBreakBroken.negate())
                 .whileTrue(Commands.sequence(
-                        waitRand(0.05, 0.1),
+                        waitRand(random, 0.05, 0.1),
                         setIntakeSensorState(true)
                 ));
         isStoringBackward.and(intake.shooterBeamBreakBroken)
                 .whileTrue(Commands.sequence(
-                        waitRand(0.05, 0.1),
+                        waitRand(random, 0.05, 0.1),
                         setIntakeSensorState(false)
                 ));
 
         intake.feeding.and(isStored)
                 .onTrue(Commands.sequence(
-                        waitRand(0.01, 0.1),
+                        waitRand(random, 0.01, 0.1),
                         setIntakeSensorState(true),
-                        waitRand(0.02, 0.1),
+                        waitRand(random, 0.02, 0.1),
                         setIntakeSensorState(false)
                 ));
     }

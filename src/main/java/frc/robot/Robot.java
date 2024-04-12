@@ -44,7 +44,6 @@ import java.nio.file.Paths;
 import java.util.Optional;
 import java.util.function.BooleanSupplier;
 
-@SuppressWarnings("RedundantMethodOverride")
 public class Robot extends LoggedRobot {
     private static final String AKitLogPath = "/U/logs";
     private static final String HootLogPath = "/U/logs";
@@ -67,9 +66,9 @@ public class Robot extends LoggedRobot {
             SwerveConstants.BackLeftModule,
             SwerveConstants.BackRightModule
     );
-    public final Intake intake = new Intake(Constants.RobotMode.REPLAY, HardwareConstants.INTAKE);
-    public final Arm arm = new Arm(Constants.RobotMode.REPLAY, HardwareConstants.ARM);
-    public final Shooter shooter = new Shooter(Constants.RobotMode.REPLAY, HardwareConstants.SHOOTER);
+    public final Intake intake = new Intake(Constants.CURRENT_MODE, HardwareConstants.INTAKE);
+    public final Arm arm = new Arm(Constants.CURRENT_MODE, HardwareConstants.ARM);
+    public final Shooter shooter = new Shooter(Constants.CURRENT_MODE, HardwareConstants.SHOOTER);
     public final Superstructure superstructure = new Superstructure(arm, shooter);
 
     @SuppressWarnings("unused")
@@ -148,7 +147,7 @@ public class Robot extends LoggedRobot {
                     SignalLogger.setPath("/U");
                     DriverStation.reportError(
                             String.format(
-                                    "Failed to create CTRE .hoot log path at \"%s\"! Falling back to default.\n%s",
+                                    "Failed to create .hoot log path at \"%s\"! Falling back to default.\n%s",
                                     HootLogPath,
                                     ioException
                             ),
@@ -251,9 +250,6 @@ public class Robot extends LoggedRobot {
     }
 
     @Override
-    public void disabledInit() {}
-
-    @Override
     public void disabledPeriodic() {}
 
     @Override
@@ -321,9 +317,6 @@ public class Robot extends LoggedRobot {
     }
 
     @Override
-    public void simulationInit() {}
-
-    @Override
     public void simulationPeriodic() {}
 
     public void configureStateTriggers() {
@@ -331,14 +324,22 @@ public class Robot extends LoggedRobot {
     }
 
     public void configureAutos() {
-        //SUBWOOFER --------
         autoChooser.addAutoOption(new AutoOption(
                 "Front4Piece",
                 autos.speaker2_1_0(),
                 Constants.CompetitionType.COMPETITION
         ));
+        autoChooser.addAutoOption(new AutoOption(
+                "Speaker0_1_2Center4_3",
+                autos.speaker0_1_2Center4_3(),
+                Constants.CompetitionType.TESTING
+        ));
+        autoChooser.addAutoOption(new AutoOption(
+                "Speaker0_1_2Center4_3_2",
+                autos.speaker0_1_2Center4_3_2(),
+                Constants.CompetitionType.TESTING
+        ));
 
-        //AMP -------------
         autoChooser.addAutoOption(new AutoOption(
                 "AmpCenter3_2",
                 autos.ampCenter3_2(),
@@ -359,8 +360,22 @@ public class Robot extends LoggedRobot {
                 autos.ampCenter3_4(),
                 Constants.CompetitionType.COMPETITION
         ));
+        autoChooser.addAutoOption(new AutoOption(
+                "AmpSpeaker2",
+                autos.ampSpeaker2(),
+                Constants.CompetitionType.TESTING
+        ));
+        autoChooser.addAutoOption(new AutoOption(
+                "AmpSpeaker2Center2_3",
+                autos.ampSpeaker2Center2_3(),
+                Constants.CompetitionType.TESTING
+        ));
+        autoChooser.addAutoOption(new AutoOption(
+                "AmpSpeaker2_1Center2_3_4",
+                autos.ampSpeaker2_1Center2_3_4(),
+                Constants.CompetitionType.TESTING
+        ));
 
-        //SOURCE ---------
         autoChooser.addAutoOption(new AutoOption(
                 "SourceCenter1_0",
                 autos.sourceCenter1_0(),
@@ -372,25 +387,18 @@ public class Robot extends LoggedRobot {
                 Constants.CompetitionType.COMPETITION
         ));
         autoChooser.addAutoOption(new AutoOption(
+                "old_SourceCenter0_1_2",
+                autos.sourceCenter0_1_2(),
+                Constants.CompetitionType.TESTING
+        ));
+        autoChooser.addAutoOption(new AutoOption(
                 "SourceCenter1_0_2",
                 autos.sourceCenter1_0_2(),
                 Constants.CompetitionType.COMPETITION
         ));
-
-        //TESTING ----------
         autoChooser.addAutoOption(new AutoOption(
                 "SourceSpeaker0",
                 autos.sourceSpeaker0(),
-                Constants.CompetitionType.TESTING
-        ));
-        autoChooser.addAutoOption(new AutoOption(
-                "AmpSpeaker2",
-                autos.ampSpeaker2(),
-                Constants.CompetitionType.TESTING
-        ));
-        autoChooser.addAutoOption(new AutoOption(
-                "AmpSpeaker2Center2_3",
-                autos.ampSpeaker2Center2_3(),
                 Constants.CompetitionType.TESTING
         ));
         autoChooser.addAutoOption(new AutoOption(
@@ -408,29 +416,11 @@ public class Robot extends LoggedRobot {
                 autos.sourceSpeaker0Center1_2(),
                 Constants.CompetitionType.TESTING
         ));
+
+
         autoChooser.addAutoOption(new AutoOption(
                 "Walton",
                 autos.walton(),
-                Constants.CompetitionType.TESTING
-        ));
-        autoChooser.addAutoOption(new AutoOption(
-                "Speaker0_1_2Center4_3",
-                autos.speaker0_1_2Center4_3(),
-                Constants.CompetitionType.TESTING
-        ));
-        autoChooser.addAutoOption(new AutoOption(
-                "AmpSpeaker2_1Center2_3_4",
-                autos.ampSpeaker2_1Center2_3_4(),
-                Constants.CompetitionType.TESTING
-        ));
-        autoChooser.addAutoOption(new AutoOption(
-                "Speaker0_1_2Center4_3_2",
-                autos.speaker0_1_2Center4_3_2(),
-                Constants.CompetitionType.TESTING
-        ));
-        autoChooser.addAutoOption(new AutoOption(
-                "OLDSourceCenter0_1_2",
-                autos.sourceCenter0_1_2(),
                 Constants.CompetitionType.TESTING
         ));
     }
@@ -438,7 +428,8 @@ public class Robot extends LoggedRobot {
     public void configureButtonBindings(final EventLoop teleopEventLoop) {
         this.driverController.leftTrigger(0.5, teleopEventLoop)
                 .whileTrue(intake.intakeCommand());
-        // TODO: does this rumble fast/early enough?
+        // TODO: this doesn't rumble early enough, or as early as we'd like it to
+        //  not sure if we're hardware limited or its behind by a few cycles and we can speed it up
         this.noteState.hasNote.onTrue(
                 ControllerUtils.rumbleForDurationCommand(
                         driverController.getHID(),
