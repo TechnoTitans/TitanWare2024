@@ -96,6 +96,7 @@ public class PhotonVision extends VirtualSubsystem {
             case REAL -> new PhotonVisionApriltagsReal(
                     PhotonVision.makePhotonVisionIOInputsMap(
                             makePhotonVisionRealIO(TitanCamera.PHOTON_FL_APRILTAG),
+                            makePhotonVisionRealIO(TitanCamera.PHOTON_FC_APRILTAG),
                             makePhotonVisionRealIO(TitanCamera.PHOTON_FR_APRILTAG)
                     )
             );

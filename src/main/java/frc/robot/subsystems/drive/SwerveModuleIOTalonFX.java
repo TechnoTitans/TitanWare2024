@@ -109,12 +109,6 @@ public class SwerveModuleIOTalonFX implements SwerveModuleIO {
                 .withKP(46.391);
         driveTalonFXConfiguration.TorqueCurrent.PeakForwardTorqueCurrent = 80;
         driveTalonFXConfiguration.TorqueCurrent.PeakReverseTorqueCurrent = -80;
-        driveTalonFXConfiguration.CurrentLimits.StatorCurrentLimit = 80;
-        driveTalonFXConfiguration.CurrentLimits.StatorCurrentLimitEnable = true;
-        driveTalonFXConfiguration.CurrentLimits.SupplyCurrentLimit = 50;
-        driveTalonFXConfiguration.CurrentLimits.SupplyCurrentThreshold = 60;
-        driveTalonFXConfiguration.CurrentLimits.SupplyTimeThreshold = 1.0;
-        driveTalonFXConfiguration.CurrentLimits.SupplyCurrentLimitEnable = true;
         driveTalonFXConfiguration.ClosedLoopRamps.TorqueClosedLoopRampPeriod = 0.2;
         driveTalonFXConfiguration.Feedback.SensorToMechanismRatio = driveReduction;
         driveTalonFXConfiguration.MotorOutput.NeutralMode = NeutralModeValue.Brake;
@@ -124,13 +118,9 @@ public class SwerveModuleIOTalonFX implements SwerveModuleIO {
         turnTalonFXConfiguration.Slot0 = new Slot0Configs()
                 .withKP(45)
                 .withKS(0.5);
-        turnTalonFXConfiguration.TorqueCurrent.PeakForwardTorqueCurrent = 60;
-        turnTalonFXConfiguration.TorqueCurrent.PeakReverseTorqueCurrent = -60;
-        turnTalonFXConfiguration.CurrentLimits.StatorCurrentLimit = 60;
+        turnTalonFXConfiguration.CurrentLimits.StatorCurrentLimit = 40;
         turnTalonFXConfiguration.CurrentLimits.StatorCurrentLimitEnable = true;
         turnTalonFXConfiguration.CurrentLimits.SupplyCurrentLimit = 40;
-        turnTalonFXConfiguration.CurrentLimits.SupplyCurrentThreshold = 60;
-        turnTalonFXConfiguration.CurrentLimits.SupplyTimeThreshold = 1.5;
         turnTalonFXConfiguration.CurrentLimits.SupplyCurrentLimitEnable = true;
         turnTalonFXConfiguration.ClosedLoopGeneral.ContinuousWrap = true;
         turnTalonFXConfiguration.Feedback.FeedbackRemoteSensorID = turnEncoder.getDeviceID();

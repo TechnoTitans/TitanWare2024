@@ -10,7 +10,7 @@ import edu.wpi.first.math.util.Units;
 import org.photonvision.PhotonPoseEstimator;
 
 public interface Constants {
-    RobotMode CURRENT_MODE = RobotMode.SIM;
+    RobotMode CURRENT_MODE = RobotMode.REAL;
     CompetitionType CURRENT_COMPETITION_TYPE = CompetitionType.TESTING;
     double LOOP_PERIOD_SECONDS = 0.02;
 
@@ -37,12 +37,17 @@ public interface Constants {
         PhotonPoseEstimator.PoseStrategy MULTI_TAG_POSE_STRATEGY =
                 PhotonPoseEstimator.PoseStrategy.MULTI_TAG_PNP_ON_COPROCESSOR;
 
-        Transform3d ROBOT_TO_FL_APRILTAG_CAM = new Transform3d(
+        Transform3d ROBOT_TO_FL_APRILTAG = new Transform3d(
                 new Translation3d(Units.inchesToMeters(11.862), Units.inchesToMeters(12.681), Units.inchesToMeters(8.947)),
                 new Rotation3d(0, Units.degreesToRadians(-25), Units.degreesToRadians(20))
         );
 
-        Transform3d ROBOT_TO_FR_APRILTAG_CAM = new Transform3d(
+        Transform3d ROBOT_TO_FC_APRILTAG = new Transform3d(
+                new Translation3d(Units.inchesToMeters(13.36613), Units.inchesToMeters(8.5202), Units.inchesToMeters(6.759)),
+                new Rotation3d(0, Units.degreesToRadians(-30), 0)
+        );
+
+        Transform3d ROBOT_TO_FR_APRILTAG = new Transform3d(
                 new Translation3d(Units.inchesToMeters(11.838), Units.inchesToMeters(-12.861), Units.inchesToMeters(8.947)),
                 new Rotation3d(0, Units.degreesToRadians(-25), Units.degreesToRadians(-20))
         );

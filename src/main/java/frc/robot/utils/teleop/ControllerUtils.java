@@ -58,9 +58,10 @@ public class ControllerUtils {
             final double value,
             final double timeSeconds
     ) {
-        return Commands.startEnd(
-                () -> controller.setRumble(rumbleType, value),
-                () -> controller.setRumble(rumbleType, 0)
-        ).withTimeout(timeSeconds);
+        return Commands.sequence(
+                Commands.runOnce(() -> controller.setRumble(rumbleType, value)),
+                Commands.waitSeconds(timeSeconds),
+                Commands.runOnce(() -> controller.setRumble(rumbleType, 0))
+        );
     }
 }

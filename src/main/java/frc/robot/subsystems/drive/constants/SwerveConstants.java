@@ -15,7 +15,7 @@ public class SwerveConstants {
             50.0 / 14.0,
             Units.inchesToMeters(17.161),
             Units.inchesToMeters(24.752),
-            Units.feetToMeters(15.5),
+            Units.feetToMeters(16.0),
             Units.feetToMeters(80.0),
             12,
             6
