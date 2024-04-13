@@ -57,35 +57,22 @@ public class PhotonVision extends VirtualSubsystem {
         }
     }
 
-    private static PhotonVisionApriltagsReal.IOApriltagsReal makePhotonVisionRealIO(final TitanCamera titanCamera) {
-        return new PhotonVisionApriltagsReal.IOApriltagsReal(titanCamera, PhotonVision.apriltagFieldLayout);
-    }
-
-    private static PhotonVisionApriltagsSim.IOApriltagsSim makePhotonVisionSimIO(
-            final TitanCamera titanCamera,
-            final VisionSystemSim visionSystemSim
-    ) {
-        return new PhotonVisionApriltagsSim.IOApriltagsSim(
-                titanCamera, PhotonVision.apriltagFieldLayout, visionSystemSim
-        );
-    }
-
     @SafeVarargs
-    public static <T extends PhotonVisionIO> Map<T, PhotonVisionIO.PhotonVisionIOInputs> makePhotonVisionIOInputsMap(
-            final T... photonVisionIOs
+    public static <T extends VisionIO> Map<T, VisionIO.VisionIOInputs> makeVisionIOInputsMap(
+            final T... visionIOs
     ) {
-        return Arrays.stream(photonVisionIOs).collect(Collectors.toMap(
+        return Arrays.stream(visionIOs).collect(Collectors.toMap(
                 photonVisionIO -> photonVisionIO,
-                photonVisionIO -> new PhotonVisionIO.PhotonVisionIOInputs()
+                photonVisionIO -> new VisionIO.VisionIOInputs()
         ));
     }
 
-    private final PhotonVisionRunner<? extends PhotonVisionIO> runner;
-    private final Map<? extends PhotonVisionIO, PhotonVisionIO.PhotonVisionIOInputs> photonVisionIOInputsMap;
+    private final PhotonVisionRunner runner;
+    private final Map<? extends VisionIO, VisionIO.VisionIOInputs> visionIOInputsMap;
 
     private final Swerve swerve;
     private final SwerveDrivePoseEstimator poseEstimator;
-    private final Map<PhotonVisionIO, EstimatedRobotPose> lastEstimatedRobotPose;
+    private final Map<VisionIO, EstimatedRobotPose> lastEstimatedRobotPose;
 
     public PhotonVision(
             final Constants.RobotMode robotMode,
@@ -93,16 +80,17 @@ public class PhotonVision extends VirtualSubsystem {
             final SwerveDrivePoseEstimator poseEstimator
     ) {
         this.runner = switch (robotMode) {
-            case REAL -> new PhotonVisionApriltagsReal(
-                    PhotonVision.makePhotonVisionIOInputsMap(
-                            makePhotonVisionRealIO(TitanCamera.PHOTON_FL_APRILTAG),
-                            makePhotonVisionRealIO(TitanCamera.PHOTON_FC_APRILTAG),
-                            makePhotonVisionRealIO(TitanCamera.PHOTON_FR_APRILTAG)
+            case REAL -> new RealVisionRunner(
+                    PhotonVision.apriltagFieldLayout,
+                    PhotonVision.makeVisionIOInputsMap(
+                            new RealVisionRunner.VisionIOApriltagsReal(TitanCamera.PHOTON_FL_APRILTAG),
+                            new RealVisionRunner.VisionIOApriltagsReal(TitanCamera.PHOTON_FC_APRILTAG),
+                            new RealVisionRunner.VisionIOApriltagsReal(TitanCamera.PHOTON_FR_APRILTAG)
                     )
             );
             case SIM -> {
                 final VisionSystemSim visionSystemSim = new VisionSystemSim(PhotonVision.PhotonLogKey);
-                yield new PhotonVisionApriltagsSim(
+                yield new SimVisionRunner(
                         swerve,
                         new SwerveDriveOdometry(
                                 swerve.getKinematics(),
@@ -112,18 +100,19 @@ public class PhotonVision extends VirtualSubsystem {
                         ),
                         PhotonVision.apriltagFieldLayout,
                         visionSystemSim,
-                        PhotonVision.makePhotonVisionIOInputsMap(
-                                makePhotonVisionSimIO(TitanCamera.PHOTON_FL_APRILTAG, visionSystemSim),
-                                makePhotonVisionSimIO(TitanCamera.PHOTON_FR_APRILTAG, visionSystemSim)
+                        PhotonVision.makeVisionIOInputsMap(
+                                new SimVisionRunner.VisionIOApriltagsSim(TitanCamera.PHOTON_FL_APRILTAG, visionSystemSim),
+                                new SimVisionRunner.VisionIOApriltagsSim(TitanCamera.PHOTON_FC_APRILTAG, visionSystemSim),
+                                new SimVisionRunner.VisionIOApriltagsSim(TitanCamera.PHOTON_FR_APRILTAG, visionSystemSim)
                         )
                 );
             }
-            case REPLAY -> new PhotonVisionRunner<>() {};
+            case REPLAY -> new PhotonVisionRunner() {};
         };
 
         this.swerve = swerve;
         this.poseEstimator = poseEstimator;
-        this.photonVisionIOInputsMap = runner.getPhotonVisionIOInputsMap();
+        this.visionIOInputsMap = runner.getVisionIOInputsMap();
 
         this.lastEstimatedRobotPose = new HashMap<>();
 
@@ -242,38 +231,33 @@ public class PhotonVision extends VirtualSubsystem {
 
     private void update() {
         for (
-                final Map.Entry<? extends PhotonVisionIO, PhotonVisionIO.PhotonVisionIOInputs>
-                        photonVisionIOInputsEntry : photonVisionIOInputsMap.entrySet()
+                final Map.Entry<? extends VisionIO, VisionIO.VisionIOInputs>
+                        visionIOInputsEntry : visionIOInputsMap.entrySet()
         ) {
+            final VisionIO visionIO = visionIOInputsEntry.getKey();
+            final VisionIO.VisionIOInputs inputs = visionIOInputsEntry.getValue();
 
-            final PhotonVisionIO photonVisionIO = photonVisionIOInputsEntry.getKey();
-            final PhotonVisionIO.PhotonVisionIOInputs photonVisionIOInputs = photonVisionIOInputsEntry.getValue();
-
-            final EstimatedRobotPose stableEstimatedRobotPose = photonVisionIOInputs.stableEstimatedRobotPose;
-            final EstimatedRobotPose estimatedRobotPose = photonVisionIOInputs.estimatedRobotPose;
-
+            final EstimatedRobotPose estimatedRobotPose = runner.getEstimatedRobotPose(visionIO);
             if (estimatedRobotPose == null) {
                 // skip the trouble of calling/indexing things if the estimatedRobotPose is null
                 continue;
             }
 
-            final EstimatedRobotPose lastSavedEstimatedPose = lastEstimatedRobotPose.get(photonVisionIO);
+            final EstimatedRobotPose lastSavedEstimatedPose = lastEstimatedRobotPose.get(visionIO);
             final EstimationRejectionReason rejectionReason =
                     shouldRejectEstimation(lastSavedEstimatedPose, estimatedRobotPose);
 
             Logger.recordOutput(
                     PhotonLogKey + "/RejectionReason", rejectionReason.getId()
             );
-
             if (rejectionReason.wasRejected()) {
                 continue;
             }
 
-            lastEstimatedRobotPose.put(photonVisionIO, stableEstimatedRobotPose);
+            final Vector<N3> stdDevs = calculateStdDevs(estimatedRobotPose, inputs.stdDevFactor);
+            Logger.recordOutput(PhotonLogKey + "/" + inputs.name + "/StdDevs", stdDevs.getData());
 
-            final Vector<N3> stdDevs = calculateStdDevs(estimatedRobotPose, photonVisionIOInputs.stdDevFactor);
-            Logger.recordOutput(PhotonLogKey + "/" + photonVisionIOInputs.name + "/StdDevs", stdDevs.getData());
-
+            lastEstimatedRobotPose.put(visionIO, estimatedRobotPose);
             poseEstimator.addVisionMeasurement(
                     estimatedRobotPose.estimatedPose.toPose2d(),
                     estimatedRobotPose.timestampSeconds,
@@ -284,14 +268,13 @@ public class PhotonVision extends VirtualSubsystem {
 
     public void updateOutputs() {
         for (
-                final Map.Entry<PhotonVisionIO, EstimatedRobotPose>
+                final Map.Entry<VisionIO, EstimatedRobotPose>
                         estimatedRobotPoseEntry : lastEstimatedRobotPose.entrySet()
         ) {
-            final PhotonVisionIO.PhotonVisionIOInputs io =
-                    photonVisionIOInputsMap.get(estimatedRobotPoseEntry.getKey());
+            final VisionIO.VisionIOInputs inputs = visionIOInputsMap.get(estimatedRobotPoseEntry.getKey());
             final EstimatedRobotPose estimatedRobotPose = estimatedRobotPoseEntry.getValue();
 
-            final String logKey = PhotonVision.PhotonLogKey + "/" + io.name;
+            final String logKey = PhotonVision.PhotonLogKey + "/" + inputs.name;
             if (estimatedRobotPose == null) {
                 continue;
             }

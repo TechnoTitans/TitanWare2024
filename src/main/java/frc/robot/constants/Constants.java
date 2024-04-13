@@ -10,7 +10,7 @@ import edu.wpi.first.math.util.Units;
 import org.photonvision.PhotonPoseEstimator;
 
 public interface Constants {
-    RobotMode CURRENT_MODE = RobotMode.REAL;
+    RobotMode CURRENT_MODE = RobotMode.SIM;
     CompetitionType CURRENT_COMPETITION_TYPE = CompetitionType.TESTING;
     double LOOP_PERIOD_SECONDS = 0.02;
 
@@ -29,8 +29,6 @@ public interface Constants {
         String AUTO_TABLE = "AutoSelector";
         String AUTO_PUBLISHER = "AutoOptions";
         String AUTO_SELECTED_SUBSCRIBER = "SelectedAuto";
-
-        boolean USE_STRUCT_AND_PROTOBUF = true;
     }
 
     interface Vision {
