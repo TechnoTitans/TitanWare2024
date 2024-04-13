@@ -11,7 +11,7 @@ import org.photonvision.simulation.SimCameraProperties;
 public enum TitanCamera {
     PHOTON_FL_APRILTAG(
             "FL_Apriltag",
-            Constants.Vision.ROBOT_TO_FL_APRILTAG_CAM,
+            Constants.Vision.ROBOT_TO_FL_APRILTAG,
             CameraProperties.SEE3CAM_24CUG,
             1.0,
             new TitanCameraCalibration()
@@ -46,18 +46,59 @@ public enum TitanCamera {
                     )
                     .withFPS(
                             CameraProperties.Resolution.R1920x1080,
-                            18
+                            60
                     )
                     .withLatency(
                             CameraProperties.Resolution.R1920x1080,
-                            50,
-                            20
+                            7,
+                            3
+                    ),
+            false
+    ),
+    PHOTON_FC_APRILTAG(
+            "FC_Apriltag",
+            Constants.Vision.ROBOT_TO_FC_APRILTAG,
+            CameraProperties.ARDUCAM_OV9281,
+            2.5,
+            new TitanCameraCalibration()
+                    .withCalibration(
+                            CameraProperties.Resolution.R640x480,
+                            MatBuilder.fill(
+                                    Nat.N3(),
+                                    Nat.N3(),
+                                    // intrinsic
+                                    549.0659323788205,
+                                    0.0,
+                                    321.9593286259019,
+                                    0.0,
+                                    547.4680535283653,
+                                    269.83116533897265,
+                                    0.0,
+                                    0.0,
+                                    1.0
+                            ),
+                            // TODO: mrcal gives us 8 distCoeffs, PV sim expects 5
+                            SimCameraProperties.PERFECT_90DEG().getDistCoeffs()
+                    )
+                    .withCalibrationError(
+                            CameraProperties.Resolution.R640x480,
+                            0.54,
+                            0.06
+                    )
+                    .withFPS(
+                            CameraProperties.Resolution.R640x480,
+                            130
+                    )
+                    .withLatency(
+                            CameraProperties.Resolution.R640x480,
+                            6,
+                            3
                     ),
             false
     ),
     PHOTON_FR_APRILTAG(
             "FR_Apriltag",
-            Constants.Vision.ROBOT_TO_FR_APRILTAG_CAM,
+            Constants.Vision.ROBOT_TO_FR_APRILTAG,
             CameraProperties.SEE3CAM_24CUG,
             1.0,
             new TitanCameraCalibration()
@@ -92,12 +133,12 @@ public enum TitanCamera {
                     )
                     .withFPS(
                             CameraProperties.Resolution.R1920x1080,
-                            18
+                            60
                     )
                     .withLatency(
                             CameraProperties.Resolution.R1920x1080,
-                            50,
-                            20
+                            7,
+                            3
                     ),
             false
     );

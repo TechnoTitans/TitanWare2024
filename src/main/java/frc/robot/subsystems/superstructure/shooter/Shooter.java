@@ -21,7 +21,7 @@ import static edu.wpi.first.units.Units.*;
 public class Shooter extends SubsystemBase {
     protected static final String LogKey = "Shooter";
 
-    private static final double VelocityToleranceRotsPerSec = 2.5;
+    private static final double VelocityToleranceRotsPerSec = 3.5;
     private final ShooterIO shooterIO;
     private final ShooterIOInputsAutoLogged inputs;
 
@@ -47,8 +47,9 @@ public class Shooter extends SubsystemBase {
         IDLE(40, 40, 40),
         EJECT(80, 80, 80),
         BACK_FEED(-60, -60, -60),
-        AMP(60, -60, -60),
-        TEST(84.433, 84.433, 128.883),
+        READY_AMP(10, -10, -10),
+        AMP(80, -40, -40),
+        FERRY_CENTERLINE(60, 60, 80),
         SUBWOOFER(80, 80, 80);
 
         private final double ampVelocity;
@@ -162,8 +163,16 @@ public class Shooter extends SubsystemBase {
         );
     }
 
+    public Command toInstantGoal(final Goal goal) {
+        return runOnce(() -> this.goal = goal);
+    }
+
     public Command toGoal(final Goal goal) {
         return runEnd(() -> this.goal = goal, () -> this.goal = Goal.IDLE);
+    }
+
+    public Command runGoal(final Goal goal) {
+        return run(() -> this.goal = goal);
     }
 
     public Command toVelocityCommand(
