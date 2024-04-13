@@ -31,6 +31,7 @@ import frc.robot.subsystems.superstructure.arm.Arm;
 import frc.robot.subsystems.superstructure.shooter.Shooter;
 import frc.robot.subsystems.vision.PhotonVision;
 import frc.robot.utils.closeables.ToClose;
+import frc.robot.utils.logging.LogUtils;
 import frc.robot.utils.subsystems.VirtualSubsystem;
 import frc.robot.utils.teleop.ControllerUtils;
 import frc.robot.utils.teleop.Profiler;
@@ -202,31 +203,22 @@ public class Robot extends LoggedRobot {
                 (interrupted, interrupting) -> {
                     Logger.recordOutput("Commands/Interrupted", interrupted.getName());
 
-                    final int interruptedRequirementsSize = interrupted.getRequirements().size();
-                    final String[] interruptedRequirements = new String[interruptedRequirementsSize];
-                    final Iterator<Subsystem> interruptedRequirementsIterator =
-                            interrupted.getRequirements().iterator();
-                    for (int i = 0; i < interruptedRequirementsSize; i++) {
-                        interruptedRequirements[i] = interruptedRequirementsIterator.next().getName();
-                    }
-
-                    Logger.recordOutput("Commands/InterruptedRequirements", interruptedRequirements);
+                    Logger.recordOutput(
+                            "Commands/InterruptedRequirements",
+                            LogUtils.getRequirementsFromSubsystems(interrupted.getRequirements())
+                    );
 
                     Logger.recordOutput("Commands/Interrupting", interrupting.isPresent()
                             ? interrupting.get().getName()
                             : "None"
                     );
 
-                    final Set<Subsystem> interruptingRequirements =
-                            interrupting.orElse(Commands.none()).getRequirements();
-                    final int interruptingRequirementsSize = interruptingRequirements.size();
-                    final String[] interruptingRequirementsList = new String[interruptingRequirementsSize];
-                    final Iterator<Subsystem> interruptingRequirementsIterator = interruptingRequirements.iterator();
-                    for (int i = 0; i < interruptingRequirementsSize; i++) {
-                        interruptingRequirementsList[i] = interruptingRequirementsIterator.next().getName();
-                    }
-
-                    Logger.recordOutput("Commands/InterruptingRequirements", interruptingRequirementsList);
+                    Logger.recordOutput(
+                            "Commands/InterruptingRequirements",
+                            LogUtils.getRequirementsFromSubsystems(
+                                    interrupting.orElse(Commands.none()).getRequirements()
+                            )
+                    );
                 }
         );
 

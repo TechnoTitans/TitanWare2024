@@ -5,8 +5,11 @@ import edu.wpi.first.math.geometry.Quaternion;
 import edu.wpi.first.math.geometry.Rotation3d;
 import edu.wpi.first.math.kinematics.ChassisSpeeds;
 import edu.wpi.first.math.trajectory.Trajectory;
+import edu.wpi.first.wpilibj2.command.Commands;
+import edu.wpi.first.wpilibj2.command.Subsystem;
 import frc.robot.constants.Constants;
 import org.littletonrobotics.junction.LogTable;
+import org.littletonrobotics.junction.Logger;
 import org.photonvision.EstimatedRobotPose;
 import org.photonvision.PhotonPoseEstimator;
 import org.photonvision.common.dataflow.structures.Packet;
@@ -14,6 +17,7 @@ import org.photonvision.targeting.PhotonTrackedTarget;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
 
 public class LogUtils {
     public static final double MICRO_TO_MILLI = 1d / 1000;
@@ -27,6 +31,14 @@ public class LogUtils {
                 chassisSpeeds.vyMetersPerSecond,
                 chassisSpeeds.omegaRadiansPerSecond
         };
+    }
+
+    public static String[] getRequirementsFromSubsystems(final Set<Subsystem> subsystems) {
+        final ArrayList<String> interruptingRequirementsList = new ArrayList<>(subsystems.size());
+        subsystems.iterator().forEachRemaining(
+                subsystem -> interruptingRequirementsList.add(subsystem.getName())
+        );
+         return interruptingRequirementsList.toArray(new String[0]);
     }
 
     public static void serializePhotonVisionEstimatedRobotPose(
