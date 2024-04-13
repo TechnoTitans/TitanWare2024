@@ -99,6 +99,7 @@ public class Robot extends LoggedRobot {
     private final EventLoop teleopEventLoop = new EventLoop();
     private final EventLoop testEventLoop = new EventLoop();
 
+    private final Trigger autoEnabled = new Trigger(DriverStation::isAutonomousEnabled);
     private final Trigger teleopEnabled = new Trigger(DriverStation::isTeleopEnabled);
 
     @Override
@@ -234,7 +235,7 @@ public class Robot extends LoggedRobot {
                 .minus(FieldConstants.getSpeakerPose())
                 .getTranslation()
                 .getNorm();
-        final ShotParameters.Parameters shotParameters = ShotParameters.get(distanceToSpeaker);
+        final ShotParameters.Parameters shotParameters = ShotParameters.getShotParameters(swerve.getPose());
 
         Logger.recordOutput("ShotParameters/SpeakerDistance", distanceToSpeaker);
         Logger.recordOutput("ShotParameters/ArmPivotAngle", shotParameters.armPivotAngle().getRotations());
@@ -257,6 +258,11 @@ public class Robot extends LoggedRobot {
     @Override
     public void autonomousInit() {
         autonomousEventLoop = autoChooser.getSelected().autoEventLoop();
+        autoEnabled.onFalse(Commands.runOnce(() -> {
+            if (autonomousEventLoop != null) {
+                autonomousEventLoop.poll();
+            }
+        }).ignoringDisable(true));
     }
 
     @Override
@@ -478,11 +484,15 @@ public class Robot extends LoggedRobot {
                 .whileTrue(shootCommands.angleAndReadyAmp(
                         driverController::getLeftY,
                         driverController::getLeftX
-                ))
-                .onFalse(shootCommands.amp());
+                )).onFalse(shootCommands.amp());
 
+        //noinspection SuspiciousNameCombination
         this.coDriverController.leftTrigger(0.5, teleopEventLoop)
-                .whileTrue(shootCommands.ferryCenterToAmp());
+                .whileTrue(shootCommands.teleopDriveAimAndFerry(
+                        driverController::getLeftY,
+                        driverController::getLeftX
+                )).onFalse(shootCommands.ferry());
+
         this.coDriverController.rightTrigger(0.5, teleopEventLoop)
                 .whileTrue(shootCommands.shootSubwoofer());
     }

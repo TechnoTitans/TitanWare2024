@@ -1,11 +1,13 @@
 package frc.robot.subsystems.superstructure;
 
 import edu.wpi.first.math.MathUtil;
+import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.interpolation.Interpolatable;
 import edu.wpi.first.math.interpolation.InterpolatingTreeMap;
 import edu.wpi.first.math.interpolation.Interpolator;
 import edu.wpi.first.math.interpolation.InverseInterpolator;
+import frc.robot.constants.FieldConstants;
 
 public class ShotParameters {
     public record Parameters(
@@ -140,7 +142,60 @@ public class ShotParameters {
         ));
     }
 
-    public static Parameters get(final double distanceMeters) {
-        return shotDataMap.get(distanceMeters);
+    private static final InterpolatingTreeMap<Double, Parameters> ferryDataMap = new InterpolatingTreeMap<>(
+            InverseInterpolator.forDouble(),
+            Parameters.interpolator
+    );
+
+    static {
+        ferryDataMap.put(6d, new Parameters(
+                Rotation2d.fromDegrees(21),
+                100,
+                133.3,
+                100,
+                0
+        ));
+
+        ferryDataMap.put(6.5d, new Parameters(
+                Rotation2d.fromDegrees(18.5),
+                100,
+                133.3,
+                100,
+                0
+        ));
+
+        ferryDataMap.put(7d, new Parameters(
+                Rotation2d.fromDegrees(17.5),
+                100,
+                133.3,
+                100,
+                0
+        ));
+
+        ferryDataMap.put(7.5d, new Parameters(
+                Rotation2d.fromDegrees(16.5),
+                100,
+                133.3,
+                100,
+                0
+        ));
+    }
+
+    public static Parameters getShotParameters(final Pose2d currentPose) {
+        return shotDataMap.get(
+                currentPose
+                        .minus(FieldConstants.getSpeakerPose())
+                        .getTranslation()
+                        .getNorm()
+        );
+    }
+
+    public static Parameters getFerryParameters(final Pose2d currentPose) {
+        return ferryDataMap.get(
+                currentPose
+                        .minus(FieldConstants.getAmpScoringPose())
+                        .getTranslation()
+                        .getNorm()
+        );
     }
 }
