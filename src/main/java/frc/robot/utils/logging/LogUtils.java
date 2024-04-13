@@ -34,7 +34,11 @@ public class LogUtils {
     }
 
     public static String[] getRequirementsFromSubsystems(final Set<Subsystem> subsystems) {
+        if (subsystems.isEmpty()) {
+            return new String[0];
+        }
         final ArrayList<String> interruptingRequirementsList = new ArrayList<>(subsystems.size());
+
         subsystems.iterator().forEachRemaining(
                 subsystem -> interruptingRequirementsList.add(subsystem.getName())
         );
