@@ -11,7 +11,6 @@ import edu.wpi.first.wpilibj2.command.CommandScheduler;
 import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.Subsystem;
 import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
-import edu.wpi.first.wpilibj2.command.button.RobotModeTriggers;
 import edu.wpi.first.wpilibj2.command.button.Trigger;
 import edu.wpi.first.wpilibj2.command.sysid.SysIdRoutine;
 import frc.robot.auto.AutoChooser;
@@ -76,7 +75,7 @@ public class Robot extends LoggedRobot {
     public final Superstructure superstructure = new Superstructure(arm, shooter);
 
     @SuppressWarnings("unused")
-    public final PhotonVision photonVision = new PhotonVision(Constants.RobotMode.REPLAY, swerve, swerve.getPoseEstimator());
+    public final PhotonVision photonVision = new PhotonVision(Constants.CURRENT_MODE, swerve, swerve.getPoseEstimator());
 
     public final NoteState noteState = new NoteState(Constants.CURRENT_MODE, intake);
     public final ShootCommands shootCommands = new ShootCommands(swerve, intake, superstructure);
@@ -96,8 +95,8 @@ public class Robot extends LoggedRobot {
     private final EventLoop teleopEventLoop = new EventLoop();
     private final EventLoop testEventLoop = new EventLoop();
 
-    private final Trigger teleopEnabled = new Trigger(DriverStation::isTeleopEnabled);
     private final Trigger autoEnabled = new Trigger(DriverStation::isAutonomousEnabled);
+    private final Trigger teleopEnabled = new Trigger(DriverStation::isTeleopEnabled);
 
     @Override
     public void robotInit() {
