@@ -45,7 +45,9 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.Arrays;
+import java.util.Iterator;
 import java.util.Optional;
+import java.util.Set;
 import java.util.function.BooleanSupplier;
 
 public class Robot extends LoggedRobot {
@@ -199,23 +201,32 @@ public class Robot extends LoggedRobot {
         CommandScheduler.getInstance().onCommandInterrupt(
                 (interrupted, interrupting) -> {
                     Logger.recordOutput("Commands/Interrupted", interrupted.getName());
-//                    final String[] requirements = new String[interrupted.getRequirements().size()];
-//                    for (int i = 0; i < interrupted.getRequirements().size(); i++) {
-//                        requirements[i] = interrupted.getRequirements().iterator().next().getName();
-//                    }
-                    Logger.recordOutput("Commands/Interrupted", Arrays.toString(interrupted.getRequirements().toArray()));
+
+                    final int interruptedRequirementsSize = interrupted.getRequirements().size();
+                    final String[] interruptedRequirements = new String[interruptedRequirementsSize];
+                    final Iterator<Subsystem> interruptedRequirementsIterator =
+                            interrupted.getRequirements().iterator();
+                    for (int i = 0; i < interruptedRequirementsSize; i++) {
+                        interruptedRequirements[i] = interruptedRequirementsIterator.next().getName();
+                    }
+
+                    Logger.recordOutput("Commands/InterruptedRequirements", interruptedRequirements);
 
                     Logger.recordOutput("Commands/Interrupting", interrupting.isPresent()
                             ? interrupting.get().getName()
                             : "None"
                     );
-                    Logger.recordOutput(
-                            "Commands/InterruptingRequirements",
-                            interrupting
-                                    .map(
-                                            command -> Arrays.toString(command.getRequirements().toArray())
-                                    ).orElse("")
-                    );
+
+                    final Set<Subsystem> interruptingRequirements =
+                            interrupting.orElse(Commands.none()).getRequirements();
+                    final int interruptingRequirementsSize = interruptingRequirements.size();
+                    final String[] interruptingRequirementsList = new String[interruptingRequirementsSize];
+                    final Iterator<Subsystem> interruptingRequirementsIterator = interruptingRequirements.iterator();
+                    for (int i = 0; i < interruptingRequirementsSize; i++) {
+                        interruptingRequirementsList[i] = interruptingRequirementsIterator.next().getName();
+                    }
+
+                    Logger.recordOutput("Commands/InterruptingRequirements", interruptingRequirementsList);
                 }
         );
 

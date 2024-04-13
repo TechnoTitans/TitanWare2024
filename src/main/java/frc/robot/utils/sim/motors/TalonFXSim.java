@@ -7,6 +7,7 @@ import edu.wpi.first.wpilibj.RobotController;
 import frc.robot.constants.SimConstants;
 import frc.robot.utils.sim.feedback.SimFeedbackSensor;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
@@ -59,7 +60,7 @@ public class TalonFXSim implements SimMotorController {
     ) {
         this(
                 talonFXControllers,
-                talonFXControllers.stream().map(TalonFX::getSimState).toList(),
+                getSimStatesFromControllers(talonFXControllers),
                 gearRatio,
                 update,
                 inputVoltage,
@@ -84,6 +85,14 @@ public class TalonFXSim implements SimMotorController {
                 angularPositionRads,
                 angularVelocityRadsPerSec
         );
+    }
+
+    private static List<TalonFXSimState> getSimStatesFromControllers(final List<TalonFX> talonFXControllers) {
+        final ArrayList<TalonFXSimState> simStates = new ArrayList<>();
+        for (final TalonFX talonFX : talonFXControllers) {
+            simStates.add(talonFX.getSimState());
+        }
+        return simStates;
     }
 
     @Override

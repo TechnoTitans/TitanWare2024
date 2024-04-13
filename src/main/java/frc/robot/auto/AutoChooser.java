@@ -11,10 +11,7 @@ import org.littletonrobotics.junction.Logger;
 import org.littletonrobotics.junction.inputs.LoggableInputs;
 import org.littletonrobotics.junction.networktables.LoggedDashboardInput;
 
-import java.util.HashSet;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.function.Function;
 
 public class AutoChooser<I, V extends AutoOption> implements AutoCloseable, LoggedDashboardInput {
@@ -100,16 +97,6 @@ public class AutoChooser<I, V extends AutoOption> implements AutoCloseable, Logg
                 addOption(nameFunction.apply(computedObject), computedObject);
             }
         }
-    }
-
-    /**
-     * Get a copy of the currently registered {@link V}s
-     * @return a {@link List} of currently registered {@link V}s
-     */
-    public List<V> getRegisteredOptions() {
-        //dont use stream
-        return List.copyOf(autoMap.values());
-//        return autoMap.values().stream().toList();
     }
 
     @Override

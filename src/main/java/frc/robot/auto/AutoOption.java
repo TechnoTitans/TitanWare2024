@@ -6,12 +6,12 @@ import frc.robot.constants.Constants;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
-import java.util.stream.Stream;
+import java.util.Set;
 
 public record AutoOption(
         String name,
         EventLoop autoEventLoop,
-        HashSet<Constants.CompetitionType> competitionTypes
+        Set<Constants.CompetitionType> competitionTypes
 ) {
     public static final List<Constants.CompetitionType> defaultCompetitionTypes =
             List.of(Constants.CompetitionType.TESTING);
@@ -28,14 +28,19 @@ public record AutoOption(
         this(
                 name,
                 autoEventLoop,
-                new HashSet<>(Stream.concat(
-                        Arrays.stream(competitionTypes),
-                        defaultCompetitionTypes.stream()
-                ).toList())
+                addDefaultCompetitionType(competitionTypes)
         );
     }
 
     public boolean hasCompetitionType(final Constants.CompetitionType competitionType) {
         return competitionTypes.contains(competitionType);
+    }
+
+    private static Set<Constants.CompetitionType> addDefaultCompetitionType(
+            final Constants.CompetitionType[] competitionTypes
+    ) {
+        final HashSet<Constants.CompetitionType> set = new HashSet<>(defaultCompetitionTypes);
+        set.addAll(Arrays.asList(competitionTypes));
+        return set;
     }
 }
