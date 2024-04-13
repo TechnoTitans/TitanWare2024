@@ -3,7 +3,13 @@ package frc.robot.utils.logging;
 import edu.wpi.first.math.geometry.Transform3d;
 import edu.wpi.first.math.trajectory.Trajectory;
 import edu.wpi.first.util.struct.Struct;
+import edu.wpi.first.wpilibj2.command.Commands;
+import edu.wpi.first.wpilibj2.command.Subsystem;
+import frc.robot.constants.Constants;
 import org.littletonrobotics.junction.LogTable;
+import org.littletonrobotics.junction.Logger;
+import org.photonvision.EstimatedRobotPose;
+import org.photonvision.PhotonPoseEstimator;
 import org.photonvision.common.dataflow.structures.Packet;
 import org.photonvision.targeting.MultiTargetPNPResult;
 import org.photonvision.targeting.PNPResult;
@@ -13,11 +19,24 @@ import org.photonvision.targeting.PhotonTrackedTarget;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
 
 public class LogUtils {
     public static final double MICRO_TO_MILLI = 1d / 1000;
     public static double microsecondsToMilliseconds(final double microseconds) {
         return microseconds * MICRO_TO_MILLI;
+    }
+
+    public static String[] getRequirementsFromSubsystems(final Set<Subsystem> subsystems) {
+        if (subsystems.isEmpty()) {
+            return new String[0];
+        }
+        final ArrayList<String> interruptingRequirementsList = new ArrayList<>(subsystems.size());
+
+        subsystems.iterator().forEachRemaining(
+                subsystem -> interruptingRequirementsList.add(subsystem.getName())
+        );
+        return interruptingRequirementsList.toArray(new String[0]);
     }
 
     public static void serializePhotonPipelineResult(

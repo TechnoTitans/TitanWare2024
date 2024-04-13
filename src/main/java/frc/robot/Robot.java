@@ -31,6 +31,7 @@ import frc.robot.subsystems.superstructure.arm.Arm;
 import frc.robot.subsystems.superstructure.shooter.Shooter;
 import frc.robot.subsystems.vision.PhotonVision;
 import frc.robot.utils.closeables.ToClose;
+import frc.robot.utils.logging.LogUtils;
 import frc.robot.utils.subsystems.VirtualSubsystem;
 import frc.robot.utils.teleop.ControllerUtils;
 import frc.robot.utils.teleop.Profiler;
@@ -44,7 +45,10 @@ import org.littletonrobotics.junction.wpilog.WPILOGWriter;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
+import java.util.Arrays;
+import java.util.Iterator;
 import java.util.Optional;
+import java.util.Set;
 import java.util.function.BooleanSupplier;
 
 public class Robot extends LoggedRobot {
@@ -196,30 +200,25 @@ public class Robot extends LoggedRobot {
                 command -> Logger.recordOutput("Commands/Finished", command.getName())
         );
 
-        // TODO: don't use streams
         CommandScheduler.getInstance().onCommandInterrupt(
                 (interrupted, interrupting) -> {
                     Logger.recordOutput("Commands/Interrupted", interrupted.getName());
+
                     Logger.recordOutput(
                             "Commands/InterruptedRequirements",
-                            interrupted.getRequirements()
-                                    .stream()
-                                    .map(Subsystem::getName)
-                                    .toArray(String[]::new)
+                            LogUtils.getRequirementsFromSubsystems(interrupted.getRequirements())
                     );
 
                     Logger.recordOutput("Commands/Interrupting", interrupting.isPresent()
                             ? interrupting.get().getName()
                             : "None"
                     );
+
                     Logger.recordOutput(
                             "Commands/InterruptingRequirements",
-                            interrupting
-                                    .map(command -> command.getRequirements()
-                                            .stream()
-                                            .map(Subsystem::getName)
-                                            .toArray(String[]::new)
-                                    ).orElseGet(() -> new String[0])
+                            LogUtils.getRequirementsFromSubsystems(
+                                    interrupting.isPresent() ? interrupting.get().getRequirements() : Set.of()
+                            )
                     );
                 }
         );
