@@ -96,12 +96,4 @@ public class Superstructure {
                 shooter.voltageSysIdCommand()
         );
     }
-
-    @SuppressWarnings("unused")
-    public Command runTorqueCurrentCharacterization() {
-        return Commands.parallel(
-                arm.torqueCurrentSysIdCommand(),
-                shooter.torqueCurrentSysIdCommand()
-        );
-    }
 }
