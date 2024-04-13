@@ -38,9 +38,5 @@ public interface ArmIO {
 
     default void setPivotPosition(final double pivotPositionRots) {}
 
-    default void toPivotPosition(final double pivotPositionRots) {}
-
     default void toPivotVoltage(final double pivotVolts) {}
-
-    default void toPivotTorqueCurrent(final double pivotTorqueCurrentAmps) {}
 }

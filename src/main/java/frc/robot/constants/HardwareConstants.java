@@ -17,6 +17,7 @@ public class HardwareConstants {
             int rightPivotMotorId,
             int pivotCANCoderId,
             double pivotGearing,
+            double pivotMomentOfInertia,
             double pivotCANCoderOffset,
             double pivotSoftLowerLimitRots,
             double pivotSoftUpperLimitRots
@@ -28,6 +29,7 @@ public class HardwareConstants {
             15,
             16,
             112.5,
+            0.65,
             0.5009765625,
             0.01,
             0.264

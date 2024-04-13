@@ -1,13 +1,20 @@
 package frc.robot.subsystems.superstructure.arm;
 
 import com.ctre.phoenix6.SignalLogger;
-import edu.wpi.first.math.MathUtil;
-import edu.wpi.first.math.VecBuilder;
-import edu.wpi.first.math.Vector;
+import edu.wpi.first.math.*;
+import edu.wpi.first.math.controller.LinearPlantInversionFeedforward;
+import edu.wpi.first.math.controller.LinearQuadraticRegulator;
+import edu.wpi.first.math.estimator.KalmanFilter;
 import edu.wpi.first.math.geometry.Pose3d;
 import edu.wpi.first.math.geometry.Rotation3d;
 import edu.wpi.first.math.geometry.Transform3d;
+import edu.wpi.first.math.numbers.N1;
+import edu.wpi.first.math.numbers.N2;
 import edu.wpi.first.math.numbers.N3;
+import edu.wpi.first.math.system.LinearSystem;
+import edu.wpi.first.math.system.plant.DCMotor;
+import edu.wpi.first.math.system.plant.LinearSystemId;
+import edu.wpi.first.math.trajectory.TrapezoidProfile;
 import edu.wpi.first.math.util.Units;
 import edu.wpi.first.units.*;
 import edu.wpi.first.wpilibj2.command.Command;
@@ -34,7 +41,6 @@ public class Arm extends SubsystemBase {
     private final ArmIOInputsAutoLogged inputs;
 
     private final SysIdRoutine voltageSysIdRoutine;
-    private final SysIdRoutine torqueCurrentSysIdRoutine;
 
     private Goal goal = Goal.STOW;
     private Goal previousGoal = goal;
@@ -42,6 +48,16 @@ public class Arm extends SubsystemBase {
     private final PositionSetpoint setpoint;
     private final PositionSetpoint pivotSoftLowerLimit;
     private final PositionSetpoint pivotSoftUpperLimit;
+
+    private final TrapezoidProfile profile;
+    private TrapezoidProfile.State lastProfiledReference = new TrapezoidProfile.State(
+            Units.rotationsToRadians(goal.pivotPositionGoal),
+            0
+    );
+
+    private final LinearQuadraticRegulator<N2, N1, N1> controller;
+    private final LinearPlantInversionFeedforward<N2, N1, N1> feedforward;
+    private final KalmanFilter<N3, N1, N1> observer;
 
     public Trigger atPivotSetpoint = new Trigger(this::atPositionSetpoint);
     public Trigger atPivotLowerLimit = new Trigger(this::atPivotLowerLimit);
@@ -90,15 +106,81 @@ public class Arm extends SubsystemBase {
             case REPLAY -> new ArmIO() {};
         };
 
+        this.profile = new TrapezoidProfile(
+                new TrapezoidProfile.Constraints(
+                        Units.degreesToRadians(60),
+                        Units.degreesToRadians(120)
+                )
+        );
+
+        final double gearing = armConstants.pivotGearing();
+        final double momentOfInertia = armConstants.pivotMomentOfInertia();
+        final DCMotor motorModel = DCMotor.getKrakenX60Foc(2);
+        final LinearSystem<N2, N1, N1> singleJointedPlant = LinearSystemId.createSingleJointedArmSystem(
+                motorModel,
+                momentOfInertia,
+                gearing
+        );
+
+        this.controller = new LinearQuadraticRegulator<>(
+                singleJointedPlant,
+                VecBuilder.fill(Units.degreesToRadians(1.975), Units.degreesToRadians(12.5)),
+                VecBuilder.fill(12),
+                Constants.LOOP_PERIOD_SECONDS
+        );
+        this.feedforward = new LinearPlantInversionFeedforward<>(singleJointedPlant, 0.02);
+
+
+        final LinearSystem<N3, N1, N1> plant = new LinearSystem<>(
+                MatBuilder.fill(
+                        Nat.N3(),
+                        Nat.N3(),
+                        0.0,
+                        1.0,
+                        0.0,
+                        0.0,
+                        -Math.pow(gearing, -2) * motorModel.KtNMPerAmp /
+                                (motorModel.KvRadPerSecPerVolt * motorModel.rOhms * momentOfInertia),
+                        Math.pow(gearing, -1) * motorModel.KtNMPerAmp /
+                                (motorModel.rOhms * momentOfInertia),
+                        0.0,
+                        0.0,
+                        0.0
+                ),
+                MatBuilder.fill(
+                        Nat.N3(),
+                        Nat.N1(),
+                        0.0,
+                        Math.pow(gearing, -1.0) * motorModel.KtNMPerAmp / (motorModel.rOhms * momentOfInertia),
+                        0.0
+                ),
+                MatBuilder.fill(
+                        Nat.N1(),
+                        Nat.N3(),
+                        1.0,
+                        0.0,
+                        0.0
+                ),
+                new Matrix<>(Nat.N1(), Nat.N1())
+        );
+
+        this.observer = new KalmanFilter<>(
+                Nat.N3(),
+                Nat.N1(),
+                plant,
+                VecBuilder.fill(
+                        Units.degreesToRadians(10),
+                        Units.degreesToRadians(20),
+                        0.085
+                ),
+                VecBuilder.fill(0.175),
+                Constants.LOOP_PERIOD_SECONDS
+        );
+
         this.inputs = new ArmIOInputsAutoLogged();
         this.voltageSysIdRoutine = makeVoltageSysIdRoutine(
                 Volts.of(4).per(Second),
                 Volts.of(8),
-                Seconds.of(6)
-        );
-        this.torqueCurrentSysIdRoutine = makeTorqueCurrentSysIdRoutine(
-                Amps.of(2).per(Second),
-                Amps.of(8),
                 Seconds.of(6)
         );
 
@@ -109,6 +191,7 @@ public class Arm extends SubsystemBase {
                 .withPivotPositionRots(armConstants.pivotSoftUpperLimitRots());
 
         this.armIO.config();
+        this.init();
     }
 
     private Pose3d armPoseFromAngle(final double angleRads) {
@@ -119,6 +202,38 @@ public class Arm extends SubsystemBase {
                         new Rotation3d(0, angleRads, 0)
                 )
         );
+    }
+
+    private void init() {
+        controller.reset();
+        feedforward.reset(VecBuilder.fill(lastProfiledReference.position, lastProfiledReference.velocity));
+        observer.setXhat(VecBuilder.fill(lastProfiledReference.position, lastProfiledReference.velocity, 0));
+    }
+
+    private double getVoltageInput() {
+        return controller.getU(0) + feedforward.getUff(0) - observer.getXhat(2);
+    }
+
+    private void correct() {
+        observer.correct(
+                VecBuilder.fill(getVoltageInput()),
+                VecBuilder.fill(Units.rotationsToRadians(inputs.leftPivotPositionRots))
+        );
+    }
+
+    private void predict() {
+        final Matrix<N1, N1> voltage = controller.calculate(
+                VecBuilder.fill(observer.getXhat(0), observer.getXhat(1)),
+                VecBuilder.fill(lastProfiledReference.position, lastProfiledReference.velocity)
+        ).plus(
+                feedforward.calculate(
+                        VecBuilder.fill(lastProfiledReference.position, lastProfiledReference.velocity)
+                )
+        ).plus(
+                -observer.getXhat(2)
+        );
+
+        observer.predict(voltage, Constants.LOOP_PERIOD_SECONDS);
     }
 
     @Override
@@ -134,13 +249,20 @@ public class Arm extends SubsystemBase {
 
         if (goal != Goal.NONE && previousGoal != goal) {
             setpoint.pivotPositionRots = goal.getPivotPositionGoal();
-            armIO.toPivotPosition(setpoint.pivotPositionRots);
-
             this.previousGoal = goal;
         } else if (goal == Goal.NONE) {
-            armIO.toPivotPosition(setpoint.pivotPositionRots);
             this.previousGoal = Goal.NONE;
         }
+
+        lastProfiledReference = profile.calculate(
+                Constants.LOOP_PERIOD_SECONDS,
+                lastProfiledReference,
+                new TrapezoidProfile.State(Units.rotationsToRadians(setpoint.pivotPositionRots), 0)
+        );
+
+        correct();
+        predict();
+        armIO.toPivotVoltage(getVoltageInput());
 
         Logger.recordOutput(LogKey + "/Goal", goal.toString());
         Logger.recordOutput(LogKey + "/PositionSetpoint/PivotPositionRots", setpoint.pivotPositionRots);
@@ -222,26 +344,6 @@ public class Arm extends SubsystemBase {
         );
     }
 
-    private SysIdRoutine makeTorqueCurrentSysIdRoutine(
-            final Measure<Velocity<Current>> currentRampRate,
-            final Measure<Current> stepCurrent,
-            final Measure<Time> timeout
-    ) {
-        return new SysIdRoutine(
-                new SysIdRoutine.Config(
-                        Volts.per(Second).of(currentRampRate.baseUnitMagnitude()),
-                        Volts.of(stepCurrent.baseUnitMagnitude()),
-                        timeout,
-                        state -> SignalLogger.writeString(String.format("%s-state", LogKey), state.toString())
-                ),
-                new SysIdRoutine.Mechanism(
-                        voltageMeasure -> armIO.toPivotTorqueCurrent(voltageMeasure.in(Volts)),
-                        null,
-                        this
-                )
-        );
-    }
-
     private Command makeSysIdCommand(final SysIdRoutine sysIdRoutine) {
         return Commands.sequence(
                 sysIdRoutine.quasistatic(SysIdRoutine.Direction.kForward)
@@ -261,10 +363,5 @@ public class Arm extends SubsystemBase {
     @SuppressWarnings("unused")
     public Command voltageSysIdCommand() {
         return makeSysIdCommand(voltageSysIdRoutine);
-    }
-
-    @SuppressWarnings("unused")
-    public Command torqueCurrentSysIdCommand() {
-        return makeSysIdCommand(torqueCurrentSysIdRoutine);
     }
 }

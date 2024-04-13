@@ -270,20 +270,8 @@ public class ArmIOSim implements ArmIO {
     }
 
     @Override
-    public void toPivotPosition(final double pivotPositionRots) {
-        leftPivotMotor.setControl(motionMagicExpoVoltage.withPosition(pivotPositionRots));
-        rightPivotMotor.setControl(leftTalonFXFollower);
-    }
-
-    @Override
     public void toPivotVoltage(final double pivotVolts) {
         leftPivotMotor.setControl(voltageOut.withOutput(pivotVolts));
-        rightPivotMotor.setControl(leftTalonFXFollower);
-    }
-
-    @Override
-    public void toPivotTorqueCurrent(double pivotTorqueCurrentAmps) {
-        leftPivotMotor.setControl(torqueCurrentFOC.withOutput(pivotTorqueCurrentAmps));
         rightPivotMotor.setControl(leftTalonFXFollower);
     }
 }

@@ -3,11 +3,8 @@ package frc.robot.subsystems.superstructure.arm;
 import com.ctre.phoenix6.BaseStatusSignal;
 import com.ctre.phoenix6.StatusSignal;
 import com.ctre.phoenix6.configs.CANcoderConfiguration;
-import com.ctre.phoenix6.configs.Slot0Configs;
 import com.ctre.phoenix6.configs.TalonFXConfiguration;
 import com.ctre.phoenix6.controls.Follower;
-import com.ctre.phoenix6.controls.MotionMagicExpoVoltage;
-import com.ctre.phoenix6.controls.TorqueCurrentFOC;
 import com.ctre.phoenix6.controls.VoltageOut;
 import com.ctre.phoenix6.hardware.CANcoder;
 import com.ctre.phoenix6.hardware.ParentDevice;
@@ -23,12 +20,7 @@ public class ArmIOReal implements ArmIO {
     private final TalonFX rightPivotMotor;
     private final CANcoder pivotCANCoder;
 
-    // TODO: use MotionMagicExpoTorqueCurrentFOC
-//    private final MotionMagicExpoTorqueCurrentFOC motionMagicExpoTorqueCurrentFOC;
-    private final MotionMagicExpoVoltage motionMagicExpoVoltage;
-    private final TorqueCurrentFOC torqueCurrentFOC;
     private final VoltageOut voltageOut;
-
     private final Follower leftPivotFollower;
 
     // Cached StatusSignals
@@ -52,11 +44,7 @@ public class ArmIOReal implements ArmIO {
         this.rightPivotMotor = new TalonFX(armConstants.rightPivotMotorId(), armConstants.CANBus());
         this.pivotCANCoder = new CANcoder(armConstants.pivotCANCoderId(), armConstants.CANBus());
 
-//        this.motionMagicExpoTorqueCurrentFOC = new MotionMagicExpoTorqueCurrentFOC(0);
-        this.motionMagicExpoVoltage = new MotionMagicExpoVoltage(0);
-        this.torqueCurrentFOC = new TorqueCurrentFOC(0);
         this.voltageOut = new VoltageOut(0);
-
         this.leftPivotFollower = new Follower(leftPivotMotor.getDeviceID(), true);
 
         this._leftPosition = leftPivotMotor.getPosition();
@@ -83,52 +71,20 @@ public class ArmIOReal implements ArmIO {
 
         final TalonFXConfiguration leftTalonFXConfiguration = new TalonFXConfiguration();
         final InvertedValue leftTalonFXInverted = InvertedValue.Clockwise_Positive;
-        leftTalonFXConfiguration.Slot0 = new Slot0Configs()
-//                .withKS(0.011965)
-                .withKS(0.060477)
-                .withKG(0.23872)
-                .withGravityType(GravityTypeValue.Arm_Cosine)
-                .withKV(13.941)
-                .withKA(0.17656 * 0.5)
-                .withKP(65.808);
-        leftTalonFXConfiguration.MotionMagic.MotionMagicCruiseVelocity = 0;
-        leftTalonFXConfiguration.MotionMagic.MotionMagicExpo_kV = 13.941;
-//        leftTalonFXConfiguration.MotionMagic.MotionMagicExpo_kA = 0.17176;
-        leftTalonFXConfiguration.MotionMagic.MotionMagicExpo_kA = 1.5;
         leftTalonFXConfiguration.TorqueCurrent.PeakForwardTorqueCurrent = 80;
         leftTalonFXConfiguration.TorqueCurrent.PeakReverseTorqueCurrent = -80;
         leftTalonFXConfiguration.CurrentLimits.StatorCurrentLimit = 60;
         leftTalonFXConfiguration.CurrentLimits.StatorCurrentLimitEnable = true;
-        leftTalonFXConfiguration.Feedback.FeedbackSensorSource = FeedbackSensorSourceValue.FusedCANcoder;
-        leftTalonFXConfiguration.Feedback.FeedbackRemoteSensorID = pivotCANCoder.getDeviceID();
-        leftTalonFXConfiguration.Feedback.RotorToSensorRatio = armConstants.pivotGearing();
-//        leftTalonFXConfiguration.Feedback.SensorToMechanismRatio = armConstants.pivotGearing();
         leftTalonFXConfiguration.MotorOutput.Inverted = leftTalonFXInverted;
         leftTalonFXConfiguration.MotorOutput.NeutralMode = NeutralModeValue.Brake;
         leftPivotMotor.getConfigurator().apply(leftTalonFXConfiguration);
 
         final TalonFXConfiguration rightTalonFXConfiguration = new TalonFXConfiguration();
         final InvertedValue rightTalonFXInverted = InvertedValue.CounterClockwise_Positive;
-        rightTalonFXConfiguration.Slot0 = new Slot0Configs()
-//                .withKS(0.011965)
-                .withKS(0.060477)
-                .withKG(0.23872)
-                .withGravityType(GravityTypeValue.Arm_Cosine)
-                .withKV(13.941)
-                .withKA(0.17656 * 0.5)
-                .withKP(65.808);
-        rightTalonFXConfiguration.MotionMagic.MotionMagicCruiseVelocity = 0;
-        rightTalonFXConfiguration.MotionMagic.MotionMagicExpo_kV = 13.941;
-//        rightTalonFXConfiguration.MotionMagic.MotionMagicExpo_kA = 0.17176;
-        rightTalonFXConfiguration.MotionMagic.MotionMagicExpo_kA = 1.5;
         rightTalonFXConfiguration.TorqueCurrent.PeakForwardTorqueCurrent = 80;
         rightTalonFXConfiguration.TorqueCurrent.PeakReverseTorqueCurrent = -80;
         rightTalonFXConfiguration.CurrentLimits.StatorCurrentLimit = 60;
         rightTalonFXConfiguration.CurrentLimits.StatorCurrentLimitEnable = true;
-        rightTalonFXConfiguration.Feedback.FeedbackSensorSource = FeedbackSensorSourceValue.FusedCANcoder;
-        rightTalonFXConfiguration.Feedback.FeedbackRemoteSensorID = pivotCANCoder.getDeviceID();
-        rightTalonFXConfiguration.Feedback.RotorToSensorRatio = armConstants.pivotGearing();
-//        rightTalonFXConfiguration.Feedback.SensorToMechanismRatio = armConstants.pivotGearing();
         rightTalonFXConfiguration.MotorOutput.Inverted = rightTalonFXInverted;
         rightTalonFXConfiguration.MotorOutput.NeutralMode = NeutralModeValue.Brake;
         rightPivotMotor.getConfigurator().apply(rightTalonFXConfiguration);
@@ -221,21 +177,8 @@ public class ArmIOReal implements ArmIO {
     }
 
     @Override
-    public void toPivotPosition(final double pivotPositionRots) {
-//        leftPivotMotor.setControl(motionMagicExpoTorqueCurrentFOC.withPosition(pivotPositionRots));
-        leftPivotMotor.setControl(motionMagicExpoVoltage.withPosition(pivotPositionRots));
-        rightPivotMotor.setControl(leftPivotFollower);
-    }
-
-    @Override
     public void toPivotVoltage(final double pivotVolts) {
         leftPivotMotor.setControl(voltageOut.withOutput(pivotVolts));
-        rightPivotMotor.setControl(leftPivotFollower);
-    }
-
-    @Override
-    public void toPivotTorqueCurrent(double pivotTorqueCurrentAmps) {
-        leftPivotMotor.setControl(torqueCurrentFOC.withOutput(pivotTorqueCurrentAmps));
         rightPivotMotor.setControl(leftPivotFollower);
     }
 }
