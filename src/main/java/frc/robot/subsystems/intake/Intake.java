@@ -1,55 +1,55 @@
 package frc.robot.subsystems.intake;
 
 import com.ctre.phoenix6.SignalLogger;
-import edu.wpi.first.math.MathUtil;
-import edu.wpi.first.math.geometry.Translation2d;
-import edu.wpi.first.math.kinematics.ChassisSpeeds;
 import edu.wpi.first.units.Current;
 import edu.wpi.first.units.Measure;
 import edu.wpi.first.units.Time;
 import edu.wpi.first.units.Velocity;
+import edu.wpi.first.wpilibj.event.EventLoop;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
+import edu.wpi.first.wpilibj2.command.button.Trigger;
 import edu.wpi.first.wpilibj2.command.sysid.SysIdRoutine;
 import frc.robot.constants.Constants;
 import frc.robot.constants.HardwareConstants;
 import frc.robot.utils.logging.LogUtils;
 import org.littletonrobotics.junction.Logger;
 
-import java.util.function.Supplier;
+import java.util.function.BooleanSupplier;
 
 import static edu.wpi.first.units.Units.*;
 
 public class Intake extends SubsystemBase {
-    protected static final String logKey = "Intake";
-
-    private static final double MaxRollerSurfaceSpeedMetersPerSec =
-            Constants.Intake.RollerCircumferenceMeters * Constants.Swerve.ROBOT_MAX_SPEED_MPS;
+    protected static final String LogKey = "Intake";
 
     private final IntakeIO intakeIO;
     private final IntakeIOInputsAutoLogged inputs;
-    private final Supplier<ChassisSpeeds> chassisSpeedsSupplier;
+    private final VelocitySetpoint setpoint;
+
+    private final EventLoop eventLoop;
+    public final Trigger shooterBeamBreakBroken;
+
+    private boolean intakingActive = false;
+    public final Trigger intaking;
+
+    private boolean storeNotes = true;
+    public final BooleanSupplier shouldStoreNotes = () -> this.storeNotes;
+
+    private boolean feedingActive = false;
+    public final Trigger feeding;
+
+    private static class VelocitySetpoint {
+        public double rightRollerVelocityRotsPerSec;
+        public double leftRollerVelocityRotsPerSec;
+        public double shooterFeederRotsPerSec;
+    }
 
     private final SysIdRoutine torqueCurrentSysIdRoutine;
 
-    public enum State {
-        INTAKE,
-        OUTTAKE,
-        FEED,
-        STOP,
-    }
-
-    public static class Setpoint {
-        public double rightRollerVelocityRotsPerSecond;
-        public double leftRollerVelocityRotsPerSecond;
-        public double shooterFeederRollerVelocityRotsPerSecond;
-    }
-
     public Intake(
             final Constants.RobotMode robotMode,
-            final HardwareConstants.IntakeConstants intakeConstants,
-            final Supplier<ChassisSpeeds> chassisSpeedsSupplier
+            final HardwareConstants.IntakeConstants intakeConstants
     ) {
         this.intakeIO = switch (robotMode) {
             case REAL -> new IntakeIOReal(intakeConstants);
@@ -57,9 +57,14 @@ public class Intake extends SubsystemBase {
             case REPLAY -> new IntakeIO() {};
         };
 
-        this.chassisSpeedsSupplier = chassisSpeedsSupplier;
-
         this.inputs = new IntakeIOInputsAutoLogged();
+        this.setpoint = new VelocitySetpoint();
+
+        this.eventLoop = new EventLoop();
+        this.shooterBeamBreakBroken = new Trigger(eventLoop, () -> inputs.shooterBeamBreak);
+
+        this.intaking = new Trigger(eventLoop, () -> this.intakingActive);
+        this.feeding = new Trigger(eventLoop, () -> this.feedingActive);
 
         this.torqueCurrentSysIdRoutine = makeTorqueCurrentSysIdRoutine(
                 Amps.of(2).per(Second),
@@ -75,81 +80,174 @@ public class Intake extends SubsystemBase {
     public void periodic() {
         final double intakeIOPeriodicStart = Logger.getRealTimestamp();
         intakeIO.updateInputs(inputs);
-        Logger.processInputs(logKey, inputs);
+        Logger.processInputs(LogKey, inputs);
+
+        eventLoop.poll();
 
         Logger.recordOutput(
-                logKey + "/PeriodicIOPeriodMs",
+                LogKey + "/PeriodicIOPeriodMs",
                 LogUtils.microsecondsToMilliseconds(Logger.getRealTimestamp() - intakeIOPeriodicStart)
         );
 
+        Logger.recordOutput(LogKey + "/Intaking", intaking.getAsBoolean());
+        Logger.recordOutput(LogKey + "/Feeding", feeding.getAsBoolean());
+        Logger.recordOutput(LogKey + "/ShouldStoreNotes", shouldStoreNotes.getAsBoolean());
+
+        Logger.recordOutput(LogKey + "/Setpoint/RightRollerVelocityRotsPerSec", setpoint.rightRollerVelocityRotsPerSec);
+        Logger.recordOutput(LogKey + "/Setpoint/LeftRollerVelocityRotsPerSec", setpoint.leftRollerVelocityRotsPerSec);
+        Logger.recordOutput(LogKey + "/Setpoint/ShooterFeederRotsPerSec", setpoint.shooterFeederRotsPerSec);
     }
 
-    //TODO: this will eventually take an enum probably
-    public Command setStateCommand(final State intakeState) {
-        return run(() -> {
-            final Setpoint setpoint = new Setpoint();
-            switch (intakeState) {
-                case INTAKE -> {
-                    if (inputs.gamePieceDetected) {
-                        setpoint.rightRollerVelocityRotsPerSecond = 0;
-                        setpoint.leftRollerVelocityRotsPerSecond = 0;
-                        setpoint.shooterFeederRollerVelocityRotsPerSecond = 0;
-                    } else {
-                        final ChassisSpeeds chassisSpeeds = chassisSpeedsSupplier.get();
-                        final Translation2d chassisSpeedTranslation = new Translation2d(
-                                chassisSpeeds.vxMetersPerSecond, chassisSpeeds.vyMetersPerSecond
-                        );
+    public Command storeCommand() {
+        return runVelocityCommand(4, 4, 4)
+                .until(shooterBeamBreakBroken)
+                .unless(shooterBeamBreakBroken)
+                .andThen(
+                        Commands.deadline(
+                                Commands.waitUntil(shooterBeamBreakBroken.negate()),
+                                runVelocityCommand(-4, -4, -4)
+                        )
+                )
+                .andThen(instantStopCommand());
+    }
 
-                        final double rollerSpeedRotsPerSec = MathUtil.clamp(
-                                2 * chassisSpeedTranslation.getNorm(),
-                                0.25 * MaxRollerSurfaceSpeedMetersPerSec,
-                                MaxRollerSurfaceSpeedMetersPerSec
-                        ) / Constants.Intake.RollerCircumferenceMeters;
+    public Command intakeCommand() {
+        return Commands.sequence(
+                runOnce(() -> this.intakingActive = true),
+                runVelocityCommand(22, 22, 8)
+                        .until(shooterBeamBreakBroken),
+                instantStopCommand()
+//                storeCommand()
+        ).finallyDo(() -> this.intakingActive = false);
+    }
 
-                        setpoint.rightRollerVelocityRotsPerSecond = rollerSpeedRotsPerSec;
-                        setpoint.leftRollerVelocityRotsPerSecond = rollerSpeedRotsPerSec;
-                        setpoint.shooterFeederRollerVelocityRotsPerSecond = rollerSpeedRotsPerSec;
-                    }
-                }
-                case FEED -> {
-                    setpoint.rightRollerVelocityRotsPerSecond = MaxRollerSurfaceSpeedMetersPerSec/2;
-                    setpoint.leftRollerVelocityRotsPerSecond = MaxRollerSurfaceSpeedMetersPerSec/2;
-                    setpoint.shooterFeederRollerVelocityRotsPerSecond = MaxRollerSurfaceSpeedMetersPerSec/2;
-                }
-                case OUTTAKE -> {
-                    setpoint.rightRollerVelocityRotsPerSecond = -MaxRollerSurfaceSpeedMetersPerSec;
-                    setpoint.leftRollerVelocityRotsPerSecond = -MaxRollerSurfaceSpeedMetersPerSec;
-                    setpoint.shooterFeederRollerVelocityRotsPerSecond = -MaxRollerSurfaceSpeedMetersPerSec;
-                }
-                case STOP -> {
-                    setpoint.rightRollerVelocityRotsPerSecond = 0;
-                    setpoint.leftRollerVelocityRotsPerSecond = 0;
-                    setpoint.shooterFeederRollerVelocityRotsPerSecond = 0;
-                }
-            }
+    public Command intakeAndFeedCommand() {
+        return Commands.sequence(
+                runOnce(() -> {
+                    this.intakingActive = true;
+                    this.storeNotes = false;
+                }),
+                runVelocityCommand(22, 22, 22)
+                        .until(shooterBeamBreakBroken),
+                Commands.waitUntil(shooterBeamBreakBroken.negate()),
+                instantStopCommand()
+        ).finallyDo(() -> {
+            this.intakingActive = false;
+            this.storeNotes = true;
+        });
+    }
 
-            Logger.recordOutput(logKey + "/RightRollerVelocityRotPerSec", setpoint.rightRollerVelocityRotsPerSecond);
-            Logger.recordOutput(logKey + "/LeftRollerVelocityRotPerSec", setpoint.leftRollerVelocityRotsPerSecond);
-            Logger.recordOutput(logKey + "/ShooterFeederRollerVelocityRotPerSec", setpoint.shooterFeederRollerVelocityRotsPerSecond);
+    public Command feedHalfCommand() {
+        return storeCommand()
+                .onlyIf(shooterBeamBreakBroken)
+                .andThen(runOnce(() -> this.feedingActive = true))
+                .andThen(Commands.deadline(
+                        Commands.waitUntil(shooterBeamBreakBroken),
+                        runVelocityCommand(6, 6, 6)
+                ))
+                .finallyDo(() -> this.feedingActive = false);
+    }
 
-            intakeIO.toVelocity(
-                    setpoint.rightRollerVelocityRotsPerSecond,
-                    setpoint.leftRollerVelocityRotsPerSecond,
-                    setpoint.shooterFeederRollerVelocityRotsPerSecond
+    public Command feedCommand() {
+        return storeCommand()
+                .onlyIf(shooterBeamBreakBroken)
+                .andThen(runOnce(() -> this.feedingActive = true))
+                .andThen(Commands.deadline(
+                        Commands.waitUntil(shooterBeamBreakBroken)
+                                .andThen(Commands.waitUntil(shooterBeamBreakBroken.negate())),
+                        runVelocityCommand(18, 18, 18)
+                ))
+                .finallyDo(() -> this.feedingActive = false);
+    }
+
+    public Command runEjectOutCommand() {
+        return runVoltageCommand(-12, -12, -12);
+    }
+
+    public Command runEjectInCommand() {
+        return runVoltageCommand(12, 12, 12);
+    }
+
+    public Command instantStopCommand() {
+        return runOnce(() -> {
+            setpoint.rightRollerVelocityRotsPerSec = 0;
+            setpoint.leftRollerVelocityRotsPerSec = 0;
+            setpoint.shooterFeederRotsPerSec = 0;
+            intakeIO.toVoltage(
+                    0,
+                    0,
+                    0
             );
         });
     }
 
-    public Command toVoltageCommand(
+    public Command runStopCommand() {
+        return runVoltageCommand(0, 0, 0);
+    }
+
+    public Command toVelocityCommand(
+            final double rightRollerVelocityRotsPerSec,
+            final double leftRollerVelocityRotsPerSec,
+            final double shooterFeederRotsPerSec
+    ) {
+        return run(() -> {
+            setpoint.rightRollerVelocityRotsPerSec = rightRollerVelocityRotsPerSec;
+            setpoint.leftRollerVelocityRotsPerSec = leftRollerVelocityRotsPerSec;
+            setpoint.shooterFeederRotsPerSec = shooterFeederRotsPerSec;
+
+            intakeIO.toVelocity(
+                    rightRollerVelocityRotsPerSec,
+                    leftRollerVelocityRotsPerSec,
+                    shooterFeederRotsPerSec
+            );
+        });
+    }
+
+    public Command runVelocityCommand(
+            final double rightRollerVelocityRotsPerSec,
+            final double leftRollerVelocityRotsPerSec,
+            final double shooterFeederRotsPerSec
+    ) {
+        return runEnd(() -> {
+            setpoint.rightRollerVelocityRotsPerSec = rightRollerVelocityRotsPerSec;
+            setpoint.leftRollerVelocityRotsPerSec = leftRollerVelocityRotsPerSec;
+            setpoint.shooterFeederRotsPerSec = shooterFeederRotsPerSec;
+
+            intakeIO.toVelocity(
+                    rightRollerVelocityRotsPerSec,
+                    leftRollerVelocityRotsPerSec,
+                    shooterFeederRotsPerSec
+            );
+        }, () -> {
+            setpoint.rightRollerVelocityRotsPerSec = 0;
+            setpoint.leftRollerVelocityRotsPerSec = 0;
+            setpoint.shooterFeederRotsPerSec = 0;
+
+            intakeIO.toVelocity(0, 0, 0);
+        });
+    }
+
+    public Command runVoltageCommand(
             final double rightRollerVoltage,
             final double leftRollerVoltage,
             final double shooterFeederVoltage
     ) {
-        return runOnce(() -> intakeIO.toVoltage(
-                rightRollerVoltage,
-                leftRollerVoltage,
-                shooterFeederVoltage
-        ));
+        return startEnd(
+                () -> intakeIO.toVoltage(
+                        rightRollerVoltage,
+                        leftRollerVoltage,
+                        shooterFeederVoltage
+                ),
+                () -> intakeIO.toVoltage(0, 0, 0)
+        );
+    }
+
+    /**
+     * Set sensor state. No-op if not in simulation.
+     * @param shooterBeamBroken whether the shooter beam break is broken.
+     */
+    public void setBeamBreakSensorState(final boolean shooterBeamBroken) {
+        intakeIO.setBeamBreakSensorState(shooterBeamBroken);
     }
 
     private SysIdRoutine makeTorqueCurrentSysIdRoutine(
@@ -178,7 +276,8 @@ public class Intake extends SubsystemBase {
         );
     }
 
-    public Command runSysIDRoutineTorqueCurrent() {
+    @SuppressWarnings("unused")
+    public Command torqueCurrentSysIdCommand() {
         return Commands.sequence(
                 torqueCurrentSysIdRoutine.quasistatic(SysIdRoutine.Direction.kForward),
                 Commands.waitSeconds(4),

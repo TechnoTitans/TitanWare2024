@@ -72,19 +72,18 @@ public class ShooterIOReal implements ShooterIO {
     @Override
     public void config() {
         final TalonFXConfiguration ampTalonFXConfiguration = new TalonFXConfiguration();
-        // TODO: get feedforward gains
         ampTalonFXConfiguration.Slot0 = new Slot0Configs()
-                .withKS(9.6776)
-                .withKV(0.080065)
-                .withKA(0.14978)
-                .withKP(2);
+                .withKS(2.732)
+                .withKV(0.038323)
+                .withKA(0.15474)
+                .withKP(6.246);
         ampTalonFXConfiguration.TorqueCurrent.PeakForwardTorqueCurrent = 80;
         ampTalonFXConfiguration.TorqueCurrent.PeakReverseTorqueCurrent = -80;
         ampTalonFXConfiguration.CurrentLimits.StatorCurrentLimit = 60;
         ampTalonFXConfiguration.CurrentLimits.StatorCurrentLimitEnable = true;
         ampTalonFXConfiguration.CurrentLimits.SupplyCurrentLimit = 40;
-        ampTalonFXConfiguration.CurrentLimits.SupplyCurrentThreshold = 50;
-        ampTalonFXConfiguration.CurrentLimits.SupplyTimeThreshold = 0.5;
+        ampTalonFXConfiguration.CurrentLimits.SupplyCurrentThreshold = 60;
+        ampTalonFXConfiguration.CurrentLimits.SupplyTimeThreshold = 1.5;
         ampTalonFXConfiguration.CurrentLimits.SupplyCurrentLimitEnable = true;
         ampTalonFXConfiguration.Feedback.SensorToMechanismRatio = shooterConstants.ampMotorGearing();
         ampTalonFXConfiguration.MotorOutput.Inverted = InvertedValue.Clockwise_Positive;
@@ -93,12 +92,12 @@ public class ShooterIOReal implements ShooterIO {
 
         final TalonFXConfiguration leftTalonFXConfiguration = new TalonFXConfiguration();
         leftTalonFXConfiguration.Slot0 = new Slot0Configs()
-                .withKS(10.133)
-                .withKV(0.11958)
-                .withKA(0.43716)
-                .withKP(2);
-        leftTalonFXConfiguration.TorqueCurrent.PeakForwardTorqueCurrent = 80;
-        leftTalonFXConfiguration.TorqueCurrent.PeakReverseTorqueCurrent = -80;
+                .withKS(10.669)
+                .withKV(0.1978)
+                .withKA(0.40341)
+                .withKP(5);
+        leftTalonFXConfiguration.TorqueCurrent.PeakForwardTorqueCurrent = 60;
+        leftTalonFXConfiguration.TorqueCurrent.PeakReverseTorqueCurrent = -60;
         leftTalonFXConfiguration.CurrentLimits.StatorCurrentLimit = 60;
         leftTalonFXConfiguration.CurrentLimits.StatorCurrentLimitEnable = true;
         leftTalonFXConfiguration.CurrentLimits.SupplyCurrentLimit = 40;
@@ -112,12 +111,12 @@ public class ShooterIOReal implements ShooterIO {
 
         final TalonFXConfiguration rightTalonFXConfiguration = new TalonFXConfiguration();
         rightTalonFXConfiguration.Slot0 = new Slot0Configs()
-                .withKS(13.797)
-                .withKV(0.13482)
-                .withKA(0.41707)
-                .withKP(2);
-        rightTalonFXConfiguration.TorqueCurrent.PeakForwardTorqueCurrent = 80;
-        rightTalonFXConfiguration.TorqueCurrent.PeakReverseTorqueCurrent = -80;
+                .withKS(10.712)
+                .withKV(0.15193)
+                .withKA(0.43766)
+                .withKP(5);
+        rightTalonFXConfiguration.TorqueCurrent.PeakForwardTorqueCurrent = 60;
+        rightTalonFXConfiguration.TorqueCurrent.PeakReverseTorqueCurrent = -60;
         rightTalonFXConfiguration.CurrentLimits.StatorCurrentLimit = 60;
         rightTalonFXConfiguration.CurrentLimits.StatorCurrentLimitEnable = true;
         rightTalonFXConfiguration.CurrentLimits.SupplyCurrentLimit = 40;

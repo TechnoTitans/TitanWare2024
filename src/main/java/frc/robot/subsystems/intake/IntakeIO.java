@@ -5,26 +5,25 @@ import org.littletonrobotics.junction.AutoLog;
 public interface IntakeIO {
     @AutoLog
     class IntakeIOInputs {
-        // TODO @max: fix the names here, "Motor" is often redundant or completely incorrect
-        public double rightMotorPositionRots = 0.0;
-        public double rightMotorVelocityRotsPerSec = 0.0;
-        public double rightMotorVoltage = 0.0;
-        public double rightMotorTorqueCurrentAmps = 0.0;
-        public double rightMotorTempCelsius = 0.0;
+        public double rightPositionRots = 0.0;
+        public double rightVelocityRotsPerSec = 0.0;
+        public double rightVoltage = 0.0;
+        public double rightTorqueCurrentAmps = 0.0;
+        public double rightTempCelsius = 0.0;
 
-        public double leftMotorPositionRots = 0.0;
+        public double leftPositionRots = 0.0;
         public double leftVelocityRotsPerSec = 0.0;
-        public double leftMotorVoltage = 0.0;
+        public double leftVoltage = 0.0;
         public double leftTorqueCurrentAmps = 0.0;
         public double leftTempCelsius = 0.0;
 
-        public double shooterFeederMotorPositionRots = 0.0;
-        public double shooterFeederMotorVelocityRotsPerSec = 0.0;
-        public double shooterFeederMotorVoltage = 0.0;
-        public double shooterFeederMotorTorqueCurrentAmps = 0.0;
-        public double shooterFeederMotorTempCelsius = 0.0;
+        public double shooterFeederPositionRots = 0.0;
+        public double shooterFeederVelocityRotsPerSec = 0.0;
+        public double shooterFeederVoltage = 0.0;
+        public double shooterFeederTorqueCurrentAmps = 0.0;
+        public double shooterFeederTempCelsius = 0.0;
 
-        public boolean gamePieceDetected = false;
+        public boolean shooterBeamBreak = false;
     }
 
     /**
@@ -63,4 +62,6 @@ public interface IntakeIO {
             final double leftRollersVolts,
             final double shooterFeederRollerVolts
     ) {}
+
+    default void setBeamBreakSensorState(final boolean shooterBeamBroken) {}
 }

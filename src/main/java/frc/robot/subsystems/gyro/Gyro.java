@@ -10,7 +10,7 @@ import frc.robot.utils.logging.LogUtils;
 import org.littletonrobotics.junction.Logger;
 
 public class Gyro {
-    protected static final String logKey = "Gyro";
+    protected static final String LogKey = "Gyro";
 
     private final GyroIO gyroIO;
 
@@ -38,15 +38,18 @@ public class Gyro {
         this.gyroIO.config();
     }
 
+    public void updateInputs() {
+        gyroIO.updateInputs(inputs);
+    }
+
     public void periodic() {
         final double gyroPeriodicUpdateStart = Logger.getRealTimestamp();
 
         gyroIO.periodic();
-        gyroIO.updateInputs(inputs);
-        Logger.processInputs(logKey, inputs);
+        Logger.processInputs(LogKey, inputs);
 
         Logger.recordOutput(
-                logKey + "/PeriodicIOPeriodMs",
+                LogKey + "/PeriodicIOPeriodMs",
                 LogUtils.microsecondsToMilliseconds(Logger.getRealTimestamp() - gyroPeriodicUpdateStart)
         );
     }

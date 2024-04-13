@@ -24,7 +24,7 @@ import java.util.Optional;
 public class PhotonVisionApriltagsSim implements PhotonVisionRunner<PhotonVisionApriltagsSim.IOApriltagsSim> {
     public static class IOApriltagsSim implements PhotonVisionIO {
         private final PhotonCamera photonCamera;
-        private final String logKey;
+        private final String cameraName;
 
         private final PhotonPoseEstimator poseEstimator;
 
@@ -44,7 +44,7 @@ public class PhotonVisionApriltagsSim implements PhotonVisionRunner<PhotonVision
                 final VisionSystemSim visionSystemSim
         ) {
             this.photonCamera = titanCamera.getPhotonCamera();
-            this.logKey = String.format("%s_PhotonVisionIOApriltagsSim", photonCamera.getName());
+            this.cameraName = photonCamera.getName();
 
             this.poseEstimator = new PhotonPoseEstimator(
                     blueSideApriltagFieldLayout,
@@ -56,6 +56,10 @@ public class PhotonVisionApriltagsSim implements PhotonVisionRunner<PhotonVision
 
             final PhotonCameraSim photonCameraSim =
                     new PhotonCameraSim(titanCamera.getPhotonCamera(), titanCamera.toSimCameraProperties());
+
+            photonCameraSim.enableDrawWireframe(true);
+            photonCameraSim.enableRawStream(true);
+            photonCameraSim.enableProcessedStream(true);
 
             ToClose.add(photonCameraSim);
             visionSystemSim.addCamera(photonCameraSim, titanCamera.getRobotRelativeToCameraTransform());
@@ -71,8 +75,10 @@ public class PhotonVisionApriltagsSim implements PhotonVisionRunner<PhotonVision
             this.latestPhotonPipelineResult = photonPipelineResult;
         }
 
+        @SuppressWarnings("DuplicatedCode")
         @Override
         public void updateInputs(final PhotonVisionIOInputs inputs) {
+            inputs.name = cameraName;
             if (latestPhotonPipelineResult == null) {
                 inputs.pipelineResultTargets = new double[] {};
             } else {
@@ -174,7 +180,7 @@ public class PhotonVisionApriltagsSim implements PhotonVisionRunner<PhotonVision
             ioApriltagsSim.updateInputs(ioInputs);
 
             Logger.processInputs(
-                    String.format("%s/%s", PhotonVision.photonLogKey, ioApriltagsSim.logKey),
+                    String.format("%s/%s", PhotonVision.PhotonLogKey, ioApriltagsSim.cameraName),
                     ioInputs
             );
         }

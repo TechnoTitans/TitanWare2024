@@ -4,18 +4,16 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 public enum CameraProperties {
-    PERFECT_90(
-            Resolution.R960x720, 90, 80
-    );
+    PERFECT_90(Resolution.R960x720, 90),
+    ARDUCAM_OV9281(Resolution.R640x480, 72.2),
+    SEE3CAM_24CUG(Resolution.R1920x1080, 128.2);
 
     private final List<Resolution> resolutions;
     private final double camDiagonalFOVDeg;
-    private final double avgFPS;
 
     CameraProperties(
             final List<Resolution> resolutions,
-            final double camDiagonalFOVDeg,
-            final double avgFPS
+            final double camDiagonalFOVDeg
     ) {
         if (resolutions.isEmpty()) {
             throw new IllegalArgumentException("Cannot provide a 0-sized resolution list!");
@@ -23,15 +21,13 @@ public enum CameraProperties {
 
         this.resolutions = resolutions;
         this.camDiagonalFOVDeg = camDiagonalFOVDeg;
-        this.avgFPS = avgFPS;
     }
 
     CameraProperties(
             final Resolution resolution,
-            final double camDiagonalFOVDeg,
-            final double avgFPS
+            final double camDiagonalFOVDeg
     ) {
-        this(List.of(resolution), camDiagonalFOVDeg, avgFPS);
+        this(List.of(resolution), camDiagonalFOVDeg);
     }
 
     @SuppressWarnings("unused")
@@ -54,8 +50,7 @@ public enum CameraProperties {
                                         )
                                 )
                         ),
-                camDiagonalFOVDeg,
-                avgFPS
+                camDiagonalFOVDeg
         );
     }
 
@@ -71,11 +66,8 @@ public enum CameraProperties {
         return resolutions.get(0);
     }
 
-    public double getAvgFPS() {
-        return avgFPS;
-    }
-
     public enum Resolution {
+        R1920x1080(1920, 1080),
         R1280x800(1280, 800),
         R1280x720(1280, 720),
         R800x600(800, 600),
