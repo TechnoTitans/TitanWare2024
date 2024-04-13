@@ -3,9 +3,11 @@ package frc.robot.subsystems.vision;
 import edu.wpi.first.apriltag.AprilTagFieldLayout;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Pose3d;
+import edu.wpi.first.math.geometry.Transform3d;
 import edu.wpi.first.math.kinematics.SwerveDriveOdometry;
 import frc.robot.constants.Constants;
 import frc.robot.subsystems.drive.Swerve;
+import frc.robot.subsystems.vision.cameras.TitanCamera;
 import frc.robot.utils.closeables.ToClose;
 import frc.robot.utils.gyro.GyroUtils;
 import org.littletonrobotics.junction.Logger;
@@ -14,6 +16,7 @@ import org.photonvision.PhotonCamera;
 import org.photonvision.PhotonPoseEstimator;
 import org.photonvision.simulation.PhotonCameraSim;
 import org.photonvision.simulation.VisionSystemSim;
+import org.photonvision.targeting.PhotonPipelineResult;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -23,7 +26,9 @@ public class SimVisionRunner implements PhotonVisionRunner {
         private final TitanCamera titanCamera;
         private final PhotonCamera photonCamera;
         private final String cameraName;
+
         private final double stdDevFactor;
+        private final Transform3d robotToCamera;
 
         public VisionIOApriltagsSim(
                 final TitanCamera titanCamera,
@@ -31,8 +36,10 @@ public class SimVisionRunner implements PhotonVisionRunner {
         ) {
             this.titanCamera = titanCamera;
             this.photonCamera = titanCamera.getPhotonCamera();
-            this.stdDevFactor = titanCamera.getStdDevFactor();
             this.cameraName = photonCamera.getName();
+
+            this.stdDevFactor = titanCamera.getStdDevFactor();
+            this.robotToCamera = titanCamera.getRobotToCameraTransform();
 
             final PhotonCameraSim photonCameraSim =
                     new PhotonCameraSim(titanCamera.getPhotonCamera(), titanCamera.toSimCameraProperties());
@@ -42,13 +49,14 @@ public class SimVisionRunner implements PhotonVisionRunner {
             photonCameraSim.enableProcessedStream(true);
 
             ToClose.add(photonCameraSim);
-            visionSystemSim.addCamera(photonCameraSim, titanCamera.getRobotRelativeToCameraTransform());
+            visionSystemSim.addCamera(photonCameraSim, titanCamera.getRobotToCameraTransform());
         }
 
         @Override
         public void updateInputs(final VisionIO.VisionIOInputs inputs) {
             inputs.name = cameraName;
             inputs.stdDevFactor = stdDevFactor;
+            inputs.robotToCamera = robotToCamera;
             inputs.latestResult = photonCamera.getLatestResult();
         }
     }
@@ -82,7 +90,7 @@ public class SimVisionRunner implements PhotonVisionRunner {
                     aprilTagFieldLayout,
                     Constants.Vision.MULTI_TAG_POSE_STRATEGY,
                     visionIOApriltagsSim.photonCamera,
-                    visionIOApriltagsSim.titanCamera.getRobotRelativeToCameraTransform()
+                    visionIOApriltagsSim.titanCamera.getRobotToCameraTransform()
             );
             photonPoseEstimator.setMultiTagFallbackStrategy(PhotonPoseEstimator.PoseStrategy.LOWEST_AMBIGUITY);
 
@@ -125,9 +133,11 @@ public class SimVisionRunner implements PhotonVisionRunner {
                     inputs
             );
 
+            final PhotonPipelineResult result = inputs.latestResult;
+            VisionUtils.correctPipelineResultTimestamp(result);
             VisionUtils.updatePoseEstimator(
                     photonPoseEstimatorMap.get(visionIO),
-                    inputs.latestResult
+                    result
             ).ifPresent(
                     estimatedRobotPose -> estimatedRobotPoseMap.put(visionIO, estimatedRobotPose)
             );
@@ -147,7 +157,7 @@ public class SimVisionRunner implements PhotonVisionRunner {
     }
 
     @Override
-    public Map<VisionIOApriltagsSim, VisionIO.VisionIOInputs> getVisionIOInputsMap() {
+    public Map<VisionIOApriltagsSim, VisionIO.VisionIOInputs> getApriltagVisionIOInputsMap() {
         return visionIOInputsMap;
     }
 

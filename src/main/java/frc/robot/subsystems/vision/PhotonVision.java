@@ -15,6 +15,8 @@ import edu.wpi.first.wpilibj.DriverStation;
 import frc.robot.constants.Constants;
 import frc.robot.subsystems.drive.Swerve;
 import frc.robot.subsystems.drive.constants.SwerveConstants;
+import frc.robot.subsystems.vision.cameras.TitanCamera;
+import frc.robot.subsystems.vision.result.NoteTrackingResult;
 import frc.robot.utils.PoseUtils;
 import frc.robot.utils.gyro.GyroUtils;
 import frc.robot.utils.subsystems.VirtualSubsystem;
@@ -24,14 +26,11 @@ import org.photonvision.simulation.VisionSystemSim;
 import org.photonvision.targeting.PhotonTrackedTarget;
 
 import java.io.UncheckedIOException;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.stream.Collectors;
 
 public class PhotonVision extends VirtualSubsystem {
-    public static final String PhotonLogKey = "PhotonVision";
+    public static final String PhotonLogKey = "Vision";
 
     public static final double TranslationalVelocityTolerance = 1;
     public static final double AngularVelocityTolerance = 1;
@@ -83,9 +82,12 @@ public class PhotonVision extends VirtualSubsystem {
             case REAL -> new RealVisionRunner(
                     PhotonVision.apriltagFieldLayout,
                     PhotonVision.makeVisionIOInputsMap(
-                            new RealVisionRunner.VisionIOApriltagsReal(TitanCamera.PHOTON_FL_APRILTAG),
-                            new RealVisionRunner.VisionIOApriltagsReal(TitanCamera.PHOTON_FC_APRILTAG),
-                            new RealVisionRunner.VisionIOApriltagsReal(TitanCamera.PHOTON_FR_APRILTAG)
+                            new RealVisionRunner.VisionIOApriltagReal(TitanCamera.PHOTON_FL_APRILTAG),
+                            new RealVisionRunner.VisionIOApriltagReal(TitanCamera.PHOTON_FC_APRILTAG),
+                            new RealVisionRunner.VisionIOApriltagReal(TitanCamera.PHOTON_FR_APRILTAG)
+                    ),
+                    PhotonVision.makeVisionIOInputsMap(
+//                            new RealVisionRunner.VisionIONoteTrackingReal(TitanCamera.PHOTON_BC_NOTE_TRACKING)
                     )
             );
             case SIM -> {
@@ -112,7 +114,7 @@ public class PhotonVision extends VirtualSubsystem {
 
         this.swerve = swerve;
         this.poseEstimator = poseEstimator;
-        this.visionIOInputsMap = runner.getVisionIOInputsMap();
+        this.visionIOInputsMap = runner.getApriltagVisionIOInputsMap();
 
         this.lastEstimatedRobotPose = new HashMap<>();
 
@@ -238,31 +240,48 @@ public class PhotonVision extends VirtualSubsystem {
             final VisionIO.VisionIOInputs inputs = visionIOInputsEntry.getValue();
 
             final EstimatedRobotPose estimatedRobotPose = runner.getEstimatedRobotPose(visionIO);
-            if (estimatedRobotPose == null) {
-                // skip the trouble of calling/indexing things if the estimatedRobotPose is null
-                continue;
+            if (estimatedRobotPose != null) {
+                final EstimatedRobotPose lastEstimatedPose = lastEstimatedRobotPose.get(visionIO);
+                final EstimationRejectionReason rejectionReason =
+                        shouldRejectEstimation(lastEstimatedPose, estimatedRobotPose);
+
+                Logger.recordOutput(
+                        PhotonLogKey + "/RejectionReason", rejectionReason.getId()
+                );
+                if (rejectionReason.wasRejected()) {
+                    continue;
+                }
+
+                final Vector<N3> stdDevs = calculateStdDevs(estimatedRobotPose, inputs.stdDevFactor);
+                Logger.recordOutput(PhotonLogKey + "/" + inputs.name + "/StdDevs", stdDevs.getData());
+
+                lastEstimatedRobotPose.put(visionIO, estimatedRobotPose);
+                poseEstimator.addVisionMeasurement(
+                        estimatedRobotPose.estimatedPose.toPose2d(),
+                        estimatedRobotPose.timestampSeconds,
+                        stdDevs
+                );
             }
 
-            final EstimatedRobotPose lastSavedEstimatedPose = lastEstimatedRobotPose.get(visionIO);
-            final EstimationRejectionReason rejectionReason =
-                    shouldRejectEstimation(lastSavedEstimatedPose, estimatedRobotPose);
+            final NoteTrackingResult noteTrackingResult = runner.getNoteTrackingResult(visionIO);
+            if (noteTrackingResult != null) {
+                Logger.recordOutput(PhotonLogKey + "/NoteTracking/HasTargets", noteTrackingResult.hasTargets);
+                final Optional<Pose2d> optionalBestNotePose = noteTrackingResult
+                        .getBestNotePose(timestamp -> Optional.of(swerve.getPose()));
 
-            Logger.recordOutput(
-                    PhotonLogKey + "/RejectionReason", rejectionReason.getId()
-            );
-            if (rejectionReason.wasRejected()) {
-                continue;
+                Logger.recordOutput(PhotonLogKey + "/NoteTracking/HasBestNotePose", optionalBestNotePose.isPresent());
+                Logger.recordOutput(
+                        PhotonLogKey + "/NoteTracking/BestNotePose",
+                        optionalBestNotePose.orElseGet(Pose2d::new)
+                );
+
+                final Pose2d[] notePoses = noteTrackingResult
+                        .getNotePoses(timestamp -> Optional.of(swerve.getPose()));
+
+                Logger.recordOutput(PhotonLogKey + "/NoteTracking/NotePoses", notePoses);
+            } else {
+                Logger.recordOutput(PhotonLogKey + "/NoteTracking/HasTargets", false);
             }
-
-            final Vector<N3> stdDevs = calculateStdDevs(estimatedRobotPose, inputs.stdDevFactor);
-            Logger.recordOutput(PhotonLogKey + "/" + inputs.name + "/StdDevs", stdDevs.getData());
-
-            lastEstimatedRobotPose.put(visionIO, estimatedRobotPose);
-            poseEstimator.addVisionMeasurement(
-                    estimatedRobotPose.estimatedPose.toPose2d(),
-                    estimatedRobotPose.timestampSeconds,
-                    stdDevs
-            );
         }
     }
 

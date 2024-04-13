@@ -1,5 +1,7 @@
 package frc.robot.subsystems.vision;
 
+import edu.wpi.first.math.util.Units;
+import edu.wpi.first.wpilibj.Timer;
 import frc.robot.constants.Constants;
 import org.photonvision.EstimatedRobotPose;
 import org.photonvision.PhotonPoseEstimator;
@@ -10,6 +12,16 @@ import org.photonvision.targeting.PhotonTrackedTarget;
 import java.util.Optional;
 
 public class VisionUtils {
+    public static void correctPipelineResultTimestamp(final PhotonPipelineResult photonPipelineResult) {
+        final double currentTimestamp = Timer.getFPGATimestamp();
+        if (photonPipelineResult.getTimestampSeconds() > currentTimestamp) {
+            // if result in the future, use alternative timestamp calculated from latency instead
+            photonPipelineResult.setTimestampSeconds(
+                    currentTimestamp - Units.millisecondsToSeconds(photonPipelineResult.getLatencyMillis())
+            );
+        }
+    }
+
     public static Optional<EstimatedRobotPose> updatePoseEstimator(
             final PhotonPoseEstimator photonPoseEstimator,
             final PhotonPipelineResult photonPipelineResult

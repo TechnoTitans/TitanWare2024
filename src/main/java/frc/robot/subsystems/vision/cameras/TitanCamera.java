@@ -1,4 +1,4 @@
-package frc.robot.subsystems.vision;
+package frc.robot.subsystems.vision.cameras;
 
 import edu.wpi.first.math.MatBuilder;
 import edu.wpi.first.math.Nat;
@@ -141,10 +141,16 @@ public enum TitanCamera {
                             3
                     ),
             false
+    ),
+    PHOTON_BC_NOTE_TRACKING(
+            "Photon_BC",
+            new Transform3d(), // TODO: get transform
+            CameraProperties.ARDUCAM_OV9782,
+            false
     );
 
     private final PhotonCamera photonCamera;
-    private final Transform3d robotRelativeToCameraTransform;
+    private final Transform3d robotToCameraTransform;
     private final CameraProperties cameraProperties;
     private final double stdDevFactor;
     private final TitanCameraCalibration cameraCalibration;
@@ -152,14 +158,14 @@ public enum TitanCamera {
 
     TitanCamera(
             final String photonCameraName,
-            final Transform3d robotRelativeToCameraTransform,
+            final Transform3d robotToCameraTransform,
             final CameraProperties cameraProperties,
             final double stdDevFactor,
             final TitanCameraCalibration titanCameraCalibration,
             final boolean driverCam
     ) {
         this.photonCamera = new PhotonCamera(photonCameraName);
-        this.robotRelativeToCameraTransform = robotRelativeToCameraTransform;
+        this.robotToCameraTransform = robotToCameraTransform;
         this.cameraProperties = cameraProperties;
         this.stdDevFactor = stdDevFactor;
         this.cameraCalibration = titanCameraCalibration;
@@ -184,13 +190,13 @@ public enum TitanCamera {
 
     TitanCamera(
             final String photonCameraName,
-            final Transform3d robotRelativeToCameraTransform,
+            final Transform3d robotToCameraTransform,
             final CameraProperties cameraProperties,
             final boolean driverCam
     ) {
         this(
                 photonCameraName,
-                robotRelativeToCameraTransform,
+                robotToCameraTransform,
                 cameraProperties,
                 1.0,
                 TitanCameraCalibration.fromSimCameraProperties(SimCameraProperties.PERFECT_90DEG()),
@@ -202,8 +208,8 @@ public enum TitanCamera {
         return photonCamera;
     }
 
-    public Transform3d getRobotRelativeToCameraTransform() {
-        return robotRelativeToCameraTransform;
+    public Transform3d getRobotToCameraTransform() {
+        return robotToCameraTransform;
     }
 
     public CameraProperties getCameraProperties() {
