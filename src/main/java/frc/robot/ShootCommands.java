@@ -44,10 +44,12 @@ public class ShootCommands {
         return () -> angleToSpeaker(currentPoseSupplier.get());
     }
 
-    public static Supplier<ShotParameters.Parameters> shotParametersSupplier(
-            final Supplier<Pose2d> currentPoseSupplier
-    ) {
-        return () -> ShotParameters.getShotParameters(currentPoseSupplier.get());
+    public static Rotation2d angleToFerry(final Pose2d currentPose) {
+        return angleToPose(currentPose, FieldConstants.getAmpScoringPose());
+    }
+
+    public static Supplier<Rotation2d> angleToFerrySupplier(final Supplier<Pose2d> currentPoseSupplier) {
+        return () -> angleToFerry(currentPoseSupplier.get());
     }
 
     public static ShootOnTheMove.Shot shotWhileMoving(
@@ -57,7 +59,7 @@ public class ShootCommands {
         return ShootOnTheMove.calculate(
                 currentPose,
                 chassisSpeeds,
-                ShotParameters::getFerryParameters
+                ShotParameters::getShotParameters
         );
     }
 
@@ -68,7 +70,7 @@ public class ShootCommands {
         return () -> ShootOnTheMove.calculate(
                 currentPoseSupplier.get(),
                 chassisSpeedsSupplier.get(),
-                ShotParameters::getFerryParameters
+                ShotParameters::getShotParameters
         );
     }
 
@@ -136,12 +138,11 @@ public class ShootCommands {
 
     public Command shootSubwoofer() {
         return Commands.deadline(
-//                intake.runStopCommand()
-//                        .andThen(Commands.waitSeconds(0.1)) // TODO: fixme
-//                        .until(superstructure.atSetpoint)
-//                        .andThen(intake.feedCommand()),
-                Commands.waitSeconds(0.2)
+                intake.runStopCommand()
+                        .until(superstructure.atSetpoint)
                         .andThen(intake.feedCommand()),
+//                Commands.waitSeconds(0.2)
+//                        .andThen(intake.feedCommand()),
                 superstructure.toGoal(Superstructure.Goal.SUBWOOFER)
         );
     }
@@ -163,17 +164,38 @@ public class ShootCommands {
         );
     }
 
+    public Command readyFerry(
+            final DoubleSupplier xStickInput,
+            final DoubleSupplier yStickInput
+    ) {
+        final Supplier<ShotParameters.Parameters> ferrySupplier =
+                () -> ShotParameters.getFerryParameters(swerve.getPose());
+
+        return Commands.parallel(
+                superstructure.toState(ferrySupplier),
+                swerve.teleopFacingAngleCommand(
+                        xStickInput,
+                        yStickInput,
+                        ShootCommands.angleToFerrySupplier(swerve::getPose)
+                )
+        );
+    }
+
     public Command ferry() {
         return Commands.deadline(
-                Commands.waitUntil(superstructure.atSetpoint)
-                        .andThen(intake.feedCommand())
-                        .andThen(Commands.waitSeconds(0.4)),
-                superstructure.runState(() -> ShotParameters.getFerryParameters(swerve.getPose()))
+                Commands.deadline(
+                        intake
+                                .runStopCommand()
+                                .until(superstructure.atSetpoint.and(swerve.atHeadingSetpoint))
+                                .andThen(intake.feedCommand()),
+                        superstructure.toState(() -> ShotParameters.getFerryParameters(swerve.getPose()))
+                ),
+                swerve.faceAngle(ShootCommands.angleToFerrySupplier(swerve::getPose))
         );
     }
 
     public Command readySuperstructureForShot() {
-        return superstructure.runState(ShootCommands.shotParametersSupplier(swerve::getPose));
+        return superstructure.toState(ShotParameters.shotParametersSupplier(swerve::getPose));
     }
 
     public Command shoot() {
@@ -183,7 +205,7 @@ public class ShootCommands {
                         .until(superstructure.atSetpoint)
                         .withTimeout(1) // TODO: fixme
                         .andThen(intake.feedCommand()),
-                superstructure.runState(ShootCommands.shotParametersSupplier(swerve::getPose))
+                superstructure.toState(ShotParameters.shotParametersSupplier(swerve::getPose))
         );
     }
 
@@ -195,7 +217,7 @@ public class ShootCommands {
                                 .until(superstructure.atSetpoint.and(swerve.atHeadingSetpoint))
                                 .withTimeout(1.5) // TODO: fixme
                                 .andThen(intake.feedCommand()),
-                        superstructure.runState(ShootCommands.shotParametersSupplier(swerve::getPose))
+                        superstructure.toState(ShotParameters.shotParametersSupplier(swerve::getPose))
                 ),
                 swerve.faceAngle(ShootCommands.angleToSpeakerSupplier(swerve::getPose))
         );
@@ -210,7 +232,7 @@ public class ShootCommands {
                                 .withTimeout(1.5) // TODO: fixme
                                 .andThen(intake.feedCommand()),
                         Commands.defer(() ->
-                                        superstructure.runState(() -> ShotParameters.getShotParameters(swerve.getPose())),
+                                        superstructure.toState(() -> ShotParameters.getShotParameters(swerve.getPose())),
                                 superstructure.getRequirements()
                         )
                 ),
@@ -218,27 +240,6 @@ public class ShootCommands {
                         () -> swerve.faceAngle(() -> ShootCommands.angleToSpeaker(swerve.getPose())),
                         Set.of(swerve)
                 )
-        );
-    }
-
-    public Command teleopDriveAimAndFerry(
-            final DoubleSupplier xStickInput,
-            final DoubleSupplier yStickInput
-    ) {
-        final Supplier<ShotParameters.Parameters> ferrySupplier =
-                () -> ShotParameters.getFerryParameters(swerve.getPose());
-
-        return Commands.parallel(
-//                        intake
-//                                .runStopCommand()
-//                                .until(superstructure.atSetpoint.and(swerve.atHeadingSetpoint))
-//                                .withTimeout(1.5)
-//                                .andThen(intake.feedCommand()),
-                superstructure.runState(ferrySupplier),
-                swerve.teleopFacingAngleCommand(
-                        xStickInput,
-                        yStickInput,
-                        () -> ShootCommands.angleToPose(swerve.getPose(), FieldConstants.getAmpScoringPose()))
         );
     }
 
@@ -260,14 +261,29 @@ public class ShootCommands {
                         intake
                                 .runStopCommand()
                                 .until(superstructure.atSetpoint.and(swerve.atHeadingSetpoint))
-                                .withTimeout(1.5)
+//                                .withTimeout(1.5)
                                 .andThen(intake.feedCommand()),
-                        superstructure.runState(() -> shotSupplier.get().parameters())
+                        superstructure.toState(() -> shotSupplier.get().parameters())
                 ),
                 swerve.teleopFacingAngleCommand(
                         xStickInput,
                         yStickInput,
                         () -> shotSupplier.get().futurePose().getRotation()
+                )
+        );
+    }
+
+    public Command readyShot(
+            final DoubleSupplier xStickInput,
+            final DoubleSupplier yStickInput
+    ) {
+        return Commands.parallel(
+                intake.runStopCommand(),
+                superstructure.toState(ShotParameters.shotParametersSupplier(swerve::getPose)),
+                swerve.teleopFacingAngleCommand(
+                        xStickInput,
+                        yStickInput,
+                        ShootCommands.angleToSpeakerSupplier(swerve::getPose)
                 )
         );
     }

@@ -188,7 +188,7 @@ public class Arm extends SubsystemBase {
     public Command toPivotPositionCommand(final DoubleSupplier pivotPositionRots) {
         return Commands.sequence(
                 Commands.runOnce(() -> this.goal = Goal.NONE),
-                run(() -> setpoint.pivotPositionRots = pivotPositionRots.getAsDouble())
+                runEnd(() -> setpoint.pivotPositionRots = pivotPositionRots.getAsDouble(), () -> this.goal = Goal.STOW)
         );
     }
 

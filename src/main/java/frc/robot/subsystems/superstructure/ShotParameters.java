@@ -9,6 +9,8 @@ import edu.wpi.first.math.interpolation.Interpolator;
 import edu.wpi.first.math.interpolation.InverseInterpolator;
 import frc.robot.constants.FieldConstants;
 
+import java.util.function.Supplier;
+
 public class ShotParameters {
     public record Parameters(
             Rotation2d armPivotAngle,
@@ -82,7 +84,7 @@ public class ShotParameters {
                 84.433,
                 128.883,
                 84.433,
-                0
+                0.41
         ));
 
         shotDataMap.put(4.5d, new Parameters(
@@ -90,7 +92,7 @@ public class ShotParameters {
                 84.433,
                 128.883,
                 84.433,
-                0
+                0.49
         ));
 
         shotDataMap.put(5d, new Parameters(
@@ -98,7 +100,7 @@ public class ShotParameters {
                 84.433,
                 128.883,
                 84.433,
-                0
+                0.57
         ));
 
         shotDataMap.put(5.5d, new Parameters(
@@ -106,7 +108,7 @@ public class ShotParameters {
                 100,
                 133.3,
                 100,
-                0
+                0.61
         ));
 
         shotDataMap.put(6d, new Parameters(
@@ -114,7 +116,7 @@ public class ShotParameters {
                 100,
                 133.3,
                 100,
-                0
+                0.7
         ));
 
         shotDataMap.put(6.5d, new Parameters(
@@ -122,7 +124,7 @@ public class ShotParameters {
                 100,
                 133.3,
                 100,
-                0
+                0.8
         ));
 
         shotDataMap.put(7d, new Parameters(
@@ -130,7 +132,7 @@ public class ShotParameters {
                 100,
                 133.3,
                 100,
-                0
+                0.9
         ));
 
         shotDataMap.put(7.5d, new Parameters(
@@ -138,7 +140,7 @@ public class ShotParameters {
                 100,
                 133.3,
                 100,
-                0
+                1
         ));
     }
 
@@ -149,34 +151,74 @@ public class ShotParameters {
 
     static {
         ferryDataMap.put(6d, new Parameters(
-                Rotation2d.fromDegrees(21),
-                100,
-                133.3,
-                100,
+                Rotation2d.fromDegrees(50),
+                40,
+                60,
+                40,
                 0
         ));
 
         ferryDataMap.put(6.5d, new Parameters(
-                Rotation2d.fromDegrees(18.5),
-                100,
-                133.3,
-                100,
+                Rotation2d.fromDegrees(50),
+                40,
+                60,
+                40,
                 0
         ));
 
         ferryDataMap.put(7d, new Parameters(
-                Rotation2d.fromDegrees(17.5),
-                100,
-                133.3,
-                100,
+                Rotation2d.fromDegrees(50),
+                40,
+                60,
+                40,
                 0
         ));
 
         ferryDataMap.put(7.5d, new Parameters(
-                Rotation2d.fromDegrees(16.5),
-                100,
-                133.3,
-                100,
+                Rotation2d.fromDegrees(50),
+                50,
+                70,
+                50,
+                0
+        ));
+
+        ferryDataMap.put(8d, new Parameters(
+                Rotation2d.fromDegrees(50),
+                60,
+                80,
+                60,
+                0
+        ));
+
+        ferryDataMap.put(8.5d, new Parameters(
+                Rotation2d.fromDegrees(50),
+                60,
+                80,
+                60,
+                0
+        ));
+
+        ferryDataMap.put(9d, new Parameters(
+                Rotation2d.fromDegrees(50),
+                60,
+                80,
+                60,
+                0
+        ));
+
+        ferryDataMap.put(9.5d, new Parameters(
+                Rotation2d.fromDegrees(50),
+                70,
+                90,
+                70,
+                0
+        ));
+
+        ferryDataMap.put(10d, new Parameters(
+                Rotation2d.fromDegrees(50),
+                70,
+                90,
+                70,
                 0
         ));
     }
@@ -188,6 +230,12 @@ public class ShotParameters {
                         .getTranslation()
                         .getNorm()
         );
+    }
+
+    public static Supplier<Parameters> shotParametersSupplier(
+            final Supplier<Pose2d> currentPoseSupplier
+    ) {
+        return () -> ShotParameters.getShotParameters(currentPoseSupplier.get());
     }
 
     public static Parameters getFerryParameters(final Pose2d currentPose) {

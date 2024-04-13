@@ -152,7 +152,7 @@ public class Swerve extends SubsystemBase {
                         MathUtil.isNear(
                                 0,
                                 getRobotRelativeSpeeds().omegaRadiansPerSecond,
-                                Units.degreesToRadians(6)
+                                Units.degreesToRadians(12)
                         )
         );
 

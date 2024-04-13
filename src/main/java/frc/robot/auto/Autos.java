@@ -16,6 +16,7 @@ import frc.robot.ShootCommands;
 import frc.robot.state.NoteState;
 import frc.robot.subsystems.drive.Swerve;
 import frc.robot.subsystems.intake.Intake;
+import frc.robot.subsystems.superstructure.ShotParameters;
 import frc.robot.subsystems.superstructure.Superstructure;
 
 import java.util.List;
@@ -156,6 +157,7 @@ public class Autos {
                 noteState.setState(NoteState.State.STORED),
                 resetPose(trajectory0),
                 shootCommands.shootSubwoofer().withName("ShootPreload").asProxy(),
+                Commands.runOnce(timer::reset),
                 followPath(trajectory0, timer)
         ).withName("PreloadAndFollow0");
     }
@@ -174,7 +176,7 @@ public class Autos {
                         )),
                         Commands.deadline(
                                 intake.intakeAndFeedCommand(),
-                                superstructure.runState(ShootCommands.shotParametersSupplier(swerve::getPose))
+                                superstructure.toState(ShotParameters.shotParametersSupplier(swerve::getPose))
                         )
                 ).finallyDo(swerve::clearPathHeadingOverride)
         );

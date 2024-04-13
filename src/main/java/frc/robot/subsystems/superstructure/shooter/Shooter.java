@@ -182,11 +182,14 @@ public class Shooter extends SubsystemBase {
     ) {
         return Commands.sequence(
                 Commands.runOnce(() -> this.goal = Goal.NONE),
-                run(() -> {
-                    setpoint.ampVelocityRotsPerSec = ampVelocityRotsPerSec.getAsDouble();
-                    setpoint.leftFlywheelVelocityRotsPerSec = leftFlywheelVelocityRotsPerSec.getAsDouble();
-                    setpoint.rightFlywheelVelocityRotsPerSec = rightFlywheelVelocityRotsPerSec.getAsDouble();
-                })
+                runEnd(
+                        () -> {
+                            setpoint.ampVelocityRotsPerSec = ampVelocityRotsPerSec.getAsDouble();
+                            setpoint.leftFlywheelVelocityRotsPerSec = leftFlywheelVelocityRotsPerSec.getAsDouble();
+                            setpoint.rightFlywheelVelocityRotsPerSec = rightFlywheelVelocityRotsPerSec.getAsDouble();
+                        },
+                        () -> this.goal = Goal.IDLE
+                )
         );
     }
 

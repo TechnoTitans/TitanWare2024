@@ -9,7 +9,6 @@ import edu.wpi.first.wpilibj.event.EventLoop;
 import edu.wpi.first.wpilibj.livewindow.LiveWindow;
 import edu.wpi.first.wpilibj2.command.CommandScheduler;
 import edu.wpi.first.wpilibj2.command.Commands;
-import edu.wpi.first.wpilibj2.command.Subsystem;
 import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
 import edu.wpi.first.wpilibj2.command.button.Trigger;
 import edu.wpi.first.wpilibj2.command.sysid.SysIdRoutine;
@@ -45,8 +44,6 @@ import org.littletonrobotics.junction.wpilog.WPILOGWriter;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
-import java.util.Arrays;
-import java.util.Iterator;
 import java.util.Optional;
 import java.util.Set;
 import java.util.function.BooleanSupplier;
@@ -243,6 +240,18 @@ public class Robot extends LoggedRobot {
         Logger.recordOutput("ShotParameters/RightVelocityRotsPerSec", shotParameters.rightVelocityRotsPerSec());
         Logger.recordOutput("ShotParameters/AmpVelocityRotsPerSec", shotParameters.ampVelocityRotsPerSec());
 
+        final double distanceToFerry = swerve.getPose()
+                .minus(FieldConstants.getAmpScoringPose())
+                .getTranslation()
+                .getNorm();
+        final ShotParameters.Parameters ferryParameters = ShotParameters.getFerryParameters(swerve.getPose());
+
+        Logger.recordOutput("FerryParameters/FerryDistance", distanceToFerry);
+        Logger.recordOutput("FerryParameters/ArmPivotAngle", ferryParameters.armPivotAngle().getRotations());
+        Logger.recordOutput("FerryParameters/LeftVelocityRotsPerSec", ferryParameters.leftVelocityRotsPerSec());
+        Logger.recordOutput("FerryParameters/RightVelocityRotsPerSec", ferryParameters.rightVelocityRotsPerSec());
+        Logger.recordOutput("FerryParameters/AmpVelocityRotsPerSec", ferryParameters.ampVelocityRotsPerSec());
+
         final ShootOnTheMove.Shot shotWhileMoving = ShootOnTheMove.calculate(
                 swerve.getPose(),
                 swerve.getRobotRelativeSpeeds(),
@@ -433,6 +442,7 @@ public class Robot extends LoggedRobot {
         ));
     }
 
+    @SuppressWarnings("RedundantSuppression")
     public void configureButtonBindings(final EventLoop teleopEventLoop) {
         this.driverController.leftTrigger(0.5, teleopEventLoop)
                 .whileTrue(intake.intakeCommand());
@@ -447,13 +457,18 @@ public class Robot extends LoggedRobot {
                 )
         );
 
+        //noinspection SuspiciousNameCombination
         this.driverController.rightTrigger(0.5, teleopEventLoop)
-                .whileTrue(shootCommands.deferredStopAimAndShoot())
+                .whileTrue(shootCommands.readyShot(
+                        driverController::getLeftY,
+                        driverController::getLeftX
+                ))
+                .onFalse(shootCommands.deferredStopAimAndShoot());
+//                .whileTrue(shootCommands.deferredStopAimAndShoot());
 //                .whileTrue(shootCommands.teleopDriveAimAndShoot(
 //                        driverController::getLeftY,
 //                        driverController::getLeftX
-//                ))
-                .onFalse(superstructure.toGoal(Superstructure.Goal.IDLE));
+//                ));
 
 //        this.driverController.a(teleopEventLoop)
 //                .whileTrue(shootCommands.readyAmp())
@@ -488,10 +503,11 @@ public class Robot extends LoggedRobot {
 
         //noinspection SuspiciousNameCombination
         this.coDriverController.leftTrigger(0.5, teleopEventLoop)
-                .whileTrue(shootCommands.teleopDriveAimAndFerry(
+                .whileTrue(shootCommands.readyFerry(
                         driverController::getLeftY,
                         driverController::getLeftX
-                )).onFalse(shootCommands.ferry());
+                ))
+                .onFalse(shootCommands.ferry());
 
         this.coDriverController.rightTrigger(0.5, teleopEventLoop)
                 .whileTrue(shootCommands.shootSubwoofer());

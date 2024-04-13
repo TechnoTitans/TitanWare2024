@@ -52,7 +52,7 @@ public class Profiler {
 
     public enum SwerveSpeed {
         FAST(Units.feetToMeters(15), 2 * Math.PI),
-        NORMAL(Units.feetToMeters(12), 1.25 * Math.PI),
+        NORMAL(Units.feetToMeters(12), 1.5 * Math.PI),
         SLOW(Units.feetToMeters(3), 0.2 * Math.PI);
 
         private final double translationSpeed;

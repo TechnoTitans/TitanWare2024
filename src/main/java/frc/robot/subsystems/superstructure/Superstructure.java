@@ -78,8 +78,8 @@ public class Superstructure extends VirtualSubsystem {
                 .beforeStarting(() -> this.goal = goal);
     }
 
-    public Command runState(final Supplier<ShotParameters.Parameters> parametersSupplier) {
-        return runState(
+    public Command toState(final Supplier<ShotParameters.Parameters> parametersSupplier) {
+        return toState(
                 () -> parametersSupplier.get().armPivotAngle(),
                 () -> parametersSupplier.get().ampVelocityRotsPerSec(),
                 () -> parametersSupplier.get().leftVelocityRotsPerSec(),
@@ -87,7 +87,7 @@ public class Superstructure extends VirtualSubsystem {
         );
     }
 
-    public Command runState(
+    public Command toState(
             final Supplier<Rotation2d> armPivotPosition,
             final DoubleSupplier ampVelocityRotsPerSec,
             final DoubleSupplier leftVelocityRotsPerSec,
