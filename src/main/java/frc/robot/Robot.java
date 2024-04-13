@@ -235,7 +235,7 @@ public class Robot extends LoggedRobot {
                 .minus(FieldConstants.getSpeakerPose())
                 .getTranslation()
                 .getNorm();
-        final ShotParameters.Parameters shotParameters = ShotParameters.get(distanceToSpeaker);
+        final ShotParameters.Parameters shotParameters = ShotParameters.getShotParameters(swerve.getPose());
 
         Logger.recordOutput("ShotParameters/SpeakerDistance", distanceToSpeaker);
         Logger.recordOutput("ShotParameters/ArmPivotAngle", shotParameters.armPivotAngle().getRotations());
@@ -479,11 +479,15 @@ public class Robot extends LoggedRobot {
                 .whileTrue(shootCommands.angleAndReadyAmp(
                         driverController::getLeftY,
                         driverController::getLeftX
-                ))
-                .onFalse(shootCommands.amp());
+                )).onFalse(shootCommands.amp());
 
+        //noinspection SuspiciousNameCombination
         this.coDriverController.leftTrigger(0.5, teleopEventLoop)
-                .whileTrue(shootCommands.ferryCenterToAmp());
+                .whileTrue(shootCommands.teleopDriveAimAndFerry(
+                        driverController::getLeftY,
+                        driverController::getLeftX
+                )).onFalse(shootCommands.ferry());
+
         this.coDriverController.rightTrigger(0.5, teleopEventLoop)
                 .whileTrue(shootCommands.shootSubwoofer());
     }
