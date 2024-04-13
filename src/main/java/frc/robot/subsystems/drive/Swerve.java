@@ -16,6 +16,7 @@ import edu.wpi.first.math.controller.ProfiledPIDController;
 import edu.wpi.first.math.estimator.SwerveDrivePoseEstimator;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
+import edu.wpi.first.math.geometry.Rotation3d;
 import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.math.kinematics.ChassisSpeeds;
 import edu.wpi.first.math.kinematics.SwerveDriveKinematics;
@@ -326,7 +327,7 @@ public class Swerve extends SubsystemBase {
         Logger.recordOutput(OdometryLogKey + "/Robot2d", getPose());
         Logger.recordOutput(OdometryLogKey + "/Robot3d", GyroUtils.robotPose2dToPose3dWithGyro(
                 getPose(),
-                GyroUtils.rpyToRotation3d(getRoll(), getPitch(), getYaw())
+                new Rotation3d(getRoll().getRadians(), getPitch().getRadians(), getYaw().getRadians())
         ));
 
         Logger.recordOutput(LogKey + "/HeadingController/Active", headingControllerActive);

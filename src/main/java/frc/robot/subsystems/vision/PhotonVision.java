@@ -5,10 +5,7 @@ import edu.wpi.first.apriltag.AprilTagFields;
 import edu.wpi.first.math.VecBuilder;
 import edu.wpi.first.math.Vector;
 import edu.wpi.first.math.estimator.SwerveDrivePoseEstimator;
-import edu.wpi.first.math.geometry.Pose2d;
-import edu.wpi.first.math.geometry.Pose3d;
-import edu.wpi.first.math.geometry.Rotation2d;
-import edu.wpi.first.math.geometry.Twist2d;
+import edu.wpi.first.math.geometry.*;
 import edu.wpi.first.math.kinematics.SwerveDriveOdometry;
 import edu.wpi.first.math.numbers.N3;
 import edu.wpi.first.wpilibj.DriverStation;
@@ -335,7 +332,11 @@ public class PhotonVision extends VirtualSubsystem {
         poseEstimator.resetPosition(robotYaw, swerve.getModulePositions(), robotPose);
         runner.resetRobotPose(GyroUtils.robotPose2dToPose3dWithGyro(
                 new Pose2d(robotPose.getTranslation(), robotYaw),
-                GyroUtils.rpyToRotation3d(swerve.getRoll(), swerve.getPitch(), swerve.getYaw())
+                new Rotation3d(
+                        swerve.getRoll().getRadians(),
+                        swerve.getPitch().getRadians(),
+                        swerve.getYaw().getRadians()
+                )
         ));
     }
 

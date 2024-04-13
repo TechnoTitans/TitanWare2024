@@ -3,6 +3,7 @@ package frc.robot.subsystems.vision;
 import edu.wpi.first.apriltag.AprilTagFieldLayout;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Pose3d;
+import edu.wpi.first.math.geometry.Rotation3d;
 import edu.wpi.first.math.kinematics.SwerveDriveOdometry;
 import frc.robot.constants.Constants;
 import frc.robot.subsystems.drive.Swerve;
@@ -191,7 +192,11 @@ public class PhotonVisionApriltagsSim implements PhotonVisionRunner<PhotonVision
         visionSystemSim.update(
                 GyroUtils.robotPose2dToPose3dWithGyro(
                         visionIndependentPose,
-                        GyroUtils.rpyToRotation3d(swerve.getRoll(), swerve.getPitch(), swerve.getYaw())
+                        new Rotation3d(
+                                swerve.getRoll().getRadians(),
+                                swerve.getPitch().getRadians(),
+                                swerve.getYaw().getRadians()
+                        )
                 )
         );
     }
