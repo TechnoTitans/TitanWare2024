@@ -95,6 +95,7 @@ public class Robot extends LoggedRobot {
     private final EventLoop teleopEventLoop = new EventLoop();
     private final EventLoop testEventLoop = new EventLoop();
 
+    private final Trigger autoEnabled = new Trigger(DriverStation::isAutonomousEnabled);
     private final Trigger teleopEnabled = new Trigger(DriverStation::isTeleopEnabled);
 
     @Override
@@ -258,6 +259,11 @@ public class Robot extends LoggedRobot {
     @Override
     public void autonomousInit() {
         autonomousEventLoop = autoChooser.getSelected().autoEventLoop();
+        autoEnabled.onFalse(Commands.runOnce(() -> {
+            if (autonomousEventLoop != null) {
+                autonomousEventLoop.poll();
+            }
+        }).ignoringDisable(true));
     }
 
     @Override

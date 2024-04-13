@@ -1,17 +1,16 @@
 package frc.robot.utils.logging;
 
-import edu.wpi.first.math.geometry.Pose3d;
-import edu.wpi.first.math.geometry.Quaternion;
-import edu.wpi.first.math.geometry.Rotation3d;
-import edu.wpi.first.math.kinematics.ChassisSpeeds;
+import edu.wpi.first.math.geometry.Transform3d;
 import edu.wpi.first.math.trajectory.Trajectory;
-import frc.robot.constants.Constants;
+import edu.wpi.first.util.struct.Struct;
 import org.littletonrobotics.junction.LogTable;
-import org.photonvision.EstimatedRobotPose;
-import org.photonvision.PhotonPoseEstimator;
 import org.photonvision.common.dataflow.structures.Packet;
+import org.photonvision.targeting.MultiTargetPNPResult;
+import org.photonvision.targeting.PNPResult;
+import org.photonvision.targeting.PhotonPipelineResult;
 import org.photonvision.targeting.PhotonTrackedTarget;
 
+import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -21,75 +20,157 @@ public class LogUtils {
         return microseconds * MICRO_TO_MILLI;
     }
 
-    public static double[] toDoubleArray(final ChassisSpeeds chassisSpeeds) {
-        return new double[] {
-                chassisSpeeds.vxMetersPerSecond,
-                chassisSpeeds.vyMetersPerSecond,
-                chassisSpeeds.omegaRadiansPerSecond
-        };
-    }
-
-    public static void serializePhotonVisionEstimatedRobotPose(
+    public static void serializePhotonPipelineResult(
             final LogTable logTable,
             final String prefix,
-            final EstimatedRobotPose estimatedRobotPose
+            final PhotonPipelineResult photonPipelineResult
     ) {
-        if (estimatedRobotPose == null) {
-            logTable.put(prefix + "/IsNull", true);
+        if (photonPipelineResult == null) {
+            logTable.put(prefix + "/IsPresent", false);
             return;
         } else {
-            logTable.put(prefix + "/IsNull", false);
+            logTable.put(prefix + "/IsPresent", false);
         }
 
-        LogUtils.serializePose3d(logTable,  prefix + "/EstimatedPose", estimatedRobotPose.estimatedPose);
-        logTable.put(prefix + "/TimestampSeconds", estimatedRobotPose.timestampSeconds);
+        final int targetsUsedSize = photonPipelineResult.targets.size();
+        logTable.put(prefix + "/Targets/Size", targetsUsedSize);
 
-        final int targetsUsedSize = estimatedRobotPose.targetsUsed.size();
         for (int i = 0; i < targetsUsedSize; i++) {
-            final PhotonTrackedTarget trackedTarget = estimatedRobotPose.targetsUsed.get(i);
+            final PhotonTrackedTarget trackedTarget = photonPipelineResult.targets.get(i);
             final Packet packet = new Packet(PhotonTrackedTarget.serde.getMaxByteSize());
 
             PhotonTrackedTarget.serde.pack(packet, trackedTarget);
-            LogUtils.serializePhotonVisionPacket(logTable, prefix + "/TargetsUsed/Packet" + i, packet);
+            LogUtils.serializePhotonVisionPacket(logTable, prefix + "/Targets/Packet" + i, packet);
         }
 
-        logTable.put(prefix + "/TargetsUsed/Size", targetsUsedSize);
-        logTable.put(prefix + "/Strategy", estimatedRobotPose.strategy.toString());
+        logTable.put(prefix + "/LatencyMillis", photonPipelineResult.getLatencyMillis());
+        logTable.put(prefix + "/TimestampSeconds", photonPipelineResult.getTimestampSeconds());
+
+        LogUtils.serializeMultiTargetPNPResult(
+                logTable,
+                prefix + "/MultiTagResult",
+                photonPipelineResult.getMultiTagResult()
+        );
     }
 
-    public static EstimatedRobotPose deserializePhotonVisionEstimatedRobotPose(
-            final LogTable logTable,
-            final String prefix
-    ) {
-        if (logTable.get(prefix + "/IsNull", true)) {
+    public static PhotonPipelineResult deserializePhotonPipelineResult(final LogTable logTable, final String prefix) {
+        if (logTable.get(prefix + "/IsPresent", false)) {
             return null;
         }
 
-        final Pose3d estimatedPose = LogUtils.deserializePose3d(logTable, prefix + "/EstimatedPose");
-        final double timestampSeconds = logTable.get(prefix + "/TimestampSeconds", -1);
-
-        final long targetsUsedSize = logTable.get(prefix + "/TargetsUsed/Size", 0);
+        final long targetsUsedSize = logTable.get(prefix + "/Targets/Size", 0);
         final List<PhotonTrackedTarget> trackedTargets = new ArrayList<>();
-
         for (int i = 0; i < targetsUsedSize; i++) {
             final Packet packet = LogUtils.deserializePhotonVisionPacket(
-                    logTable, prefix + "/TargetsUsed/Packet" + i
+                    logTable, prefix + "/Targets/Packet" + i
             );
 
             final PhotonTrackedTarget trackedTarget = PhotonTrackedTarget.serde.unpack(packet);
             trackedTargets.add(trackedTarget);
         }
 
-        final String strategyString =
-                logTable.get(prefix + "/Strategy", Constants.Vision.MULTI_TAG_POSE_STRATEGY.toString());
-        final PhotonPoseEstimator.PoseStrategy strategy = PhotonPoseEstimator.PoseStrategy.valueOf(strategyString);
+        final double latencyMillis = logTable.get(prefix + "/LatencyMillis", 0);
+        final double timestampSeconds = logTable.get(prefix + "/TimestampSeconds", -1);
 
-        return new EstimatedRobotPose(
-                estimatedPose,
-                timestampSeconds,
+        final MultiTargetPNPResult multiTargetPNPResult =
+                LogUtils.deserializeMultiTargetPNPResult(logTable, prefix + "/MultiTagResult");
+
+        final PhotonPipelineResult result = new PhotonPipelineResult(
+                latencyMillis,
                 trackedTargets,
-                strategy
+                multiTargetPNPResult
         );
+        result.setTimestampSeconds(timestampSeconds);
+
+        return result;
+    }
+
+    public static final PNPResultStruct PNPResultStruct = new PNPResultStruct();
+    public static class PNPResultStruct implements Struct<PNPResult> {
+        @Override
+        public Class<PNPResult> getTypeClass() {
+            return PNPResult.class;
+        }
+
+        @Override
+        public String getTypeString() {
+            return "struct:PNPResult";
+        }
+
+        @Override
+        public int getSize() {
+            return kSizeBool
+                    + Transform3d.struct.getSize()
+                    + kSizeDouble
+                    + Transform3d.struct.getSize()
+                    + kSizeDouble
+                    + kSizeDouble;
+        }
+
+        @Override
+        public String getSchema() {
+            return "bool isPresent;Transform3d best;double bestReprojErr;Transform3d alt;double altReprojErr;double ambiguity";
+        }
+
+        @Override
+        public Struct<?>[] getNested() {
+            return new Struct<?>[]{Transform3d.struct};
+        }
+
+        @Override
+        public PNPResult unpack(final ByteBuffer bb) {
+            final boolean isPresent = bb.get() != 0;
+            if (!isPresent) {
+                return new PNPResult();
+            }
+
+            final Transform3d best = Transform3d.struct.unpack(bb);
+            final double bestReprojErr = bb.getDouble();
+            final Transform3d alt = Transform3d.struct.unpack(bb);
+            final double altReprojErr = bb.getDouble();
+            final double ambiguity = bb.getDouble();
+
+            return new PNPResult(best, alt, ambiguity, bestReprojErr, altReprojErr);
+        }
+
+        @Override
+        public void pack(final ByteBuffer bb, final PNPResult value) {
+            bb.put((byte)(value.isPresent ? 1 : 0));
+            Transform3d.struct.pack(bb, value.best);
+            bb.putDouble(value.bestReprojErr);
+            Transform3d.struct.pack(bb, value.alt);
+            bb.putDouble(value.altReprojErr);
+            bb.putDouble(value.ambiguity);
+        }
+    }
+
+    public static void serializeMultiTargetPNPResult(
+            final LogTable logTable,
+            final String prefix,
+            final MultiTargetPNPResult multiTargetPNPResult
+    ) {
+        logTable.put(prefix + "/PNPResult", PNPResultStruct, multiTargetPNPResult.estimatedPose);
+
+        final int nFiducialsUsed = multiTargetPNPResult.fiducialIDsUsed.size();
+        final int[] fiducialIDsUsed = new int[nFiducialsUsed];
+        for (int i = 0; i < nFiducialsUsed; i++) {
+            fiducialIDsUsed[i] = multiTargetPNPResult.fiducialIDsUsed.get(i);
+        }
+
+        logTable.put(prefix + "/FiducialIDsUsed", fiducialIDsUsed);
+    }
+
+    private static final PNPResult DefaultPNPResult = new PNPResult();
+    public static MultiTargetPNPResult deserializeMultiTargetPNPResult(final LogTable logTable, final String prefix) {
+        final PNPResult pnpResult = logTable.get(prefix + "/PNPResult", PNPResultStruct, DefaultPNPResult);
+
+        final int[] fiducialIDsUsed = logTable.get(prefix + "/FiducialIDsUsed", new int[0]);
+        final List<Integer> fiducialIDs = new ArrayList<>();
+        for (final int id : fiducialIDsUsed) {
+            fiducialIDs.add(id);
+        }
+
+        return new MultiTargetPNPResult(pnpResult, fiducialIDs);
     }
 
     public static void serializePhotonVisionPacket(final LogTable logTable, final String prefix, final Packet packet) {
@@ -98,38 +179,6 @@ public class LogUtils {
 
     public static Packet deserializePhotonVisionPacket(final LogTable logTable, final String prefix) {
         return new Packet(logTable.get(prefix + "/packetData", new byte[] {}));
-    }
-
-    public static void serializePose3d(final LogTable logTable, final String prefix, final Pose3d pose3d) {
-        if (Constants.NetworkTables.USE_STRUCT_AND_PROTOBUF) {
-            logTable.put(prefix + "/Pose3d", pose3d);
-        } else {
-            logTable.put(prefix + "/Pose3d/x", pose3d.getX());
-            logTable.put(prefix + "/Pose3d/y", pose3d.getY());
-            logTable.put(prefix + "/Pose3d/z", pose3d.getZ());
-            logTable.put(prefix + "/Pose3d/rw", pose3d.getRotation().getQuaternion().getW());
-            logTable.put(prefix + "/Pose3d/rx", pose3d.getRotation().getQuaternion().getX());
-            logTable.put(prefix + "/Pose3d/ry", pose3d.getRotation().getQuaternion().getY());
-            logTable.put(prefix + "/Pose3d/rz", pose3d.getRotation().getQuaternion().getZ());
-        }
-    }
-
-    public static Pose3d deserializePose3d(final LogTable logTable, final String prefix) {
-        if (Constants.NetworkTables.USE_STRUCT_AND_PROTOBUF) {
-            return logTable.get(prefix + "/Pose3d", new Pose3d());
-        } else {
-            return new Pose3d(
-                    logTable.get(prefix + "/Pose3d/x", 0),
-                    logTable.get(prefix + "/Pose3d/y", 0),
-                    logTable.get(prefix + "/Pose3d/z", 0),
-                    new Rotation3d(new Quaternion(
-                            logTable.get(prefix + "/Pose3d/rw", 1),
-                            logTable.get(prefix + "/Pose3d/rx", 0),
-                            logTable.get(prefix + "/Pose3d/ry", 0),
-                            logTable.get(prefix + "/Pose3d/rz", 0)
-                    ))
-            );
-        }
     }
 
     /**

@@ -29,8 +29,6 @@ public interface Constants {
         String AUTO_TABLE = "AutoSelector";
         String AUTO_PUBLISHER = "AutoOptions";
         String AUTO_SELECTED_SUBSCRIBER = "SelectedAuto";
-
-        boolean USE_STRUCT_AND_PROTOBUF = true;
     }
 
     interface Vision {
