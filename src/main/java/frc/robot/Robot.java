@@ -216,7 +216,7 @@ public class Robot extends LoggedRobot {
                     Logger.recordOutput(
                             "Commands/InterruptingRequirements",
                             LogUtils.getRequirementsFromSubsystems(
-                                    interrupting.orElse(Commands.none()).getRequirements()
+                                    interrupting.isPresent() ? interrupting.get().getRequirements() : Set.of()
                             )
                     );
                 }
