@@ -38,7 +38,7 @@ public class LogUtils {
         subsystems.iterator().forEachRemaining(
                 subsystem -> interruptingRequirementsList.add(subsystem.getName())
         );
-         return interruptingRequirementsList.toArray(new String[0]);
+        return interruptingRequirementsList.toArray(new String[0]);
     }
 
     public static void serializePhotonVisionEstimatedRobotPose(
