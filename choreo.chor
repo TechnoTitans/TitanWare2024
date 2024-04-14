@@ -32096,8 +32096,8 @@
                     "controlIntervalCount": 26
                 },
                 {
-                    "x": 3.246781587600708,
-                    "y": 2.370969295501709,
+                    "x": 2.9487416744232178,
+                    "y": 2.6832008361816406,
                     "heading": 2.3435368495454334,
                     "isInitialGuess": false,
                     "translationConstrained": true,
@@ -35473,7 +35473,7 @@
             "usesDefaultFieldObstacles": true,
             "circleObstacles": [],
             "eventMarkers": [],
-            "isTrajectoryStale": true
+            "isTrajectoryStale": false
         },
         "AltSourceCenter0_1_2": {
             "waypoints": [
