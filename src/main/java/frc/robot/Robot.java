@@ -266,19 +266,12 @@ public class Robot extends LoggedRobot {
 
     @Override
     public void autonomousInit() {
-        Commands.repeatingSequence(
-                superstructure.toGoal(Superstructure.Goal.IDLE)
-                        .withTimeout(2),
-                noteState.setState(NoteState.State.STORED),
-                shootCommands.shootSubwoofer()
-                        .withTimeout(4)
-        ).schedule();
-//        autonomousEventLoop = autoChooser.getSelected().autoEventLoop();
-//        autoEnabled.onFalse(Commands.runOnce(() -> {
-//            if (autonomousEventLoop != null) {
-//                autonomousEventLoop.poll();
-//            }
-//        }).ignoringDisable(true));
+        autonomousEventLoop = autoChooser.getSelected().autoEventLoop();
+        autoEnabled.onFalse(Commands.runOnce(() -> {
+            if (autonomousEventLoop != null) {
+                autonomousEventLoop.poll();
+            }
+        }).ignoringDisable(true));
     }
 
     @Override
