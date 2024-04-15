@@ -98,7 +98,7 @@ public class ShootCommands {
     public Command amp() {
         return Commands.sequence(
                 intake.feedHalfCommand()
-                        .onlyIf(() -> superstructure.getDesiredGoal() != Superstructure.Goal.AMP),
+                        .onlyIf(() -> superstructure.getGoal() != Superstructure.Goal.AMP),
                 Commands.deadline(
                         Commands.waitUntil(superstructure.atSetpoint)
                                 .andThen(Commands.waitSeconds(0.1))

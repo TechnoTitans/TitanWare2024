@@ -61,7 +61,7 @@ public class Superstructure extends VirtualSubsystem {
         Logger.recordOutput(LogKey + "/AtSetpoint", atSetpoint.getAsBoolean());
     }
 
-    public Goal getDesiredGoal() {
+    public Goal getGoal() {
         return desiredGoal;
     }
 
