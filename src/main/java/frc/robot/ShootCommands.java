@@ -11,7 +11,6 @@ import frc.robot.subsystems.intake.Intake;
 import frc.robot.subsystems.superstructure.ShootOnTheMove;
 import frc.robot.subsystems.superstructure.ShotParameters;
 import frc.robot.subsystems.superstructure.Superstructure;
-import org.littletonrobotics.junction.Logger;
 
 import java.util.Set;
 import java.util.function.DoubleSupplier;
@@ -140,14 +139,8 @@ public class ShootCommands {
     public Command shootSubwoofer() {
         return Commands.deadline(
                 intake.runStopCommand()
-                        .until(() -> {
-                            final boolean atSetpoint = superstructure.atSetpoint.getAsBoolean();
-                            Logger.recordOutput("AtSetpointOnRunStopCheck", atSetpoint);
-                            return atSetpoint;
-                        })
+                        .until(superstructure.atSetpoint)
                         .andThen(intake.feedCommand()),
-//                Commands.waitSeconds(0.2)
-//                        .andThen(intake.feedCommand()),
                 superstructure.toGoal(Superstructure.Goal.SUBWOOFER)
         );
     }
