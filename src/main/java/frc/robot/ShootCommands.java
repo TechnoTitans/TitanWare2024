@@ -141,8 +141,6 @@ public class ShootCommands {
                 intake.runStopCommand()
                         .until(superstructure.atSetpoint)
                         .andThen(intake.feedCommand()),
-//                Commands.waitSeconds(0.2)
-//                        .andThen(intake.feedCommand()),
                 superstructure.toGoal(Superstructure.Goal.SUBWOOFER)
         );
     }
