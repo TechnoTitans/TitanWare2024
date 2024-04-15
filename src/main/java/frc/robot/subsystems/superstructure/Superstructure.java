@@ -19,7 +19,8 @@ public class Superstructure extends VirtualSubsystem {
     private final Arm arm;
     private final Shooter shooter;
 
-    private Goal goal = Goal.IDLE;
+    private Goal desiredGoal = Goal.IDLE;
+    private Goal currentGoal = desiredGoal;
     public final Trigger atSetpoint;
 
     public enum Goal {
@@ -43,39 +44,37 @@ public class Superstructure extends VirtualSubsystem {
     public Superstructure(final Arm arm, final Shooter shooter) {
         this.arm = arm;
         this.shooter = shooter;
-        this.atSetpoint = arm.atPivotSetpoint.and(shooter.atVelocitySetpoint);
+        this.atSetpoint = arm.atPivotSetpoint
+                .and(shooter.atVelocitySetpoint)
+                .and(() -> currentGoal == desiredGoal);
     }
 
     @Override
     public void periodic() {
+        if (desiredGoal != currentGoal) {
+            arm.setGoal(desiredGoal.armGoal);
+            shooter.setGoal(desiredGoal.shooterGoal);
+            this.currentGoal = desiredGoal;
+        }
+
+        Logger.recordOutput(LogKey + "/Goal", currentGoal.toString());
         Logger.recordOutput(LogKey + "/AtSetpoint", atSetpoint.getAsBoolean());
-        Logger.recordOutput(LogKey + "/Goal", goal.toString());
     }
 
-    public Goal getGoal() {
-        return goal;
+    public Goal getDesiredGoal() {
+        return desiredGoal;
     }
 
     public Command toInstantGoal(final Goal goal) {
-        return Commands.parallel(
-                arm.toInstantGoal(goal.armGoal),
-                shooter.toInstantGoal(goal.shooterGoal))
-                .beforeStarting(() -> this.goal = goal);
+        return Commands.runOnce(() -> this.desiredGoal = goal);
     }
 
     public Command toGoal(final Goal goal) {
-        return Commands.parallel(
-                        arm.toGoal(goal.armGoal),
-                        shooter.toGoal(goal.shooterGoal))
-                .beforeStarting(() -> this.goal = goal)
-                .finallyDo(() -> this.goal = Goal.IDLE);
+        return Commands.runEnd(() -> this.desiredGoal = goal, () -> this.desiredGoal = Goal.IDLE);
     }
 
     public Command runGoal(final Goal goal) {
-        return Commands.parallel(
-                        arm.runGoal(goal.armGoal),
-                        shooter.runGoal(goal.shooterGoal))
-                .beforeStarting(() -> this.goal = goal);
+        return Commands.run(() -> this.desiredGoal = goal);
     }
 
     public Command toState(final Supplier<ShotParameters.Parameters> parametersSupplier) {
