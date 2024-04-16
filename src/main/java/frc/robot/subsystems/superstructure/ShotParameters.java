@@ -104,42 +104,66 @@ public class ShotParameters {
         ));
 
         shotDataMap.put(5.5d, new Parameters(
-                Rotation2d.fromDegrees(22),
-                100,
-                133.3,
-                100,
+                Rotation2d.fromDegrees(23.25),
+                84.433,
+                128.883,
+                84.433,
                 0.61
         ));
 
         shotDataMap.put(6d, new Parameters(
-                Rotation2d.fromDegrees(21),
-                100,
-                133.3,
-                100,
+                Rotation2d.fromDegrees(23),
+                84.433,
+                128.883,
+                84.433,
                 0.7
         ));
 
         shotDataMap.put(6.5d, new Parameters(
-                Rotation2d.fromDegrees(18.5),
-                100,
-                133.3,
-                100,
+                Rotation2d.fromDegrees(22),
+                84.433,
+                128.883,
+                84.433,
                 0.8
         ));
 
         shotDataMap.put(7d, new Parameters(
-                Rotation2d.fromDegrees(17.5),
-                100,
-                133.3,
-                100,
+                Rotation2d.fromDegrees(20.5),
+                84.433,
+                128.883,
+                84.433,
                 0.9
         ));
 
         shotDataMap.put(7.5d, new Parameters(
-                Rotation2d.fromDegrees(16.5),
-                100,
-                133.3,
-                100,
+                Rotation2d.fromDegrees(20),
+                84.433,
+                128.883,
+                84.433,
+                1
+        ));
+
+        shotDataMap.put(8d, new Parameters(
+                Rotation2d.fromDegrees(20),
+                84.433,
+                128.883,
+                84.433,
+                1
+        ));
+
+        shotDataMap.put(8.5d, new Parameters(
+                Rotation2d.fromDegrees(20),
+                84.433,
+                128.883,
+                84.433,
+                1
+        ));
+
+        shotDataMap.put(9d, new Parameters(
+                Rotation2d.fromDegrees(20),
+                84.433,
+                128.883,
+                84.433,
                 1
         ));
     }
@@ -184,41 +208,57 @@ public class ShotParameters {
 
         ferryDataMap.put(8d, new Parameters(
                 Rotation2d.fromDegrees(50),
-                60,
-                80,
-                60,
+                55,
+                75,
+                55,
                 0
         ));
 
         ferryDataMap.put(8.5d, new Parameters(
                 Rotation2d.fromDegrees(50),
-                60,
-                80,
-                60,
+                55,
+                75,
+                55,
                 0
         ));
 
         ferryDataMap.put(9d, new Parameters(
                 Rotation2d.fromDegrees(50),
+                55,
+                75,
+                55,
+                0
+        ));
+
+        ferryDataMap.put(9.5d, new Parameters(
+                Rotation2d.fromDegrees(50),
                 60,
                 80,
                 60,
                 0
         ));
 
-        ferryDataMap.put(9.5d, new Parameters(
+        ferryDataMap.put(10d, new Parameters(
                 Rotation2d.fromDegrees(50),
-                70,
-                90,
-                70,
+                62.5,
+                82.5,
+                62.5,
                 0
         ));
 
-        ferryDataMap.put(10d, new Parameters(
+        ferryDataMap.put(10.5d, new Parameters(
                 Rotation2d.fromDegrees(50),
-                70,
-                90,
-                70,
+                65,
+                85,
+                65,
+                0
+        ));
+
+        ferryDataMap.put(11d, new Parameters(
+                Rotation2d.fromDegrees(50),
+                65,
+                85,
+                65,
                 0
         ));
     }
@@ -241,7 +281,7 @@ public class ShotParameters {
     public static Parameters getFerryParameters(final Pose2d currentPose) {
         return ferryDataMap.get(
                 currentPose
-                        .minus(FieldConstants.getAmpScoringPose())
+                        .minus(FieldConstants.getFerryPose())
                         .getTranslation()
                         .getNorm()
         );

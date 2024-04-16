@@ -127,8 +127,8 @@ public class Intake extends SubsystemBase {
                     this.intakingActive = true;
                     this.storeNotes = false;
                 }),
-                runVelocityCommand(22, 22, 22)
-                        .until(shooterBeamBreakBroken),
+                toVelocityCommand(22, 22, 22),
+                Commands.waitUntil(shooterBeamBreakBroken),
                 Commands.waitUntil(shooterBeamBreakBroken.negate()),
                 instantStopCommand()
         ).finallyDo(() -> {

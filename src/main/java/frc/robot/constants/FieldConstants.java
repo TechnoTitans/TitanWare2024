@@ -22,11 +22,19 @@ public class FieldConstants {
     public static final Pose2d BLUE_AMP_POSE =
             new Pose2d(
                     Units.inchesToMeters(72.455),
-                    FIELD_WIDTH_Y_METERS - Units.inchesToMeters(20),
+                    FIELD_WIDTH_Y_METERS,
                     Rotation2d.fromRadians(-Math.PI / 2)
             );
+//    public static final Pose2d BLUE_AMP_SCORING_POSE = BLUE_AMP_POSE.transformBy(
+//            new Transform2d(0, -Units.inchesToMeters(20), Rotation2d.fromDegrees(0))
+//    );
+
+    public static final Pose2d BLUE_AMP_SCORING_POSE = new Pose2d(
+            1.84, 7.4, Rotation2d.fromRadians(-Math.PI / 2)
+    );
 
     public static final Pose2d RED_AMP_POSE = PoseUtils.flip(BLUE_AMP_POSE);
+    public static final Pose2d RED_AMP_SCORING_POSE = PoseUtils.flip(BLUE_AMP_SCORING_POSE);
 
     private static Pose2d getAllianceFlippedPose(final Pose2d blueAlliancePose, final Pose2d redAlliancePose) {
         final Optional<DriverStation.Alliance> alliance = DriverStation.getAlliance();
@@ -43,7 +51,11 @@ public class FieldConstants {
     }
 
     public static Pose2d getAmpScoringPose() {
-        return getAllianceFlippedPose(BLUE_AMP_POSE, RED_AMP_POSE);
+        return getAllianceFlippedPose(BLUE_AMP_SCORING_POSE, RED_AMP_SCORING_POSE);
+    }
+
+    public static Pose2d getFerryPose() {
+        return getAmpScoringPose();
     }
 
     public static Pose2d getSpeakerPose() {

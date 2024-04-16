@@ -79,7 +79,7 @@ public class Robot extends LoggedRobot {
     public final PhotonVision photonVision = new PhotonVision(Constants.CURRENT_MODE, swerve, swerve.getPoseEstimator());
 
     public final NoteState noteState = new NoteState(Constants.CURRENT_MODE, intake);
-    public final ShootCommands shootCommands = new ShootCommands(swerve, intake, superstructure);
+    public final ShootCommands shootCommands = new ShootCommands(swerve, intake, superstructure, noteState);
     public final Autos autos = new Autos(swerve, intake, superstructure, noteState, shootCommands);
     public final AutoChooser<String, AutoOption> autoChooser = new AutoChooser<>(
             new AutoOption(
@@ -241,7 +241,7 @@ public class Robot extends LoggedRobot {
         Logger.recordOutput("ShotParameters/AmpVelocityRotsPerSec", shotParameters.ampVelocityRotsPerSec());
 
         final double distanceToFerry = swerve.getPose()
-                .minus(FieldConstants.getAmpScoringPose())
+                .minus(FieldConstants.getFerryPose())
                 .getTranslation()
                 .getNorm();
         final ShotParameters.Parameters ferryParameters = ShotParameters.getFerryParameters(swerve.getPose());
@@ -337,7 +337,7 @@ public class Robot extends LoggedRobot {
     public void simulationPeriodic() {}
 
     public void configureStateTriggers() {
-        teleopEnabled.onTrue(superstructure.toGoal(Superstructure.Goal.IDLE));
+        teleopEnabled.onTrue(superstructure.toInstantGoal(Superstructure.Goal.IDLE));
     }
 
     public void configureAutos() {
@@ -388,8 +388,8 @@ public class Robot extends LoggedRobot {
                 Constants.CompetitionType.TESTING
         ));
         autoChooser.addAutoOption(new AutoOption(
-                "AmpSpeaker2_1Center2_3_4",
-                autos.ampSpeaker2_1Center2_3_4(),
+                "Amp2_1Center2_3_4",
+                autos.amp2_1Center2_3_4(),
                 Constants.CompetitionType.TESTING
         ));
 
@@ -496,10 +496,11 @@ public class Robot extends LoggedRobot {
                 .whileTrue(shootCommands.runEjectIntake());
         //noinspection SuspiciousNameCombination
         this.coDriverController.b(teleopEventLoop)
-                .whileTrue(shootCommands.angleAndReadyAmp(
-                        driverController::getLeftY,
-                        driverController::getLeftX
-                )).onFalse(shootCommands.amp());
+//                .whileTrue(shootCommands.angleAndReadyAmp(
+//                        driverController::getLeftY,
+//                        driverController::getLeftX
+//                )).onFalse(shootCommands.amp());
+                .whileTrue(shootCommands.lineupAndAmp());
 
         //noinspection SuspiciousNameCombination
         this.coDriverController.leftTrigger(0.5, teleopEventLoop)

@@ -85,7 +85,7 @@ public class Swerve extends SubsystemBase {
     private Supplier<Rotation2d> headingOverrideSupplier = Rotation2d::new;
     private boolean headingControllerActive = false;
     private Rotation2d headingTarget = new Rotation2d();
-    private final ProfiledPIDController headingController;
+    private final PIDController headingController;
 
     public final Trigger atHolonomicDrivePose;
     private boolean holonomicControllerActive = false;
@@ -133,13 +133,7 @@ public class Swerve extends SubsystemBase {
                 VecBuilder.fill(0.6, 0.6, Units.degreesToRadians(80))
         );
 
-        this.headingController = new ProfiledPIDController(
-                4, 0, 0,
-                new TrapezoidProfile.Constraints(
-                        Config.maxAngularVelocity() * 0.95,
-                        Config.maxAngularAcceleration() * 0.75
-                )
-        );
+        this.headingController = new PIDController(4, 0, 0);
         this.headingController.enableContinuousInput(-Math.PI, Math.PI);
         this.headingController.setTolerance(Units.degreesToRadians(3), Units.degreesToRadians(6));
         this.atHeadingSetpoint = new Trigger(
@@ -157,11 +151,14 @@ public class Swerve extends SubsystemBase {
         );
 
         this.holonomicDriveWithPIDController = new HolonomicDriveWithPIDController(
-                new PIDController(5, 0, 0),
-                new PIDController(5, 0, 0),
+                new PIDController(3, 0, 0),
+                new PIDController(3, 0, 0),
                 new ProfiledPIDController(
                         headingController.getP(), headingController.getI(), headingController.getD(),
-                        headingController.getConstraints()
+                        new TrapezoidProfile.Constraints(
+                                Config.maxAngularVelocity() * 0.95,
+                                Config.maxAngularAcceleration() * 0.75
+                        )
                 ),
                 new Pose2d(0.05, 0.05, Rotation2d.fromDegrees(3))
         );
@@ -339,6 +336,7 @@ public class Swerve extends SubsystemBase {
 
         Logger.recordOutput(LogKey + "/HolonomicController/Active", holonomicControllerActive);
         Logger.recordOutput(LogKey + "/HolonomicController/TargetPose", holonomicPoseTarget);
+        Logger.recordOutput(LogKey + "/HolonomicController/AtPoseSetpoint", atHolonomicDrivePose.getAsBoolean());
     }
 
     public SwerveDriveKinematics getKinematics() {
@@ -549,10 +547,7 @@ public class Swerve extends SubsystemBase {
         return Commands.sequence(
                 runOnce(() -> {
                     headingControllerActive = true;
-                    headingController.reset(
-                            getYaw().getRadians(),
-                            getFieldRelativeSpeeds().omegaRadiansPerSecond
-                    );
+                    headingController.reset();
                 }),
                 run(() -> {
                     final Profiler.DriverProfile driverProfile = Profiler.getDriverProfile();
@@ -572,8 +567,7 @@ public class Swerve extends SubsystemBase {
                             translationInput.getY()
                                     * swerveSpeed.getTranslationSpeed()
                                     * driverProfile.getTranslationSensitivity(),
-                            headingController.calculate(getYaw().getRadians(), headingTarget.getRadians())
-                                    + headingController.getSetpoint().velocity,
+                            headingController.calculate(getYaw().getRadians(), headingTarget.getRadians()),
                             true,
                             Robot.IsRedAlliance.getAsBoolean()
                     );
@@ -585,18 +579,14 @@ public class Swerve extends SubsystemBase {
         return Commands.sequence(
                 runOnce(() -> {
                     headingControllerActive = true;
-                    headingController.reset(
-                            getYaw().getRadians(),
-                            getFieldRelativeSpeeds().omegaRadiansPerSecond
-                    );
+                    headingController.reset();
                 }),
                 run(() -> {
                     this.headingTarget = rotationTargetSupplier.get();
                     drive(
                             0,
                             0,
-                            headingController.calculate(getYaw().getRadians(), headingTarget.getRadians())
-                                    + headingController.getSetpoint().velocity,
+                            headingController.calculate(getYaw().getRadians(), headingTarget.getRadians()),
                             true,
                             false
                     );
@@ -762,6 +752,10 @@ public class Swerve extends SubsystemBase {
                         })
         );
     }
+
+//    public Command followPathPlanner() {
+//        PathPlannerPath.bezierFromPoses()
+//    }
 
     private SysIdRoutine makeLinearVoltageSysIdRoutine() {
         return new SysIdRoutine(
