@@ -342,7 +342,7 @@ public class Robot extends LoggedRobot {
 
     public void configureAutos() {
         autoChooser.addAutoOption(new AutoOption(
-                "Front4Piece",
+                   "Front4Piece",
                 autos.speaker2_1_0(),
                 Constants.CompetitionType.COMPETITION
         ));
