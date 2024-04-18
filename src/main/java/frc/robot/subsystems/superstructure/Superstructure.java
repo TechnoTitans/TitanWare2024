@@ -27,7 +27,7 @@ public class Superstructure extends VirtualSubsystem {
         NONE(Arm.Goal.NONE, Shooter.Goal.NONE),
         IDLE(Arm.Goal.STOW, Shooter.Goal.IDLE),
         SUBWOOFER(Arm.Goal.SUBWOOFER, Shooter.Goal.SUBWOOFER),
-        READY_AMP(Arm.Goal.AMP, Shooter.Goal.READY_AMP),
+        CLIMB(Arm.Goal.AMP, Shooter.Goal.IDLE),
         AMP(Arm.Goal.AMP, Shooter.Goal.AMP),
         EJECT(Arm.Goal.STOW, Shooter.Goal.EJECT),
         FERRY_CENTERLINE(Arm.Goal.FERRY_CENTERLINE, Shooter.Goal.FERRY_CENTERLINE),

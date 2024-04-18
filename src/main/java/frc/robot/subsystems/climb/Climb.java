@@ -80,7 +80,7 @@ public class Climb extends SubsystemBase {
     }
 
     public Command climbCommand() {
-        return runPositionCommand(5, 5);
+        return runPositionCommand(0.2, 0.2);
     }
 
     private boolean atArmUpperLimit() {

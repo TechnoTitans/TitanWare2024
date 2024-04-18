@@ -152,6 +152,9 @@ public class ClimbIOReal implements ClimbIO {
                 rightArm,
                 leftArm
         );
+
+        rightArm.setPosition(0);
+        leftArm.setPosition(0);
     }
 
     @Override

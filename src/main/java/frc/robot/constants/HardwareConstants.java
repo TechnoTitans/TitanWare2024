@@ -10,28 +10,6 @@ public class HardwareConstants {
             RobotMap.CanivoreCANBus,
             13
     );
-
-    public record IntakeConstants(
-            String CANBus,
-            int rightRollerMotor,
-            int leftRollerMotor,
-            int shooterFeederRollerMotor,
-            int sensorDigitalInput,
-            double rightMotorGearing,
-            double leftMotorGearing,
-            double shooterFeederMotorGearing
-    ) {}
-
-    public static final IntakeConstants INTAKE = new IntakeConstants(
-            RobotMap.RioCANBus,
-            19,
-            20,
-            21,
-            1,
-            2,
-            2,
-            2
-    );
   
     public record ArmConstants(
             String CANBus,
@@ -108,10 +86,10 @@ public class HardwareConstants {
 
     public static final ClimbConstants CLIMB = new ClimbConstants(
             RobotMap.CanivoreCANBus,
-            17,
-            18,
+            24,
+            23,
             300,
-            3,
+            0.5,
             0
     );
 }
