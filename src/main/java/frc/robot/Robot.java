@@ -20,7 +20,6 @@ import frc.robot.constants.FieldConstants;
 import frc.robot.constants.HardwareConstants;
 import frc.robot.constants.RobotMap;
 import frc.robot.state.NoteState;
-import frc.robot.subsystems.climb.Climb;
 import frc.robot.subsystems.drive.Swerve;
 import frc.robot.subsystems.drive.constants.SwerveConstants;
 import frc.robot.subsystems.intake.Intake;
@@ -75,7 +74,6 @@ public class Robot extends LoggedRobot {
     public final Arm arm = new Arm(Constants.CURRENT_MODE, HardwareConstants.ARM);
     public final Shooter shooter = new Shooter(Constants.CURRENT_MODE, HardwareConstants.SHOOTER);
     public final Superstructure superstructure = new Superstructure(arm, shooter);
-    public final Climb climb = new Climb(Constants.CURRENT_MODE, HardwareConstants.CLIMB);
 
     @SuppressWarnings("unused")
     public final PhotonVision photonVision = new PhotonVision(Constants.CURRENT_MODE, swerve, swerve.getPoseEstimator());
@@ -319,13 +317,13 @@ public class Robot extends LoggedRobot {
                 .whileTrue(intake.torqueCurrentSysIdCommand());
 
         coDriverController.y(testEventLoop)
-                .whileTrue(swerve.angularVoltageSysIdQuasistaticCommand(SysIdRoutine.Direction.kForward));
+                .whileTrue(swerve.linearTorqueCurrentSysIdQuasistaticCommand(SysIdRoutine.Direction.kForward));
         coDriverController.a(testEventLoop)
-                .whileTrue(swerve.angularVoltageSysIdQuasistaticCommand(SysIdRoutine.Direction.kReverse));
+                .whileTrue(swerve.linearTorqueCurrentSysIdQuasistaticCommand(SysIdRoutine.Direction.kReverse));
         coDriverController.b(testEventLoop)
-                .whileTrue(swerve.angularVoltageSysIdDynamicCommand(SysIdRoutine.Direction.kForward));
+                .whileTrue(swerve.linearTorqueCurrentSysIdDynamicCommand(SysIdRoutine.Direction.kForward));
         coDriverController.x(testEventLoop)
-                .whileTrue(swerve.angularVoltageSysIdDynamicCommand(SysIdRoutine.Direction.kReverse));
+                .whileTrue(swerve.linearTorqueCurrentSysIdDynamicCommand(SysIdRoutine.Direction.kReverse));
     }
 
     @Override
@@ -344,8 +342,13 @@ public class Robot extends LoggedRobot {
 
     public void configureAutos() {
         autoChooser.addAutoOption(new AutoOption(
-                   "Front4Piece",
+                "Speaker2_1_0",
                 autos.speaker2_1_0(),
+                Constants.CompetitionType.COMPETITION
+        ));
+        autoChooser.addAutoOption(new AutoOption(
+                "Speaker0_1_2",
+                autos.speaker0_1_2(),
                 Constants.CompetitionType.COMPETITION
         ));
         autoChooser.addAutoOption(new AutoOption(
@@ -377,6 +380,11 @@ public class Robot extends LoggedRobot {
         autoChooser.addAutoOption(new AutoOption(
                 "AmpCenter3_4",
                 autos.ampCenter3_4(),
+                Constants.CompetitionType.COMPETITION
+        ));
+        autoChooser.addAutoOption(new AutoOption(
+                "AmpCenter4_3_2",
+                autos.ampCenter4_3_2(),
                 Constants.CompetitionType.COMPETITION
         ));
         autoChooser.addAutoOption(new AutoOption(
@@ -503,12 +511,6 @@ public class Robot extends LoggedRobot {
 //                        driverController::getLeftX
 //                )).onFalse(shootCommands.amp());
                 .whileTrue(shootCommands.lineupAndAmp());
-        this.coDriverController.x().whileTrue(
-                Commands.parallel(
-                        climb.climbCommand(),
-                        superstructure.toInstantGoal(Superstructure.Goal.CLIMB)
-                )
-        );
         //noinspection SuspiciousNameCombination
         this.coDriverController.leftTrigger(0.5, teleopEventLoop)
                 .whileTrue(shootCommands.readyFerry(

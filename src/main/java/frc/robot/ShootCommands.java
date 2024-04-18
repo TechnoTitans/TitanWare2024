@@ -153,6 +153,15 @@ public class ShootCommands {
         );
     }
 
+    public Command fastSubwoofer() {
+        return Commands.deadline(
+                intake.runStopCommand()
+                        .withTimeout(0.2)
+                        .andThen(intake.feedCommand()),
+                superstructure.toGoal(Superstructure.Goal.SUBWOOFER)
+        );
+    }
+
     public Command ferryCenterToAmp() {
         return Commands.deadline(
                 Commands.deadline(
@@ -252,7 +261,6 @@ public class ShootCommands {
                                 .until(superstructure.atSetpoint.and(swerve.atHeadingSetpoint))
                                 .withTimeout(1.5)
                                 .andThen(intake.feedCommand())
-                                .andThen(Commands.waitSeconds(0.1))
                                 .onlyIf(noteState.hasNote),
                         Commands.defer(() ->
                                         superstructure.toState(() -> ShotParameters.getShotParameters(swerve.getPose())),
