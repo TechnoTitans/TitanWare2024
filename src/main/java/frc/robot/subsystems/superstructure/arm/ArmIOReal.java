@@ -2,18 +2,17 @@ package frc.robot.subsystems.superstructure.arm;
 
 import com.ctre.phoenix6.BaseStatusSignal;
 import com.ctre.phoenix6.StatusSignal;
+import com.ctre.phoenix6.configs.CANcoderConfiguration;
 import com.ctre.phoenix6.configs.Slot0Configs;
 import com.ctre.phoenix6.configs.TalonFXConfiguration;
 import com.ctre.phoenix6.controls.Follower;
 import com.ctre.phoenix6.controls.MotionMagicExpoVoltage;
 import com.ctre.phoenix6.controls.TorqueCurrentFOC;
 import com.ctre.phoenix6.controls.VoltageOut;
+import com.ctre.phoenix6.hardware.CANcoder;
 import com.ctre.phoenix6.hardware.ParentDevice;
 import com.ctre.phoenix6.hardware.TalonFX;
-import com.ctre.phoenix6.signals.GravityTypeValue;
-import com.ctre.phoenix6.signals.InvertedValue;
-import com.ctre.phoenix6.signals.NeutralModeValue;
-import edu.wpi.first.wpilibj.DigitalInput;
+import com.ctre.phoenix6.signals.*;
 import frc.robot.constants.HardwareConstants;
 import frc.robot.utils.ctre.Phoenix6Utils;
 
@@ -22,16 +21,13 @@ public class ArmIOReal implements ArmIO {
 
     private final TalonFX leftPivotMotor;
     private final TalonFX rightPivotMotor;
+    private final CANcoder pivotCANCoder;
 
-    // TODO: use MotionMagicExpoTorqueCurrentFOC
-//    private final MotionMagicExpoTorqueCurrentFOC motionMagicExpoTorqueCurrentFOC;
     private final MotionMagicExpoVoltage motionMagicExpoVoltage;
     private final TorqueCurrentFOC torqueCurrentFOC;
     private final VoltageOut voltageOut;
 
     private final Follower leftPivotFollower;
-
-    private final DigitalInput pivotUpperLimitSwitch;
 
     // Cached StatusSignals
     private final StatusSignal<Double> _leftPosition;
@@ -44,12 +40,15 @@ public class ArmIOReal implements ArmIO {
     private final StatusSignal<Double> _rightVoltage;
     private final StatusSignal<Double> _rightTorqueCurrent;
     private final StatusSignal<Double> _rightDeviceTemp;
+    private final StatusSignal<Double> _encoderPosition;
+    private final StatusSignal<Double> _encoderVelocity;
 
     public ArmIOReal(final HardwareConstants.ArmConstants armConstants) {
         this.armConstants = armConstants;
 
         this.leftPivotMotor = new TalonFX(armConstants.leftPivotMotorId(), armConstants.CANBus());
         this.rightPivotMotor = new TalonFX(armConstants.rightPivotMotorId(), armConstants.CANBus());
+        this.pivotCANCoder = new CANcoder(armConstants.pivotCANCoderId(), armConstants.CANBus());
 
 //        this.motionMagicExpoTorqueCurrentFOC = new MotionMagicExpoTorqueCurrentFOC(0);
         this.motionMagicExpoVoltage = new MotionMagicExpoVoltage(0);
@@ -57,8 +56,6 @@ public class ArmIOReal implements ArmIO {
         this.voltageOut = new VoltageOut(0);
 
         this.leftPivotFollower = new Follower(leftPivotMotor.getDeviceID(), true);
-
-        this.pivotUpperLimitSwitch = new DigitalInput(armConstants.pivotUpperLimitSwitchDIOChannel());
 
         this._leftPosition = leftPivotMotor.getPosition();
         this._leftVelocity = leftPivotMotor.getVelocity();
@@ -70,30 +67,39 @@ public class ArmIOReal implements ArmIO {
         this._rightVoltage = rightPivotMotor.getMotorVoltage();
         this._rightTorqueCurrent = rightPivotMotor.getTorqueCurrent();
         this._rightDeviceTemp = rightPivotMotor.getDeviceTemp();
+        this._encoderPosition = pivotCANCoder.getPosition();
+        this._encoderVelocity = pivotCANCoder.getVelocity();
     }
 
     @SuppressWarnings("DuplicatedCode")
     @Override
     public void config() {
+        final CANcoderConfiguration pivotCANCoderConfiguration = new CANcoderConfiguration();
+        pivotCANCoderConfiguration.MagnetSensor.MagnetOffset = armConstants.pivotCANCoderOffset();
+        pivotCANCoderConfiguration.MagnetSensor.SensorDirection = SensorDirectionValue.Clockwise_Positive;
+        pivotCANCoder.getConfigurator().apply(pivotCANCoderConfiguration);
+
         final TalonFXConfiguration leftTalonFXConfiguration = new TalonFXConfiguration();
         final InvertedValue leftTalonFXInverted = InvertedValue.Clockwise_Positive;
         leftTalonFXConfiguration.Slot0 = new Slot0Configs()
-//                .withKS(0.011965)
-                .withKS(0.15)
-                .withKG(0.22)
+                .withKS(0.120477)
+                .withKG(0.22872)
                 .withGravityType(GravityTypeValue.Arm_Cosine)
-                .withKV(14.053)
-                .withKA(0.17176 * 0.5)
-                .withKP(16.658); // TODO: tune Kp
+                .withKV(13.941)
+                .withKA(0.17656 * 0.5)
+                .withKP(65.808);
         leftTalonFXConfiguration.MotionMagic.MotionMagicCruiseVelocity = 0;
-        leftTalonFXConfiguration.MotionMagic.MotionMagicExpo_kV = 14.053;
+        leftTalonFXConfiguration.MotionMagic.MotionMagicExpo_kV = 13.941;
 //        leftTalonFXConfiguration.MotionMagic.MotionMagicExpo_kA = 0.17176;
-        leftTalonFXConfiguration.MotionMagic.MotionMagicExpo_kA = 1;
+        leftTalonFXConfiguration.MotionMagic.MotionMagicExpo_kA = 1.5;
         leftTalonFXConfiguration.TorqueCurrent.PeakForwardTorqueCurrent = 80;
         leftTalonFXConfiguration.TorqueCurrent.PeakReverseTorqueCurrent = -80;
         leftTalonFXConfiguration.CurrentLimits.StatorCurrentLimit = 60;
         leftTalonFXConfiguration.CurrentLimits.StatorCurrentLimitEnable = true;
-        leftTalonFXConfiguration.Feedback.SensorToMechanismRatio = armConstants.pivotGearing();
+        leftTalonFXConfiguration.Feedback.FeedbackSensorSource = FeedbackSensorSourceValue.FusedCANcoder;
+        leftTalonFXConfiguration.Feedback.FeedbackRemoteSensorID = pivotCANCoder.getDeviceID();
+        leftTalonFXConfiguration.Feedback.RotorToSensorRatio = armConstants.pivotGearing();
+//        leftTalonFXConfiguration.Feedback.SensorToMechanismRatio = armConstants.pivotGearing();
         leftTalonFXConfiguration.MotorOutput.Inverted = leftTalonFXInverted;
         leftTalonFXConfiguration.MotorOutput.NeutralMode = NeutralModeValue.Brake;
         leftPivotMotor.getConfigurator().apply(leftTalonFXConfiguration);
@@ -101,28 +107,35 @@ public class ArmIOReal implements ArmIO {
         final TalonFXConfiguration rightTalonFXConfiguration = new TalonFXConfiguration();
         final InvertedValue rightTalonFXInverted = InvertedValue.CounterClockwise_Positive;
         rightTalonFXConfiguration.Slot0 = new Slot0Configs()
-//                .withKS(0.011965)
-                .withKS(0.15)
-                .withKG(0.22)
+                .withKS(0.120477)
+                .withKG(0.22872)
                 .withGravityType(GravityTypeValue.Arm_Cosine)
-                .withKV(14.053)
-                .withKA(0.17176 * 0.5)
-                .withKP(16.658); // TODO: tune Kp
+                .withKV(13.941)
+                .withKA(0.17656 * 0.5)
+                .withKP(65.808);
         rightTalonFXConfiguration.MotionMagic.MotionMagicCruiseVelocity = 0;
-        rightTalonFXConfiguration.MotionMagic.MotionMagicExpo_kV = 14.053;
+        rightTalonFXConfiguration.MotionMagic.MotionMagicExpo_kV = 13.941;
 //        rightTalonFXConfiguration.MotionMagic.MotionMagicExpo_kA = 0.17176;
-        rightTalonFXConfiguration.MotionMagic.MotionMagicExpo_kA = 1;
+        rightTalonFXConfiguration.MotionMagic.MotionMagicExpo_kA = 1.5;
         rightTalonFXConfiguration.TorqueCurrent.PeakForwardTorqueCurrent = 80;
         rightTalonFXConfiguration.TorqueCurrent.PeakReverseTorqueCurrent = -80;
         rightTalonFXConfiguration.CurrentLimits.StatorCurrentLimit = 60;
         rightTalonFXConfiguration.CurrentLimits.StatorCurrentLimitEnable = true;
-        rightTalonFXConfiguration.Feedback.SensorToMechanismRatio = armConstants.pivotGearing();
+        rightTalonFXConfiguration.Feedback.FeedbackSensorSource = FeedbackSensorSourceValue.FusedCANcoder;
+        rightTalonFXConfiguration.Feedback.FeedbackRemoteSensorID = pivotCANCoder.getDeviceID();
+        rightTalonFXConfiguration.Feedback.RotorToSensorRatio = armConstants.pivotGearing();
+//        rightTalonFXConfiguration.Feedback.SensorToMechanismRatio = armConstants.pivotGearing();
         rightTalonFXConfiguration.MotorOutput.Inverted = rightTalonFXInverted;
         rightTalonFXConfiguration.MotorOutput.NeutralMode = NeutralModeValue.Brake;
         rightPivotMotor.getConfigurator().apply(rightTalonFXConfiguration);
 
         BaseStatusSignal.setUpdateFrequencyForAll(
-                100,
+                1000,
+                _encoderPosition,
+                _encoderVelocity
+        );
+        BaseStatusSignal.setUpdateFrequencyForAll(
+                250,
                 _leftPosition,
                 _leftVelocity,
                 _leftVoltage,
@@ -139,7 +152,8 @@ public class ArmIOReal implements ArmIO {
         );
         ParentDevice.optimizeBusUtilizationForAll(
                 leftPivotMotor,
-                rightPivotMotor
+                rightPivotMotor,
+                pivotCANCoder
         );
     }
 
@@ -156,10 +170,10 @@ public class ArmIOReal implements ArmIO {
                 _rightVelocity,
                 _rightVoltage,
                 _rightTorqueCurrent,
-                _rightDeviceTemp
+                _rightDeviceTemp,
+                _encoderPosition,
+                _encoderVelocity
         );
-
-        inputs.pivotUpperLimitSwitch = !pivotUpperLimitSwitch.get();
 
         inputs.leftPivotPositionRots = _leftPosition.getValue();
         inputs.leftPivotVelocityRotsPerSec = _leftVelocity.getValue();
@@ -172,6 +186,9 @@ public class ArmIOReal implements ArmIO {
         inputs.rightPivotVoltageVolts = _rightVoltage.getValue();
         inputs.rightPivotTorqueCurrentAmps = _rightTorqueCurrent.getValue();
         inputs.rightPivotTempCelsius = _rightDeviceTemp.getValue();
+
+        inputs.pivotEncoderPositionRots = _encoderPosition.getValue();
+        inputs.pivotEncoderVelocityRotsPerSec = _encoderVelocity.getValue();
     }
 
     @Override
@@ -201,7 +218,6 @@ public class ArmIOReal implements ArmIO {
 
     @Override
     public void toPivotPosition(final double pivotPositionRots) {
-//        leftPivotMotor.setControl(motionMagicExpoTorqueCurrentFOC.withPosition(pivotPositionRots));
         leftPivotMotor.setControl(motionMagicExpoVoltage.withPosition(pivotPositionRots));
         rightPivotMotor.setControl(leftPivotFollower);
     }

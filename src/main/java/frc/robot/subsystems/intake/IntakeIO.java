@@ -62,4 +62,6 @@ public interface IntakeIO {
             final double leftRollersVolts,
             final double shooterFeederRollerVolts
     ) {}
+
+    default void setBeamBreakSensorState(final boolean shooterBeamBroken) {}
 }

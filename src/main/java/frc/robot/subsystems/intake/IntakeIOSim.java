@@ -73,6 +73,9 @@ public class IntakeIOSim implements IntakeIO {
 
         this.shooterBeamBreak = new DigitalInput(intakeConstants.sensorDigitalInput());
         this.shooterBeamBreakSim = new DIOSim(shooterBeamBreak);
+        this.shooterBeamBreakSim.setInitialized(true);
+        this.shooterBeamBreakSim.setIsInput(true);
+        this.shooterBeamBreakSim.setValue(true);
 
         final DCMotorSim rightRollerMotorSim = new DCMotorSim(
                 LinearSystemId.createDCMotorSystem(
@@ -334,5 +337,10 @@ public class IntakeIOSim implements IntakeIO {
         rightRoller.setControl(voltageOut.withOutput(rightRollerVolts));
         leftRoller.setControl(voltageOut.withOutput(leftRollerVolts));
         shooterFeederRoller.setControl(voltageOut.withOutput(shooterFeederRollerVolts));
+    }
+
+    @Override
+    public void setBeamBreakSensorState(final boolean shooterBeamBroken) {
+        shooterBeamBreakSim.setValue(!shooterBeamBroken);
     }
 }

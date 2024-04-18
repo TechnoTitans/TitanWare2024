@@ -2,6 +2,12 @@ package frc.robot.subsystems.superstructure.arm;
 
 import com.ctre.phoenix6.SignalLogger;
 import edu.wpi.first.math.MathUtil;
+import edu.wpi.first.math.VecBuilder;
+import edu.wpi.first.math.Vector;
+import edu.wpi.first.math.geometry.Pose3d;
+import edu.wpi.first.math.geometry.Rotation3d;
+import edu.wpi.first.math.geometry.Transform3d;
+import edu.wpi.first.math.numbers.N3;
 import edu.wpi.first.math.util.Units;
 import edu.wpi.first.units.*;
 import edu.wpi.first.wpilibj2.command.Command;
@@ -11,6 +17,7 @@ import edu.wpi.first.wpilibj2.command.button.Trigger;
 import edu.wpi.first.wpilibj2.command.sysid.SysIdRoutine;
 import frc.robot.constants.Constants;
 import frc.robot.constants.HardwareConstants;
+import frc.robot.constants.SimConstants;
 import frc.robot.utils.logging.LogUtils;
 import org.littletonrobotics.junction.Logger;
 
@@ -21,9 +28,7 @@ import static edu.wpi.first.units.Units.*;
 public class Arm extends SubsystemBase {
     protected static final String LogKey = "Arm";
     private static final double PositionToleranceRots = 0.005;
-    private static final double VelocityToleranceRotsPerSec = 0.02;
-
-    private final HardwareConstants.ArmConstants armConstants;
+    private static final double VelocityToleranceRotsPerSec = 0.01;
 
     private final ArmIO armIO;
     private final ArmIOInputsAutoLogged inputs;
@@ -31,8 +36,8 @@ public class Arm extends SubsystemBase {
     private final SysIdRoutine voltageSysIdRoutine;
     private final SysIdRoutine torqueCurrentSysIdRoutine;
 
-    private Goal goal = Goal.STOW;
-    private Goal previousGoal = goal;
+    private Goal desiredGoal = Goal.STOW;
+    private Goal currentGoal = desiredGoal;
 
     private final PositionSetpoint setpoint;
     private final PositionSetpoint pivotSoftLowerLimit;
@@ -61,7 +66,8 @@ public class Arm extends SubsystemBase {
         NONE(0),
         ZERO(0),
         STOW(Units.degreesToRotations(10)),
-        AMP(Units.degreesToRotations(95)),
+        AMP(Units.degreesToRotations(91)),
+        FERRY_CENTERLINE(Units.degreesToRotations(50)),
         SUBWOOFER(Units.degreesToRotations(56.5));
 
         private final double pivotPositionGoal;
@@ -74,8 +80,10 @@ public class Arm extends SubsystemBase {
         }
     }
 
+    private final Vector<N3> RotationAxis = VecBuilder.fill(0, 1, 0);
+    private final Pose3d RootPose = new Pose3d().transformBy(SimConstants.Arm.ROBOT_TO_PIVOT_TRANSFORM);
+
     public Arm(final Constants.RobotMode mode, final HardwareConstants.ArmConstants armConstants) {
-        this.armConstants = armConstants;
         this.armIO = switch (mode) {
             case REAL -> new ArmIOReal(armConstants);
             case SIM -> new ArmIOSim(armConstants);
@@ -85,7 +93,7 @@ public class Arm extends SubsystemBase {
         this.inputs = new ArmIOInputsAutoLogged();
         this.voltageSysIdRoutine = makeVoltageSysIdRoutine(
                 Volts.of(4).per(Second),
-                Volts.of(10),
+                Volts.of(8),
                 Seconds.of(6)
         );
         this.torqueCurrentSysIdRoutine = makeTorqueCurrentSysIdRoutine(
@@ -101,6 +109,17 @@ public class Arm extends SubsystemBase {
                 .withPivotPositionRots(armConstants.pivotSoftUpperLimitRots());
 
         this.armIO.config();
+        this.armIO.configureSoftLimits(pivotSoftLowerLimit, pivotSoftUpperLimit);
+    }
+
+    private Pose3d armPoseFromAngle(final double angleRads) {
+        return RootPose.transformBy(
+                new Transform3d(
+                        SimConstants.Arm.PIVOT_SHAFT_TO_CENTER_TRANSFORM
+                                .rotateBy(new Rotation3d(RotationAxis, angleRads)),
+                        new Rotation3d(0, angleRads, 0)
+                )
+        );
     }
 
     @Override
@@ -114,70 +133,62 @@ public class Arm extends SubsystemBase {
                 LogUtils.microsecondsToMilliseconds(Logger.getRealTimestamp() - armPeriodicUpdateStart)
         );
 
-        if (goal != Goal.NONE && previousGoal != goal) {
-            setpoint.pivotPositionRots = goal.getPivotPositionGoal();
+        if (desiredGoal != Goal.NONE && currentGoal != desiredGoal) {
+            setpoint.pivotPositionRots = desiredGoal.getPivotPositionGoal();
             armIO.toPivotPosition(setpoint.pivotPositionRots);
 
-            this.previousGoal = goal;
-        } else if (goal == Goal.NONE) {
+            this.currentGoal = desiredGoal;
+        } else if (desiredGoal == Goal.NONE) {
             armIO.toPivotPosition(setpoint.pivotPositionRots);
-            this.previousGoal = Goal.NONE;
+            this.currentGoal = Goal.NONE;
         }
 
-        Logger.recordOutput(LogKey + "/Goal", goal.toString());
+        Logger.recordOutput(LogKey + "/CurrentGoal", currentGoal.toString());
+        Logger.recordOutput(LogKey + "/DesiredGoal", desiredGoal.toString());
         Logger.recordOutput(LogKey + "/PositionSetpoint/PivotPositionRots", setpoint.pivotPositionRots);
         Logger.recordOutput(LogKey + "/AtPositionSetpoint", atPositionSetpoint());
         Logger.recordOutput(LogKey + "/AtPivotLowerLimit", atPivotLowerLimit());
         Logger.recordOutput(LogKey + "/AtPivotUpperLimit", atPivotUpperLimit());
+
+        Logger.recordOutput(
+                LogKey + "/Pose",
+                armPoseFromAngle(Units.rotationsToRadians(-inputs.leftPivotPositionRots))
+        );
+
+        Logger.recordOutput(
+                LogKey + "/GoalPose",
+                armPoseFromAngle(Units.rotationsToRadians(-setpoint.pivotPositionRots))
+        );
     }
 
     private boolean atPositionSetpoint() {
         return setpoint.atSetpoint(inputs.leftPivotPositionRots, inputs.leftPivotVelocityRotsPerSec)
-                && setpoint.atSetpoint(inputs.rightPivotPositionRots, inputs.rightPivotVelocityRotsPerSec);
+                && currentGoal == desiredGoal;
     }
 
     private boolean atPivotLowerLimit() {
-        return inputs.leftPivotPositionRots <= pivotSoftLowerLimit.pivotPositionRots
-                || inputs.rightPivotPositionRots <= pivotSoftLowerLimit.pivotPositionRots;
+        return inputs.leftPivotPositionRots <= pivotSoftLowerLimit.pivotPositionRots;
     }
 
     private boolean atPivotUpperLimit() {
-        return inputs.pivotUpperLimitSwitch
-                || inputs.leftPivotPositionRots >= pivotSoftUpperLimit.pivotPositionRots
-                || inputs.rightPivotPositionRots >= pivotSoftUpperLimit.pivotPositionRots;
+        return inputs.leftPivotPositionRots >= pivotSoftUpperLimit.pivotPositionRots;
     }
 
-    public Command toGoal(final Goal goal) {
-        // TODO: need to standardize on using runOnce vs. runEnd, i.e. whether this command,
-        //  on end/interrupt should schedule the default/idle goal (in this case, STOW)
-        return runEnd(() -> this.goal = goal, () -> this.goal = Goal.STOW);
+    public void setGoal(final Goal goal) {
+        this.desiredGoal = goal;
+        Logger.recordOutput(LogKey + "/CurrentGoal", currentGoal.toString());
+        Logger.recordOutput(LogKey + "/DesiredGoal", desiredGoal.toString());
     }
 
     public Command toPivotPositionCommand(final DoubleSupplier pivotPositionRots) {
         return Commands.sequence(
-                Commands.runOnce(() -> this.goal = Goal.NONE),
-                run(() -> setpoint.pivotPositionRots = pivotPositionRots.getAsDouble())
+                Commands.runOnce(() -> this.desiredGoal = Goal.NONE),
+                runEnd(() -> setpoint.pivotPositionRots = pivotPositionRots.getAsDouble(), () -> this.desiredGoal = Goal.STOW)
         );
     }
 
     public Command runPivotVoltageCommand(final double pivotVoltageVolts) {
         return run(() -> armIO.toPivotVoltage(pivotVoltageVolts));
-    }
-
-    public Command homePivotCommand() {
-        // TODO: this could probably be improved to be more robust, and potentially do a 2nd,
-        //  slower, pass to be more accurate
-        // TODO: this probably should un-configure the soft limit, in case we want to zero twice for some reason, lol
-        return Commands.sequence(
-                startEnd(
-                        () -> armIO.toPivotVoltage(2),
-                        () -> armIO.toPivotVoltage(0)
-                ).until(() -> inputs.pivotUpperLimitSwitch),
-                runOnce(() -> {
-                    armIO.setPivotPosition(armConstants.pivotUpperLimitSwitchPositionRots());
-                    armIO.configureSoftLimits(pivotSoftLowerLimit, pivotSoftUpperLimit);
-                })
-        );
     }
 
     @SuppressWarnings("unused")

@@ -7,23 +7,30 @@ import edu.wpi.first.wpilibj2.command.Subsystem;
 import edu.wpi.first.wpilibj2.command.button.Trigger;
 import frc.robot.subsystems.superstructure.arm.Arm;
 import frc.robot.subsystems.superstructure.shooter.Shooter;
+import frc.robot.utils.subsystems.VirtualSubsystem;
+import org.littletonrobotics.junction.Logger;
 
 import java.util.Set;
 import java.util.function.DoubleSupplier;
 import java.util.function.Supplier;
 
-public class Superstructure {
+public class Superstructure extends VirtualSubsystem {
+    public static final String LogKey = "Superstructure";
     private final Arm arm;
     private final Shooter shooter;
 
-    private boolean isHomed = false;
+    private Goal desiredGoal = Goal.IDLE;
+    private Goal currentGoal = desiredGoal;
     public final Trigger atSetpoint;
 
     public enum Goal {
+        NONE(Arm.Goal.NONE, Shooter.Goal.NONE),
         IDLE(Arm.Goal.STOW, Shooter.Goal.IDLE),
         SUBWOOFER(Arm.Goal.SUBWOOFER, Shooter.Goal.SUBWOOFER),
+        READY_AMP(Arm.Goal.AMP, Shooter.Goal.READY_AMP),
         AMP(Arm.Goal.AMP, Shooter.Goal.AMP),
         EJECT(Arm.Goal.STOW, Shooter.Goal.EJECT),
+        FERRY_CENTERLINE(Arm.Goal.FERRY_CENTERLINE, Shooter.Goal.FERRY_CENTERLINE),
         BACK_FEED(Arm.Goal.STOW, Shooter.Goal.BACK_FEED);
 
         private final Arm.Goal armGoal;
@@ -38,29 +45,41 @@ public class Superstructure {
     public Superstructure(final Arm arm, final Shooter shooter) {
         this.arm = arm;
         this.shooter = shooter;
-        this.atSetpoint = arm.atPivotSetpoint.and(shooter.atVelocitySetpoint);
+        this.atSetpoint = arm.atPivotSetpoint
+                .and(shooter.atVelocitySetpoint)
+                .and(() -> currentGoal == desiredGoal);
     }
 
-    public Command home() {
-        return Commands.sequence(
-                arm.homePivotCommand(),
-                Commands.runOnce(() -> this.isHomed = true)
-        );
+    @Override
+    public void periodic() {
+        if (desiredGoal != currentGoal) {
+            arm.setGoal(desiredGoal.armGoal);
+            shooter.setGoal(desiredGoal.shooterGoal);
+            this.currentGoal = desiredGoal;
+        }
+
+        Logger.recordOutput(LogKey + "/Goal", currentGoal.toString());
+        Logger.recordOutput(LogKey + "/AtSetpoint", atSetpoint.getAsBoolean());
     }
 
-    public boolean isHomed() {
-        return isHomed;
+    public Goal getGoal() {
+        return desiredGoal;
+    }
+
+    public Command toInstantGoal(final Goal goal) {
+        return Commands.runOnce(() -> this.desiredGoal = goal);
     }
 
     public Command toGoal(final Goal goal) {
-        return Commands.parallel(
-                arm.toGoal(goal.armGoal),
-                shooter.toGoal(goal.shooterGoal)
-        );
+        return Commands.runEnd(() -> this.desiredGoal = goal, () -> this.desiredGoal = Goal.IDLE);
     }
 
-    public Command runState(final Supplier<ShotParameters.Parameters> parametersSupplier) {
-        return runState(
+    public Command runGoal(final Goal goal) {
+        return Commands.run(() -> this.desiredGoal = goal);
+    }
+
+    public Command toState(final Supplier<ShotParameters.Parameters> parametersSupplier) {
+        return toState(
                 () -> parametersSupplier.get().armPivotAngle(),
                 () -> parametersSupplier.get().ampVelocityRotsPerSec(),
                 () -> parametersSupplier.get().leftVelocityRotsPerSec(),
@@ -68,13 +87,14 @@ public class Superstructure {
         );
     }
 
-    public Command runState(
+    public Command toState(
             final Supplier<Rotation2d> armPivotPosition,
             final DoubleSupplier ampVelocityRotsPerSec,
             final DoubleSupplier leftVelocityRotsPerSec,
             final DoubleSupplier rightVelocityRotsPerSec
     ) {
         return Commands.parallel(
+                Commands.runEnd(() -> this.desiredGoal = Goal.NONE, () -> this.desiredGoal = Goal.IDLE),
                 arm.toPivotPositionCommand(() -> armPivotPosition.get().getRotations()),
                 shooter.toVelocityCommand(ampVelocityRotsPerSec, leftVelocityRotsPerSec, rightVelocityRotsPerSec)
         );
@@ -87,6 +107,7 @@ public class Superstructure {
             final double rightVolts
     ) {
         return Commands.parallel(
+                Commands.run(() -> this.desiredGoal = Goal.NONE),
                 arm.runPivotVoltageCommand(armPivotVolts),
                 shooter.runVoltageCommand(
                         ampVolts,
