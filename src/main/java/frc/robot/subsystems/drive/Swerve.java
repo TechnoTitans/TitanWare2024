@@ -66,6 +66,8 @@ public class Swerve extends SubsystemBase {
             new ReplanningConfig()
     );
 
+    private final Constants.RobotMode mode;
+
     private Gyro gyro;
     private final HardwareConstants.GyroConstants gyroConstants;
     private final SwerveDriveKinematics kinematics;
@@ -106,6 +108,7 @@ public class Swerve extends SubsystemBase {
             final SwerveConstants.SwerveModuleConstants backLeftConstants,
             final SwerveConstants.SwerveModuleConstants backRightConstants
     ) {
+        this.mode = mode;
         this.gyroConstants = gyroConstants;
         this.odometryThreadRunner = new OdometryThreadRunner(signalQueueReadWriteLock);
 
@@ -308,13 +311,13 @@ public class Swerve extends SubsystemBase {
         Logger.recordOutput(LogKey + "/CurrentStates", currentStates);
 
         // only update gyro from wheel odometry if we're not simulating and the gyro has failed
-        if (Constants.CURRENT_MODE == Constants.RobotMode.REAL && gyro.hasHardwareFault() && gyro.isReal()) {
+        if (mode == Constants.RobotMode.REAL && gyro.hasHardwareFault() && gyro.isReal()) {
             gyro = new Gyro(gyroConstants, odometryThreadRunner, kinematics, swerveModules, Constants.RobotMode.SIM);
         }
 
         Logger.recordOutput(
                LogKey + "/IsUsingFallbackSimGyro",
-               Constants.CURRENT_MODE == Constants.RobotMode.REAL && !gyro.isReal()
+               mode == Constants.RobotMode.REAL && !gyro.isReal()
         );
 
         Logger.recordOutput(

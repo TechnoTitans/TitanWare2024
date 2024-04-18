@@ -24,6 +24,7 @@ public class Superstructure extends VirtualSubsystem {
     public final Trigger atSetpoint;
 
     public enum Goal {
+        NONE(Arm.Goal.NONE, Shooter.Goal.NONE),
         IDLE(Arm.Goal.STOW, Shooter.Goal.IDLE),
         SUBWOOFER(Arm.Goal.SUBWOOFER, Shooter.Goal.SUBWOOFER),
         READY_AMP(Arm.Goal.AMP, Shooter.Goal.READY_AMP),
@@ -93,6 +94,7 @@ public class Superstructure extends VirtualSubsystem {
             final DoubleSupplier rightVelocityRotsPerSec
     ) {
         return Commands.parallel(
+                Commands.runEnd(() -> this.desiredGoal = Goal.NONE, () -> this.desiredGoal = Goal.IDLE),
                 arm.toPivotPositionCommand(() -> armPivotPosition.get().getRotations()),
                 shooter.toVelocityCommand(ampVelocityRotsPerSec, leftVelocityRotsPerSec, rightVelocityRotsPerSec)
         );
@@ -105,6 +107,7 @@ public class Superstructure extends VirtualSubsystem {
             final double rightVolts
     ) {
         return Commands.parallel(
+                Commands.run(() -> this.desiredGoal = Goal.NONE),
                 arm.runPivotVoltageCommand(armPivotVolts),
                 shooter.runVoltageCommand(
                         ampVolts,

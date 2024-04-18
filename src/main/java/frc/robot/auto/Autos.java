@@ -36,7 +36,6 @@ public class Autos {
     private final Superstructure superstructure;
 
     private final NoteState noteState;
-
     private final ShootCommands shootCommands;
 
     public Autos(
@@ -50,7 +49,6 @@ public class Autos {
         this.intake = intake;
         this.superstructure = superstructure;
         this.noteState = noteState;
-
         this.shootCommands = shootCommands;
     }
 
@@ -647,7 +645,7 @@ public class Autos {
                             autoTriggers.trajectories.get(0),
                             timer,
                             0.4
-                    ).withName("Follow0AndIntakeInstantShoot0").asProxy()
+                    ).asProxy().withName("Follow0AndIntakeInstantShoot0")
             ).withName("PreloadFollow0AndShoot0")
         );
 
@@ -657,7 +655,7 @@ public class Autos {
                                 autoTriggers.trajectories.get(1),
                                 timer,
                                 1.5
-                        ).withName("Follow1AndIntakeInstantShoot1")
+                        ).asProxy().withName("Follow1AndIntakeInstantShoot1")
                 ).withName("Follow1Intake1AndShoot1")
         );
 
@@ -667,7 +665,7 @@ public class Autos {
                                 autoTriggers.trajectories.get(2),
                                 timer,
                                 3
-                        ).withName("Follow2AndIntakeInstantShoot2").asProxy()
+                        ).asProxy().withName("Follow2AndIntakeInstantShoot2")
                 ).withName("Follow2Intake2AndShoot2")
         );
 

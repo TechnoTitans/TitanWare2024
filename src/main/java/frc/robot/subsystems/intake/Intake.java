@@ -125,14 +125,18 @@ public class Intake extends SubsystemBase {
         return Commands.sequence(
                 runOnce(() -> {
                     this.intakingActive = true;
+                    this.feedingActive = true;
                     this.storeNotes = false;
                 }),
-                toVelocityCommand(22, 22, 22),
-                Commands.waitUntil(shooterBeamBreakBroken),
-                Commands.waitUntil(shooterBeamBreakBroken.negate()),
+                Commands.deadline(
+                        Commands.waitUntil(shooterBeamBreakBroken)
+                                .andThen(Commands.waitUntil(shooterBeamBreakBroken.negate())),
+                        runVelocityCommand(22, 22, 22)
+                ),
                 instantStopCommand()
         ).finallyDo(() -> {
             this.intakingActive = false;
+            this.feedingActive = false;
             this.storeNotes = true;
         });
     }

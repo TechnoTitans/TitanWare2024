@@ -23,8 +23,6 @@ public class ArmIOReal implements ArmIO {
     private final TalonFX rightPivotMotor;
     private final CANcoder pivotCANCoder;
 
-    // TODO: use MotionMagicExpoTorqueCurrentFOC
-//    private final MotionMagicExpoTorqueCurrentFOC motionMagicExpoTorqueCurrentFOC;
     private final MotionMagicExpoVoltage motionMagicExpoVoltage;
     private final TorqueCurrentFOC torqueCurrentFOC;
     private final VoltageOut voltageOut;
@@ -220,7 +218,6 @@ public class ArmIOReal implements ArmIO {
 
     @Override
     public void toPivotPosition(final double pivotPositionRots) {
-//        leftPivotMotor.setControl(motionMagicExpoTorqueCurrentFOC.withPosition(pivotPositionRots));
         leftPivotMotor.setControl(motionMagicExpoVoltage.withPosition(pivotPositionRots));
         rightPivotMotor.setControl(leftPivotFollower);
     }

@@ -239,14 +239,27 @@ public class SwerveModuleIOTalonFXSim implements SwerveModuleIO {
     }
 
     public double getDrivePosition() {
-        return Phoenix6Utils.latencyCompensateIfSignalIsGood(_drivePosition, _driveVelocity);
+        final double driveWheelPosition = Phoenix6Utils.latencyCompensateIfSignalIsGood(_drivePosition, _driveVelocity);
+        final double turnPosition = Phoenix6Utils.latencyCompensateIfSignalIsGood(_turnPosition, _turnVelocity);
+        final double driveBackOutWheelRotations = (
+                (turnPosition * couplingRatio)
+                        / driveReduction
+        );
+
+        return driveWheelPosition - driveBackOutWheelRotations;
     }
 
     @Override
     public void setInputs(final double desiredDriverVelocity, final double desiredTurnerRotations) {
+        final double driveVelocityBackOut = (
+                (_turnVelocity.getValue() * couplingRatio)
+                        / driveReduction
+        );
+        final double backedOutDriveVelocity = desiredDriverVelocity + driveVelocityBackOut;
+
         odometryThreadRunner.updateControlRequest(driveMotor, velocityTorqueCurrentFOC);
         driveMotor.setControl(velocityTorqueCurrentFOC
-                .withVelocity(desiredDriverVelocity)
+                .withVelocity(backedOutDriveVelocity)
         );
         turnMotor.setControl(positionVoltage.withPosition(desiredTurnerRotations));
     }
@@ -258,7 +271,8 @@ public class SwerveModuleIOTalonFXSim implements SwerveModuleIO {
             return;
         }
 
-        final StatusCode refreshCode = driveMotor.getConfigurator().refresh(turnTalonFXConfiguration, 0.2);
+        final StatusCode refreshCode = driveMotor.getConfigurator()
+                .refresh(turnTalonFXConfiguration, SimConstants.CTRE.CONFIG_TIMEOUT_SECONDS);
         if (!refreshCode.isOK()) {
             // warn if the refresh call failed in sim, which might happen pretty often as
             // there seems to be an issue with calling refresh while disabled in sim
