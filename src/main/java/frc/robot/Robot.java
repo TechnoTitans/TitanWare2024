@@ -98,6 +98,7 @@ public class Robot extends LoggedRobot {
 
     private final Trigger autoEnabled = new Trigger(DriverStation::isAutonomousEnabled);
     private final Trigger teleopEnabled = new Trigger(DriverStation::isTeleopEnabled);
+    private final Trigger endgameTrigger = new Trigger(() -> DriverStation.getMatchTime() <= 20).and(teleopEnabled);
 
     @Override
     public void robotInit() {
@@ -339,6 +340,10 @@ public class Robot extends LoggedRobot {
 
     public void configureStateTriggers() {
         teleopEnabled.onTrue(superstructure.toInstantGoal(Superstructure.Goal.IDLE));
+
+        endgameTrigger.onTrue(ControllerUtils.rumbleForDurationCommand(
+                coDriverController.getHID(), GenericHID.RumbleType.kBothRumble, 0.5, 1)
+        );
     }
 
     public void configureAutos() {
@@ -386,6 +391,11 @@ public class Robot extends LoggedRobot {
         autoChooser.addAutoOption(new AutoOption(
                 "AmpCenter4_3_2",
                 autos.ampCenter4_3_2(),
+                Constants.CompetitionType.COMPETITION
+        ));
+        autoChooser.addAutoOption(new AutoOption(
+                "AmpCenter4_2_1",
+                autos.ampCenter4_2_1(),
                 Constants.CompetitionType.COMPETITION
         ));
         autoChooser.addAutoOption(new AutoOption(
@@ -507,11 +517,11 @@ public class Robot extends LoggedRobot {
                 .whileTrue(shootCommands.runEjectIntake());
         //noinspection SuspiciousNameCombination
         this.coDriverController.b(teleopEventLoop)
-//                .whileTrue(shootCommands.angleAndReadyAmp(
-//                        driverController::getLeftY,
-//                        driverController::getLeftX
-//                )).onFalse(shootCommands.amp());
-                .whileTrue(shootCommands.lineupAndAmp());
+                .whileTrue(shootCommands.angleAndReadyAmp(
+                        driverController::getLeftY,
+                        driverController::getLeftX
+                )).onFalse(shootCommands.amp());
+//                .whileTrue(shootCommands.lineupAndAmp());
         //noinspection SuspiciousNameCombination
         this.coDriverController.leftTrigger(0.5, teleopEventLoop)
                 .whileTrue(shootCommands.readyFerry(
