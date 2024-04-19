@@ -133,14 +133,15 @@ public class ShootCommands {
 
     public Command lineupAndAmp() {
         return swerve.driveToPose(FieldConstants::getAmpScoringPose)
+                .alongWith(readyAmp())
                 .until(swerve.atHolonomicDrivePose)
                 .withTimeout(6)
                 .andThen(Commands.deadline(
                         Commands.sequence(
-                                readyAmp().withTimeout(0.2),
+                                Commands.waitSeconds(0.2),
                                 amp()
                         ),
-                        swerve.teleopDriveCommand(() -> 0, () -> 0.5, () -> 0)
+                        swerve.teleopDriveCommand(() -> 0, () -> -0.5, () -> 0, () -> false)
                 ));
     }
 
@@ -156,7 +157,7 @@ public class ShootCommands {
     public Command fastSubwoofer() {
         return Commands.deadline(
                 intake.runStopCommand()
-                        .withTimeout(0.2)
+                        .withTimeout(0.25)
                         .andThen(intake.feedCommand()),
                 superstructure.toGoal(Superstructure.Goal.SUBWOOFER)
         );

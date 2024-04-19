@@ -559,7 +559,7 @@ public class Autos {
                 ).withName("Intake0")
         );
 
-        autoTriggers.atTime(4.54).onTrue(
+        autoTriggers.atTime(4.33).onTrue(
                 Commands.sequence(
                         shootCommands.deferredStopAimAndShoot()
                                 .onlyIf(noteState.hasNote)
@@ -569,20 +569,20 @@ public class Autos {
                 ).withName("Shoot0AndFollow1")
         );
 
-        autoTriggers.atTime(5.2).onTrue(
+        autoTriggers.atTime(5).onTrue(
                 Commands.parallel(
                         intake.intakeCommand(),
                         shootCommands.readySuperstructureForShot()
                 ).withName("Intake1")
         );
 
-        autoTriggers.atTime(8.02).onTrue(
+        autoTriggers.atTime(7.44).onTrue(
                 Commands.sequence(
                         shootCommands.deferredStopAimAndShoot()
                                 .onlyIf(noteState.hasNote)
                                 .withName("Shoot1")
                                 .asProxy()
-                ).withName("Shoot1AndFollow2")
+                ).withName("Shoot1")
         );
 
         return autoTriggers.eventLoop;

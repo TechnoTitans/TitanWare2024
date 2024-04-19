@@ -288,7 +288,8 @@ public class Robot extends LoggedRobot {
                 swerve.teleopDriveCommand(
                         driverController::getLeftY,
                         driverController::getLeftX,
-                        driverController::getRightX
+                        driverController::getRightX,
+                        IsRedAlliance
                 )
         );
     }
@@ -518,6 +519,14 @@ public class Robot extends LoggedRobot {
                         driverController::getLeftX
                 ))
                 .onFalse(shootCommands.ferry());
+        this.coDriverController.x()
+                .whileTrue(Commands.deadline(
+                        intake.runStopCommand()
+                                .until(superstructure.atSetpoint)
+                                .andThen(Commands.waitSeconds(0.1))
+                                .andThen(intake.feedCommand()),
+                        superstructure.toGoal(Superstructure.Goal.TRAP)
+                ));
 
         this.coDriverController.rightTrigger(0.5, teleopEventLoop)
                 .whileTrue(shootCommands.shootSubwoofer());
