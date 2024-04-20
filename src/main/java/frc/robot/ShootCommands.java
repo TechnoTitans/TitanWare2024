@@ -188,7 +188,7 @@ public class ShootCommands {
                 () -> ShotParameters.getFerryParameters(swerve.getPose());
 
         return Commands.parallel(
-                superstructure.toState(ferrySupplier),
+                superstructure.runState(ferrySupplier),
                 swerve.teleopFacingAngleCommand(
                         xStickInput,
                         yStickInput,
@@ -211,7 +211,14 @@ public class ShootCommands {
     }
 
     public Command readySuperstructureForShot() {
-        return superstructure.toState(ShotParameters.shotParametersSupplier(swerve::getPose));
+        return superstructure.runState(ShotParameters.shotParametersSupplier(swerve::getPose));
+    }
+
+    public Command attemptStoreNote() {
+        return intake.intakeCommand()
+                .until(noteState.hasNote)
+                .onlyIf(noteState.hasNote.negate())
+                .andThen(intake.instantStopCommand());
     }
 
     public Command readyShot(
@@ -219,8 +226,8 @@ public class ShootCommands {
             final DoubleSupplier yStickInput
     ) {
         return Commands.parallel(
-                intake.runStopCommand(),
-                superstructure.toState(ShotParameters.shotParametersSupplier(swerve::getPose)),
+                attemptStoreNote().asProxy(),
+                superstructure.runState(ShotParameters.shotParametersSupplier(swerve::getPose)),
                 swerve.teleopFacingAngleCommand(
                         xStickInput,
                         yStickInput,
@@ -257,12 +264,13 @@ public class ShootCommands {
     public Command deferredStopAimAndShoot() {
         return Commands.deadline(
                 Commands.deadline(
-                        intake
-                                .runStopCommand()
-                                .until(superstructure.atSetpoint.and(swerve.atHeadingSetpoint))
-                                .withTimeout(1.5)
-                                .andThen(intake.feedCommand())
-                                .onlyIf(noteState.hasNote),
+                        Commands.sequence(
+                                intake.runStopCommand()
+                                        .until(superstructure.atSetpoint.and(swerve.atHeadingSetpoint))
+                                        .withTimeout(1.5)
+                                        .andThen(intake.feedCommand())
+                                        .onlyIf(noteState.hasNote)
+                        ),
                         Commands.defer(() ->
                                         superstructure.toState(() -> ShotParameters.getShotParameters(swerve.getPose())),
                                 superstructure.getRequirements()

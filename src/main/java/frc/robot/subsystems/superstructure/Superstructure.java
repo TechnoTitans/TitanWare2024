@@ -100,6 +100,28 @@ public class Superstructure extends VirtualSubsystem {
         );
     }
 
+    public Command runState(final Supplier<ShotParameters.Parameters> parametersSupplier) {
+        return runState(
+                () -> parametersSupplier.get().armPivotAngle(),
+                () -> parametersSupplier.get().ampVelocityRotsPerSec(),
+                () -> parametersSupplier.get().leftVelocityRotsPerSec(),
+                () -> parametersSupplier.get().rightVelocityRotsPerSec()
+        );
+    }
+
+    public Command runState(
+            final Supplier<Rotation2d> armPivotPosition,
+            final DoubleSupplier ampVelocityRotsPerSec,
+            final DoubleSupplier leftVelocityRotsPerSec,
+            final DoubleSupplier rightVelocityRotsPerSec
+    ) {
+        return Commands.parallel(
+                Commands.run(() -> this.desiredGoal = Goal.NONE),
+                arm.runPivotPositionCommand(() -> armPivotPosition.get().getRotations()),
+                shooter.runVelocityCommand(ampVelocityRotsPerSec, leftVelocityRotsPerSec, rightVelocityRotsPerSec)
+        );
+    }
+
     public Command runVoltageCommand(
             final double armPivotVolts,
             final double ampVolts,

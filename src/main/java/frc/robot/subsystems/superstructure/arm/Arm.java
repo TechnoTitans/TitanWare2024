@@ -182,10 +182,20 @@ public class Arm extends SubsystemBase {
     }
 
     public Command toPivotPositionCommand(final DoubleSupplier pivotPositionRots) {
-        return Commands.sequence(
-                Commands.runOnce(() -> this.desiredGoal = Goal.NONE),
-                runEnd(() -> setpoint.pivotPositionRots = pivotPositionRots.getAsDouble(), () -> this.desiredGoal = Goal.STOW)
+        return runEnd(
+                () -> {
+                    this.desiredGoal = Goal.NONE;
+                    setpoint.pivotPositionRots = pivotPositionRots.getAsDouble();
+                },
+                () -> this.desiredGoal = Goal.STOW
         );
+    }
+
+    public Command runPivotPositionCommand(final DoubleSupplier pivotPositionRots) {
+        return run(() -> {
+            this.desiredGoal = Goal.NONE;
+            setpoint.pivotPositionRots = pivotPositionRots.getAsDouble();
+        });
     }
 
     public Command runPivotVoltageCommand(final double pivotVoltageVolts) {
