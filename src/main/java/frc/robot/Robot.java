@@ -98,7 +98,10 @@ public class Robot extends LoggedRobot {
 
     private final Trigger autoEnabled = new Trigger(DriverStation::isAutonomousEnabled);
     private final Trigger teleopEnabled = new Trigger(DriverStation::isTeleopEnabled);
-    private final Trigger endgameTrigger = new Trigger(() -> DriverStation.getMatchTime() <= 20).and(teleopEnabled);
+    private final Trigger endgameTrigger = new Trigger(
+            () -> DriverStation.getMatchTime() <= 20
+                    && DriverStation.isFMSAttached()
+    ).and(teleopEnabled);
 
     @Override
     public void robotInit() {
@@ -529,14 +532,6 @@ public class Robot extends LoggedRobot {
                         driverController::getLeftX
                 ))
                 .onFalse(shootCommands.ferry());
-        this.coDriverController.x()
-                .whileTrue(Commands.deadline(
-                        intake.runStopCommand()
-                                .until(superstructure.atSetpoint)
-                                .andThen(Commands.waitSeconds(0.1))
-                                .andThen(intake.feedCommand()),
-                        superstructure.toGoal(Superstructure.Goal.TRAP)
-                ));
 
         this.coDriverController.rightTrigger(0.5, teleopEventLoop)
                 .whileTrue(shootCommands.shootSubwoofer());

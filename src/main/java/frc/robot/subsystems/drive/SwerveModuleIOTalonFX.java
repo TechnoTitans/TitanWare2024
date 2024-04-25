@@ -101,6 +101,7 @@ public class SwerveModuleIOTalonFX implements SwerveModuleIO {
         canCoderConfiguration.MagnetSensor.AbsoluteSensorRange = AbsoluteSensorRangeValue.Signed_PlusMinusHalf;
         turnEncoder.getConfigurator().apply(canCoderConfiguration);
 
+        // TODO: drive and azimuth gains both need to be re-tuned
         driveTalonFXConfiguration.Slot0 = new Slot0Configs()
                 .withKS(5.6753)
                 .withKV(0)

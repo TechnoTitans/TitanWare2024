@@ -88,6 +88,7 @@ public class Autos {
             return new Trigger(eventLoop, DriverStation::isAutonomousEnabled);
         }
 
+        // TODO: doesn't seem to ever trigger, also, theres probably? a better way to do this check
         @SuppressWarnings("unused")
         public Trigger atPlaceAndTime(final double timeSeconds) {
             final Translation2d place = trajectory
@@ -110,7 +111,8 @@ public class Autos {
                     () -> MathUtil.isNear(timeSeconds, timeSupplier.getAsDouble(), TimeToleranceSeconds)
             );
         }
-        
+
+        // TODO: doesn't seem to ever trigger, also, theres probably? a better way to do this check
         @SuppressWarnings("unused")
         public Trigger atPlace(final double timeSeconds) {
             final Translation2d place = trajectory

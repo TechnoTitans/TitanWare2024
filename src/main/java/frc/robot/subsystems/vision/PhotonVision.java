@@ -180,6 +180,8 @@ public class PhotonVision extends VirtualSubsystem {
         final double secondsSinceLastUpdate =
                 estimatedRobotPose.timestampSeconds - lastEstimatedRobotPose.timestampSeconds;
 
+        // TODO: this rejection showed up very often at event-cmp and didn't seem to help much,
+        //  maybe re-evaluate why we added this rejection in the first place? (removed for now)
 //        if (lastEstimatedRobotPose.timestampSeconds == -1 || secondsSinceLastUpdate <= 0) {
             // TODO: do we always need to reject immediately here? maybe we can still use the next estimation even
             //  if the last estimation had no timestamp or was very close
