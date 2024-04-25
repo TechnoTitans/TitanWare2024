@@ -49,15 +49,19 @@ public class RealVisionRunner implements PhotonVisionRunner {
         private final PhotonCamera photonCamera;
         private final String cameraName;
 
+        private final Transform3d robotToCamera;
+
         public VisionIONoteTrackingReal(final TitanCamera titanCamera) {
             this.photonCamera = titanCamera.getPhotonCamera();
             this.cameraName = photonCamera.getName();
+            this.robotToCamera = titanCamera.getRobotToCameraTransform();
         }
 
         @Override
         public void updateInputs(VisionIOInputs inputs) {
             inputs.name = cameraName;
             inputs.stdDevFactor = -1;
+            inputs.robotToCamera = robotToCamera;
             inputs.latestResult = photonCamera.getLatestResult();
         }
     }
@@ -144,6 +148,10 @@ public class RealVisionRunner implements PhotonVisionRunner {
 
             final PhotonPipelineResult pipelineResult = inputs.latestResult;
             VisionUtils.correctPipelineResultTimestamp(pipelineResult);
+
+            // TODO: HasTarget is true at this point, but when it gets sent through
+            //  NoteTrackingResult and logged outside of here, it becomes always false.
+            Logger.recordOutput("HasTarget", pipelineResult.hasTargets());
 
             final NoteTrackingResult noteTrackingResult = new NoteTrackingResult(inputs.robotToCamera, pipelineResult);
             noteTrackingResultMap.put(visionIO, noteTrackingResult);

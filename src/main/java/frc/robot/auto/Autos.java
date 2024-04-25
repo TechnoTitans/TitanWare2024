@@ -19,8 +19,7 @@ import frc.robot.subsystems.intake.Intake;
 import frc.robot.subsystems.superstructure.ShotParameters;
 import frc.robot.subsystems.superstructure.Superstructure;
 
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 import java.util.function.DoubleSupplier;
 import java.util.function.Supplier;
 
@@ -89,7 +88,7 @@ public class Autos {
             return new Trigger(eventLoop, DriverStation::isAutonomousEnabled);
         }
 
-        //TODO: Fix this it doesn't work
+        // TODO: doesn't seem to ever trigger, also, theres probably? a better way to do this check
         @SuppressWarnings("unused")
         public Trigger atPlaceAndTime(final double timeSeconds) {
             final Translation2d place = trajectory
@@ -112,8 +111,8 @@ public class Autos {
                     () -> MathUtil.isNear(timeSeconds, timeSupplier.getAsDouble(), TimeToleranceSeconds)
             );
         }
-        
-        //TODO: Fix this it doesn't work
+
+        // TODO: doesn't seem to ever trigger, also, theres probably? a better way to do this check
         @SuppressWarnings("unused")
         public Trigger atPlace(final double timeSeconds) {
             final Translation2d place = trajectory
@@ -130,9 +129,13 @@ public class Autos {
         }
     }
 
+    private Command followPath(final ChoreoTrajectory choreoTrajectory) {
+        return swerve.followChoreoPathCommand(choreoTrajectory, Robot.IsRedAlliance);
+    }
+
     private Command followPath(final ChoreoTrajectory choreoTrajectory, final Timer timer) {
         return Commands.runOnce(timer::start)
-                .andThen(swerve.followChoreoPathCommand(choreoTrajectory, Robot.IsRedAlliance))
+                .andThen(followPath(choreoTrajectory))
                 .finallyDo(timer::stop);
     }
 
@@ -154,7 +157,7 @@ public class Autos {
         return Commands.sequence(
                 noteState.setState(NoteState.State.STORED),
                 resetPose(trajectory0),
-                shootCommands.shootSubwoofer().withName("ShootPreload").asProxy(),
+                shootCommands.fastSubwoofer().withName("ShootPreload").asProxy(),
                 Commands.runOnce(timer::reset),
                 followPath(trajectory0, timer)
         ).withName("PreloadAndFollow0");
@@ -559,7 +562,7 @@ public class Autos {
                 ).withName("Intake0")
         );
 
-        autoTriggers.atTime(4.54).onTrue(
+        autoTriggers.atTime(4.33).onTrue(
                 Commands.sequence(
                         shootCommands.deferredStopAimAndShoot()
                                 .onlyIf(noteState.hasNote)
@@ -569,20 +572,20 @@ public class Autos {
                 ).withName("Shoot0AndFollow1")
         );
 
-        autoTriggers.atTime(5.2).onTrue(
+        autoTriggers.atTime(5).onTrue(
                 Commands.parallel(
                         intake.intakeCommand(),
                         shootCommands.readySuperstructureForShot()
                 ).withName("Intake1")
         );
 
-        autoTriggers.atTime(8.02).onTrue(
+        autoTriggers.atTime(7.44).onTrue(
                 Commands.sequence(
                         shootCommands.deferredStopAimAndShoot()
                                 .onlyIf(noteState.hasNote)
                                 .withName("Shoot1")
                                 .asProxy()
-                ).withName("Shoot1AndFollow2")
+                ).withName("Shoot1")
         );
 
         return autoTriggers.eventLoop;
@@ -625,6 +628,161 @@ public class Autos {
                                 .withName("Shoot1")
                                 .asProxy()
                 ).withName("Shoot1AndFollow2")
+        );
+
+        return autoTriggers.eventLoop;
+    }
+
+    public EventLoop ampCenter4_3_2() {
+        final Timer timer = new Timer();
+        final AutoTriggers autoTriggers = new AutoTriggers("AmpCenter4_3_2", swerve::getPose, timer::get);
+
+        autoTriggers.autoEnabled().whileTrue(preloadSubwooferAndFollow0(autoTriggers.trajectories, timer));
+
+        autoTriggers.atTime(1.65).onTrue(
+                Commands.parallel(
+                        intake.intakeCommand()
+                ).withName("Intake0")
+        );
+
+        autoTriggers.atTime(4.32).onTrue(
+                Commands.sequence(
+                        shootCommands.deferredStopAimAndShoot()
+                                .onlyIf(noteState.hasNote)
+                                .withName("Shoot0")
+                                .asProxy(),
+                        followPath(autoTriggers.trajectories.get(1), timer).asProxy()
+                ).withName("Shoot0AndFollow1")
+        );
+
+        autoTriggers.atTime(4.8).onTrue(
+                Commands.parallel(
+                        intake.intakeCommand()
+                ).withName("Intake1")
+        );
+
+        autoTriggers.atTime(7.17).onTrue(
+                Commands.sequence(
+                        shootCommands.deferredStopAimAndShoot()
+                                .onlyIf(noteState.hasNote)
+                                .withName("Shoot1")
+                                .asProxy(),
+                        followPath(autoTriggers.trajectories.get(2), timer).asProxy()
+                ).withName("Shoot1AndFollow2")
+        );
+
+        autoTriggers.atTime(7.8).onTrue(
+                Commands.parallel(
+                        intake.intakeCommand(),
+                        superstructure.toInstantGoal(Superstructure.Goal.IDLE)
+                ).withName("Intake1")
+        );
+
+        autoTriggers.atTime(10.52).onTrue(
+                Commands.sequence(
+                        shootCommands.deferredStopAimAndShoot()
+                                .onlyIf(noteState.hasNote)
+                                .withName("Shoot2")
+                                .asProxy()
+                ).withName("Shoot2")
+        );
+
+        return autoTriggers.eventLoop;
+    }
+
+    public EventLoop ampCenter4_2_1() {
+        final Timer timer = new Timer();
+        final AutoTriggers autoTriggers = new AutoTriggers("AmpCenter4_2_1", swerve::getPose, timer::get);
+
+        autoTriggers.autoEnabled().whileTrue(preloadSubwooferAndFollow0(autoTriggers.trajectories, timer));
+
+        autoTriggers.atTime(1.65).onTrue(
+                Commands.parallel(
+                        intake.intakeCommand()
+                ).withName("Intake0")
+        );
+
+        autoTriggers.atTime(4.32).onTrue(
+                Commands.sequence(
+                        shootCommands.deferredStopAimAndShoot()
+                                .onlyIf(noteState.hasNote)
+                                .withName("Shoot0")
+                                .asProxy(),
+                        followPath(autoTriggers.trajectories.get(1), timer).asProxy()
+                ).withName("Shoot0AndFollow1")
+        );
+
+        autoTriggers.atTime(5).onTrue(
+                Commands.parallel(
+                        intake.intakeCommand()
+                ).withName("Intake1")
+        );
+
+        autoTriggers.atTime(7.74).onTrue(
+                Commands.sequence(
+                        shootCommands.deferredStopAimAndShoot()
+                                .onlyIf(noteState.hasNote)
+                                .withName("Shoot1")
+                                .asProxy(),
+                        followPath(autoTriggers.trajectories.get(2), timer).asProxy()
+                ).withName("Shoot1AndFollow2")
+        );
+
+        autoTriggers.atTime(8.7).onTrue(
+                Commands.parallel(
+                        intake.intakeCommand()
+                ).withName("Intake2")
+        );
+
+        autoTriggers.atTime(11.31).onTrue(
+                Commands.sequence(
+                        shootCommands.deferredStopAimAndShoot()
+                                .onlyIf(noteState.hasNote)
+                                .withName("Shoot2")
+                                .asProxy()
+                ).withName("Shoot2")
+        );
+
+        return autoTriggers.eventLoop;
+    }
+
+    public EventLoop speaker0_1_2() {
+        final String trajectoryName = "Speaker0_1_2";
+        final Timer timer = new Timer();
+        final AutoTriggers autoTriggers = new AutoTriggers(trajectoryName, swerve::getPose, timer::get);
+
+        autoTriggers.autoEnabled().whileTrue(
+                Commands.sequence(
+                        noteState.setState(NoteState.State.STORED),
+                        resetPose(autoTriggers.trajectory),
+                        shootCommands.shootSubwoofer().withName("ShootPreload").asProxy(),
+                        Commands.runOnce(timer::reset),
+                        followIntakeAndInstantShoot(
+                                autoTriggers.trajectories.get(0),
+                                timer,
+                                0.4
+                        ).asProxy().withName("Follow0AndIntakeInstantShoot0")
+                ).withName("PreloadFollow0AndShoot0")
+        );
+
+        autoTriggers.atTime(1.13).onTrue(
+                Commands.parallel(
+                        followIntakeAndInstantShoot(
+                                autoTriggers.trajectories.get(1),
+                                timer,
+                                1.5
+                        ).asProxy().withName("Follow1AndIntakeInstantShoot1")
+                ).withName("Follow1Intake1AndShoot1")
+        );
+
+        autoTriggers.atTime(2.61).onTrue(
+                Commands.parallel(
+                        followIntakeAndInstantShoot(
+                                autoTriggers.trajectories.get(2),
+                                timer,
+                                3
+                        ).asProxy().withName("Follow2AndIntakeInstantShoot2")
+                ).withName("Follow2Intake2AndShoot2")
         );
 
         return autoTriggers.eventLoop;

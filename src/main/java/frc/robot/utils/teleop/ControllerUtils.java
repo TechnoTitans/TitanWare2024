@@ -55,11 +55,11 @@ public class ControllerUtils {
     public static Command rumbleForDurationCommand(
             final GenericHID controller,
             final GenericHID.RumbleType rumbleType,
-            final double value,
+            final double strength,
             final double timeSeconds
     ) {
         return Commands.sequence(
-                Commands.runOnce(() -> controller.setRumble(rumbleType, value)),
+                Commands.runOnce(() -> controller.setRumble(rumbleType, strength)),
                 Commands.waitSeconds(timeSeconds),
                 Commands.runOnce(() -> controller.setRumble(rumbleType, 0))
         );

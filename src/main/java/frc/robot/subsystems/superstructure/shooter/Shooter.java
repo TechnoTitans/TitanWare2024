@@ -47,7 +47,6 @@ public class Shooter extends SubsystemBase {
         IDLE(40, 40, 40),
         EJECT(80, 80, 80),
         BACK_FEED(-60, -60, -60),
-        READY_AMP(10, -10, -10),
         AMP(80, -40, -40),
         FERRY_CENTERLINE(60, 60, 80),
         SUBWOOFER(80, 80, 80);
@@ -175,17 +174,28 @@ public class Shooter extends SubsystemBase {
             final DoubleSupplier leftFlywheelVelocityRotsPerSec,
             final DoubleSupplier rightFlywheelVelocityRotsPerSec
     ) {
-        return Commands.sequence(
-                Commands.runOnce(() -> this.desiredGoal = Goal.NONE),
-                runEnd(
-                        () -> {
-                            setpoint.ampVelocityRotsPerSec = ampVelocityRotsPerSec.getAsDouble();
-                            setpoint.leftFlywheelVelocityRotsPerSec = leftFlywheelVelocityRotsPerSec.getAsDouble();
-                            setpoint.rightFlywheelVelocityRotsPerSec = rightFlywheelVelocityRotsPerSec.getAsDouble();
-                        },
-                        () -> this.desiredGoal = Goal.IDLE
-                )
+        return runEnd(
+                () -> {
+                    this.desiredGoal = Goal.NONE;
+                    setpoint.ampVelocityRotsPerSec = ampVelocityRotsPerSec.getAsDouble();
+                    setpoint.leftFlywheelVelocityRotsPerSec = leftFlywheelVelocityRotsPerSec.getAsDouble();
+                    setpoint.rightFlywheelVelocityRotsPerSec = rightFlywheelVelocityRotsPerSec.getAsDouble();
+                },
+                () -> this.desiredGoal = Goal.IDLE
         );
+    }
+
+    public Command runVelocityCommand(
+            final DoubleSupplier ampVelocityRotsPerSec,
+            final DoubleSupplier leftFlywheelVelocityRotsPerSec,
+            final DoubleSupplier rightFlywheelVelocityRotsPerSec
+    ) {
+        return run(() -> {
+            this.desiredGoal = Goal.NONE;
+            setpoint.ampVelocityRotsPerSec = ampVelocityRotsPerSec.getAsDouble();
+            setpoint.leftFlywheelVelocityRotsPerSec = leftFlywheelVelocityRotsPerSec.getAsDouble();
+            setpoint.rightFlywheelVelocityRotsPerSec = rightFlywheelVelocityRotsPerSec.getAsDouble();
+        });
     }
 
     public Command runVoltageCommand(

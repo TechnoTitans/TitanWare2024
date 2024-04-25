@@ -27,7 +27,6 @@ public class Superstructure extends VirtualSubsystem {
         NONE(Arm.Goal.NONE, Shooter.Goal.NONE),
         IDLE(Arm.Goal.STOW, Shooter.Goal.IDLE),
         SUBWOOFER(Arm.Goal.SUBWOOFER, Shooter.Goal.SUBWOOFER),
-        READY_AMP(Arm.Goal.AMP, Shooter.Goal.READY_AMP),
         AMP(Arm.Goal.AMP, Shooter.Goal.AMP),
         EJECT(Arm.Goal.STOW, Shooter.Goal.EJECT),
         FERRY_CENTERLINE(Arm.Goal.FERRY_CENTERLINE, Shooter.Goal.FERRY_CENTERLINE),
@@ -97,6 +96,28 @@ public class Superstructure extends VirtualSubsystem {
                 Commands.runEnd(() -> this.desiredGoal = Goal.NONE, () -> this.desiredGoal = Goal.IDLE),
                 arm.toPivotPositionCommand(() -> armPivotPosition.get().getRotations()),
                 shooter.toVelocityCommand(ampVelocityRotsPerSec, leftVelocityRotsPerSec, rightVelocityRotsPerSec)
+        );
+    }
+
+    public Command runState(final Supplier<ShotParameters.Parameters> parametersSupplier) {
+        return runState(
+                () -> parametersSupplier.get().armPivotAngle(),
+                () -> parametersSupplier.get().ampVelocityRotsPerSec(),
+                () -> parametersSupplier.get().leftVelocityRotsPerSec(),
+                () -> parametersSupplier.get().rightVelocityRotsPerSec()
+        );
+    }
+
+    public Command runState(
+            final Supplier<Rotation2d> armPivotPosition,
+            final DoubleSupplier ampVelocityRotsPerSec,
+            final DoubleSupplier leftVelocityRotsPerSec,
+            final DoubleSupplier rightVelocityRotsPerSec
+    ) {
+        return Commands.parallel(
+                Commands.run(() -> this.desiredGoal = Goal.NONE),
+                arm.runPivotPositionCommand(() -> armPivotPosition.get().getRotations()),
+                shooter.runVelocityCommand(ampVelocityRotsPerSec, leftVelocityRotsPerSec, rightVelocityRotsPerSec)
         );
     }
 

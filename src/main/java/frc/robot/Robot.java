@@ -98,6 +98,10 @@ public class Robot extends LoggedRobot {
 
     private final Trigger autoEnabled = new Trigger(DriverStation::isAutonomousEnabled);
     private final Trigger teleopEnabled = new Trigger(DriverStation::isTeleopEnabled);
+    private final Trigger endgameTrigger = new Trigger(
+            () -> DriverStation.getMatchTime() <= 20
+                    && DriverStation.isFMSAttached()
+    ).and(teleopEnabled);
 
     @Override
     public void robotInit() {
@@ -288,7 +292,8 @@ public class Robot extends LoggedRobot {
                 swerve.teleopDriveCommand(
                         driverController::getLeftY,
                         driverController::getLeftX,
-                        driverController::getRightX
+                        driverController::getRightX,
+                        IsRedAlliance
                 )
         );
     }
@@ -317,13 +322,13 @@ public class Robot extends LoggedRobot {
                 .whileTrue(intake.torqueCurrentSysIdCommand());
 
         coDriverController.y(testEventLoop)
-                .whileTrue(swerve.angularVoltageSysIdQuasistaticCommand(SysIdRoutine.Direction.kForward));
+                .whileTrue(swerve.linearTorqueCurrentSysIdQuasistaticCommand(SysIdRoutine.Direction.kForward));
         coDriverController.a(testEventLoop)
-                .whileTrue(swerve.angularVoltageSysIdQuasistaticCommand(SysIdRoutine.Direction.kReverse));
+                .whileTrue(swerve.linearTorqueCurrentSysIdQuasistaticCommand(SysIdRoutine.Direction.kReverse));
         coDriverController.b(testEventLoop)
-                .whileTrue(swerve.angularVoltageSysIdDynamicCommand(SysIdRoutine.Direction.kForward));
+                .whileTrue(swerve.linearTorqueCurrentSysIdDynamicCommand(SysIdRoutine.Direction.kForward));
         coDriverController.x(testEventLoop)
-                .whileTrue(swerve.angularVoltageSysIdDynamicCommand(SysIdRoutine.Direction.kReverse));
+                .whileTrue(swerve.linearTorqueCurrentSysIdDynamicCommand(SysIdRoutine.Direction.kReverse));
     }
 
     @Override
@@ -338,12 +343,21 @@ public class Robot extends LoggedRobot {
 
     public void configureStateTriggers() {
         teleopEnabled.onTrue(superstructure.toInstantGoal(Superstructure.Goal.IDLE));
+
+        endgameTrigger.onTrue(ControllerUtils.rumbleForDurationCommand(
+                coDriverController.getHID(), GenericHID.RumbleType.kBothRumble, 0.5, 1)
+        );
     }
 
     public void configureAutos() {
         autoChooser.addAutoOption(new AutoOption(
-                "Front4Piece",
+                "Speaker2_1_0",
                 autos.speaker2_1_0(),
+                Constants.CompetitionType.COMPETITION
+        ));
+        autoChooser.addAutoOption(new AutoOption(
+                "Speaker0_1_2",
+                autos.speaker0_1_2(),
                 Constants.CompetitionType.COMPETITION
         ));
         autoChooser.addAutoOption(new AutoOption(
@@ -375,6 +389,16 @@ public class Robot extends LoggedRobot {
         autoChooser.addAutoOption(new AutoOption(
                 "AmpCenter3_4",
                 autos.ampCenter3_4(),
+                Constants.CompetitionType.COMPETITION
+        ));
+        autoChooser.addAutoOption(new AutoOption(
+                "AmpCenter4_3_2",
+                autos.ampCenter4_3_2(),
+                Constants.CompetitionType.COMPETITION
+        ));
+        autoChooser.addAutoOption(new AutoOption(
+                "AmpCenter4_2_1",
+                autos.ampCenter4_2_1(),
                 Constants.CompetitionType.COMPETITION
         ));
         autoChooser.addAutoOption(new AutoOption(
@@ -496,12 +520,11 @@ public class Robot extends LoggedRobot {
                 .whileTrue(shootCommands.runEjectIntake());
         //noinspection SuspiciousNameCombination
         this.coDriverController.b(teleopEventLoop)
-//                .whileTrue(shootCommands.angleAndReadyAmp(
-//                        driverController::getLeftY,
-//                        driverController::getLeftX
-//                )).onFalse(shootCommands.amp());
-                .whileTrue(shootCommands.lineupAndAmp());
-
+                .whileTrue(shootCommands.angleAndReadyAmp(
+                        driverController::getLeftY,
+                        driverController::getLeftX
+                )).onFalse(shootCommands.amp());
+//                .whileTrue(shootCommands.lineupAndAmp());
         //noinspection SuspiciousNameCombination
         this.coDriverController.leftTrigger(0.5, teleopEventLoop)
                 .whileTrue(shootCommands.readyFerry(

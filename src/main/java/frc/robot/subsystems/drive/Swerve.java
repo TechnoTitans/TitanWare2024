@@ -154,8 +154,8 @@ public class Swerve extends SubsystemBase {
         );
 
         this.holonomicDriveWithPIDController = new HolonomicDriveWithPIDController(
-                new PIDController(3, 0, 0),
-                new PIDController(3, 0, 0),
+                new PIDController(4, 0, 0),
+                new PIDController(4, 0, 0),
                 new ProfiledPIDController(
                         headingController.getP(), headingController.getI(), headingController.getD(),
                         new TrapezoidProfile.Constraints(
@@ -163,7 +163,7 @@ public class Swerve extends SubsystemBase {
                                 Config.maxAngularAcceleration() * 0.75
                         )
                 ),
-                new Pose2d(0.05, 0.05, Rotation2d.fromDegrees(3))
+                new Pose2d(0.05, 0.05, Rotation2d.fromDegrees(6))
         );
         this.atHolonomicDrivePose = new Trigger(holonomicDriveWithPIDController::atReference);
 
@@ -509,7 +509,8 @@ public class Swerve extends SubsystemBase {
     public Command teleopDriveCommand(
             final DoubleSupplier xSpeedSupplier,
             final DoubleSupplier ySpeedSupplier,
-            final DoubleSupplier rotSupplier
+            final DoubleSupplier rotSupplier,
+            final BooleanSupplier invertYaw
     ) {
         return run(() -> {
             final Profiler.DriverProfile driverProfile = Profiler.getDriverProfile();
@@ -537,7 +538,7 @@ public class Swerve extends SubsystemBase {
                             * swerveSpeed.getRotationSpeed()
                             * driverProfile.getRotationalSensitivity(),
                     true,
-                    Robot.IsRedAlliance.getAsBoolean()
+                    invertYaw.getAsBoolean()
             );
         });
     }

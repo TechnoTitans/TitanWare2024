@@ -146,7 +146,7 @@ public enum TitanCamera {
             false
     ),
     PHOTON_BC_NOTE_TRACKING(
-            "Photon_BC",
+            "BC_NoteTracking",
             new Transform3d(), // TODO: get transform
             CameraProperties.ARDUCAM_OV9782,
             false
