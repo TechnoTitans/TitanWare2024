@@ -88,8 +88,8 @@ public class LogUtils {
             trackedTargets.add(trackedTarget);
         }
 
-        final double latencyMillis = logTable.get(prefix + "/LatencyMillis", 0);
-        final double timestampSeconds = logTable.get(prefix + "/TimestampSeconds", -1);
+        final double latencyMillis = logTable.get(prefix + "/LatencyMillis", 0d);
+        final double timestampSeconds = logTable.get(prefix + "/TimestampSeconds", -1d);
 
         final MultiTargetPNPResult multiTargetPNPResult =
                 LogUtils.deserializeMultiTargetPNPResult(logTable, prefix + "/MultiTagResult");
