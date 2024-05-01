@@ -74,10 +74,8 @@ public class ReplayVisionRunner implements PhotonVisionRunner {
             visionIO.periodic();
             visionIO.updateInputs(inputs);
 
-            Logger.processInputs(
-                    String.format("%s/%s", PhotonVision.PhotonLogKey, visionIONames.get(visionIO)),
-                    inputs
-            );
+            final String logKey = String.format("%s/%s", PhotonVision.PhotonLogKey, visionIONames.get(visionIO));
+            Logger.processInputs(logKey, inputs);
 
             final PhotonPipelineResult result = inputs.latestResult;
             VisionUtils.correctPipelineResultTimestamp(result);

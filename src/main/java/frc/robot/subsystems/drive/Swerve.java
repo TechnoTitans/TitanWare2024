@@ -17,10 +17,7 @@ import edu.wpi.first.math.estimator.SwerveDrivePoseEstimator;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.geometry.Translation2d;
-import edu.wpi.first.math.kinematics.ChassisSpeeds;
-import edu.wpi.first.math.kinematics.SwerveDriveKinematics;
-import edu.wpi.first.math.kinematics.SwerveModulePosition;
-import edu.wpi.first.math.kinematics.SwerveModuleState;
+import edu.wpi.first.math.kinematics.*;
 import edu.wpi.first.math.trajectory.TrapezoidProfile;
 import edu.wpi.first.math.util.Units;
 import edu.wpi.first.units.Current;
@@ -72,6 +69,9 @@ public class Swerve extends SubsystemBase {
     private final HardwareConstants.GyroConstants gyroConstants;
     private final SwerveDriveKinematics kinematics;
     private final SwerveDrivePoseEstimator poseEstimator;
+
+    private final SwerveDriveOdometry wheelOnlyOdometry;
+    private Pose2d lastWheelOnlyPose = new Pose2d();
 
     private final SwerveModule frontLeft, frontRight, backLeft, backRight;
     private final SwerveModule[] swerveModules;
@@ -134,6 +134,13 @@ public class Swerve extends SubsystemBase {
                 new Pose2d(),
                 Constants.Vision.STATE_STD_DEVS,
                 VecBuilder.fill(0.6, 0.6, Units.degreesToRadians(80))
+        );
+
+        this.wheelOnlyOdometry = new SwerveDriveOdometry(
+                kinematics,
+                getGyro().getYawRotation2d(),
+                getModulePositions(),
+                lastWheelOnlyPose
         );
 
         this.headingController = new PIDController(4, 0, 0);
@@ -277,6 +284,7 @@ public class Swerve extends SubsystemBase {
                 positions[moduleIndex] = swerveModules[moduleIndex].getOdometryPositions()[timestampIndex];
             }
 
+            wheelOnlyOdometry.update(Rotation2d.fromDegrees(gyroYawPositions[timestampIndex]), positions);
             poseEstimator.updateWithTime(
                     sampleTimestamps[timestampIndex],
                     Rotation2d.fromDegrees(gyroYawPositions[timestampIndex]),
@@ -323,6 +331,12 @@ public class Swerve extends SubsystemBase {
         Logger.recordOutput(
                 OdometryLogKey + "/OdometryUpdatePeriodMs", odometryUpdatePeriodMs
         );
+
+        final Pose2d wheelOnlyPose = wheelOnlyOdometry.getPoseMeters();
+        Logger.recordOutput(OdometryLogKey + "/WheelOnlyRobot2d", wheelOnlyPose);
+        Logger.recordOutput(OdometryLogKey + "/WheelOnlyTwist", lastWheelOnlyPose.log(wheelOnlyPose));
+        lastWheelOnlyPose = wheelOnlyPose;
+
         Logger.recordOutput(OdometryLogKey + "/Robot2d", getPose());
         Logger.recordOutput(OdometryLogKey + "/Robot3d", GyroUtils.robotPose2dToPose3dWithGyro(
                 getPose(),
@@ -382,16 +396,17 @@ public class Swerve extends SubsystemBase {
     }
 
     public void zeroRotation() {
-        poseEstimator.resetPosition(
-                gyro.getYawRotation2d(),
-                getModulePositions(),
-                new Pose2d(
-                        getPose().getTranslation(),
-                        Robot.IsRedAlliance.getAsBoolean()
-                                ? Rotation2d.fromDegrees(180)
-                                : Rotation2d.fromDegrees(0)
-                )
+        final Rotation2d gyroYaw = gyro.getYawRotation2d();
+        final SwerveModulePosition[] positions = getModulePositions();
+        final Pose2d pose = new Pose2d(
+                getPose().getTranslation(),
+                Robot.IsRedAlliance.getAsBoolean()
+                        ? Rotation2d.fromDegrees(180)
+                        : Rotation2d.fromDegrees(0)
         );
+
+        poseEstimator.resetPosition(gyroYaw, positions, pose);
+        wheelOnlyOdometry.resetPosition(gyroYaw, positions, pose);
     }
 
     public Command zeroRotationCommand() {
@@ -399,7 +414,11 @@ public class Swerve extends SubsystemBase {
     }
 
     public void resetPose(final Pose2d robotPose) {
-        poseEstimator.resetPosition(gyro.getYawRotation2d(), getModulePositions(), robotPose);
+        final Rotation2d gyroYaw = gyro.getYawRotation2d();
+        final SwerveModulePosition[] positions = getModulePositions();
+
+        poseEstimator.resetPosition(gyroYaw, positions, robotPose);
+        wheelOnlyOdometry.resetPosition(gyroYaw, positions, robotPose);
     }
 
     public Command resetPoseCommand(final Pose2d robotPose) {
