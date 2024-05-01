@@ -80,8 +80,7 @@ public class AutoChooser<I, V extends AutoOption> implements AutoCloseable, Logg
     }
 
     public V getSelected() {
-        final String selectedAutoName = selectedAutoSubscriber.get();
-        return selectedAutoName != null ? autoMap.get(selectedAutoName) : defaultAuto;
+        return selectedAuto != null ? autoMap.get(selectedAuto) : defaultAuto;
     }
 
     public V get(final String name) {
