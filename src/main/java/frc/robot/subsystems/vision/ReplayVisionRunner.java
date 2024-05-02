@@ -4,6 +4,7 @@ import edu.wpi.first.apriltag.AprilTagFieldLayout;
 import edu.wpi.first.math.geometry.Pose3d;
 import frc.robot.constants.Constants;
 import frc.robot.subsystems.vision.cameras.TitanCamera;
+import frc.robot.subsystems.vision.gtsam.GTSAMInterface;
 import frc.robot.utils.closeables.ToClose;
 import org.littletonrobotics.junction.Logger;
 import org.photonvision.EstimatedRobotPose;
@@ -11,6 +12,7 @@ import org.photonvision.PhotonCamera;
 import org.photonvision.PhotonPoseEstimator;
 import org.photonvision.targeting.PhotonPipelineResult;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -29,6 +31,7 @@ public class ReplayVisionRunner implements PhotonVisionRunner {
     private final Map<ReplayVisionRunner.VisionIOApriltagsReplay, VisionIO.VisionIOInputs> visionIOInputsMap;
     private final Map<ReplayVisionRunner.VisionIOApriltagsReplay, PhotonPoseEstimator> photonPoseEstimatorMap;
 
+    private final GTSAMInterface gtsamInterface;
     private final Map<VisionIO, EstimatedRobotPose> estimatedRobotPoseMap;
 
     public ReplayVisionRunner(
@@ -54,6 +57,8 @@ public class ReplayVisionRunner implements PhotonVisionRunner {
 
         this.visionIONames = visionIONames;
         this.photonPoseEstimatorMap = poseEstimatorMap;
+
+        this.gtsamInterface = new GTSAMInterface(new ArrayList<>(visionIONames.values()));
         this.estimatedRobotPoseMap = new HashMap<>();
     }
 
