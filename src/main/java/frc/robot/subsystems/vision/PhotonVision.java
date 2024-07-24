@@ -67,7 +67,8 @@ public class PhotonVision extends VirtualSubsystem {
     }
 
     private final PhotonVisionRunner runner;
-    private final Map<? extends VisionIO, VisionIO.VisionIOInputs> visionIOInputsMap;
+    private final Map<? extends VisionIO, VisionIO.VisionIOInputs> aprilTagVisionIOInputsMap;
+    private final Map<? extends VisionIO, VisionIO.VisionIOInputs> noteTrackingVisionIOInputsMap;
 
     private final Swerve swerve;
     private final SwerveDrivePoseEstimator poseEstimator;
@@ -121,7 +122,8 @@ public class PhotonVision extends VirtualSubsystem {
 
         this.swerve = swerve;
         this.poseEstimator = poseEstimator;
-        this.visionIOInputsMap = runner.getApriltagVisionIOInputsMap();
+        this.aprilTagVisionIOInputsMap = runner.getApriltagVisionIOInputsMap();
+        this.noteTrackingVisionIOInputsMap = runner.getNoteTrackingVisionIOInputsMap();
 
         this.lastEstimatedRobotPose = new HashMap<>();
 
@@ -240,7 +242,7 @@ public class PhotonVision extends VirtualSubsystem {
     private void update() {
         for (
                 final Map.Entry<? extends VisionIO, VisionIO.VisionIOInputs>
-                        visionIOInputsEntry : visionIOInputsMap.entrySet()
+                        visionIOInputsEntry : aprilTagVisionIOInputsMap.entrySet()
         ) {
             final VisionIO visionIO = visionIOInputsEntry.getKey();
             final VisionIO.VisionIOInputs inputs = visionIOInputsEntry.getValue();
@@ -268,6 +270,13 @@ public class PhotonVision extends VirtualSubsystem {
                         stdDevs
                 );
             }
+        }
+
+       for (
+                final Map.Entry<? extends VisionIO, VisionIO.VisionIOInputs>
+                        visionIOInputsEntry : noteTrackingVisionIOInputsMap.entrySet()
+        ) {
+            final VisionIO visionIO = visionIOInputsEntry.getKey();
 
             final NoteTrackingResult noteTrackingResult = runner.getNoteTrackingResult(visionIO);
             if (noteTrackingResult != null) {
@@ -296,7 +305,7 @@ public class PhotonVision extends VirtualSubsystem {
                 final Map.Entry<VisionIO, EstimatedRobotPose>
                         estimatedRobotPoseEntry : lastEstimatedRobotPose.entrySet()
         ) {
-            final VisionIO.VisionIOInputs inputs = visionIOInputsMap.get(estimatedRobotPoseEntry.getKey());
+            final VisionIO.VisionIOInputs inputs = aprilTagVisionIOInputsMap.get(estimatedRobotPoseEntry.getKey());
             final EstimatedRobotPose estimatedRobotPose = estimatedRobotPoseEntry.getValue();
 
             final String logKey = PhotonVision.PhotonLogKey + "/" + inputs.name;

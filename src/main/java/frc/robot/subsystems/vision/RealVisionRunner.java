@@ -171,6 +171,11 @@ public class RealVisionRunner implements PhotonVisionRunner {
     }
 
     @Override
+    public Map<VisionIONoteTrackingReal, VisionIO.VisionIOInputs> getNoteTrackingVisionIOInputsMap() {
+        return noteTrackingVisionIOInputsMap;
+    }
+
+    @Override
     public EstimatedRobotPose getEstimatedRobotPose(final VisionIO visionIO) {
         return estimatedRobotPoseMap.get(visionIO);
     }

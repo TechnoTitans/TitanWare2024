@@ -23,10 +23,11 @@ public class NoteTrackingResult {
     public final Rotation2d bestTargetPitch;
     public final double bestTargetDistance;
 
-    public NoteTrackingResult(final Transform3d robotToCamera, final PhotonPipelineResult result) {
+    public NoteTrackingResult(final Transform3d robotToCamera, final PhotonPipelineResult pipelineResult) {
         this.robotToCamera = robotToCamera;
-        this.pipelineResult = result;
-        if (result == null || !result.hasTargets()) {
+        this.pipelineResult = pipelineResult;
+
+        if (pipelineResult == null || !pipelineResult.hasTargets()) {
             this.hasTargets = false;
             this.bestTarget = null;
             this.bestTargetYaw = new Rotation2d();
