@@ -81,7 +81,7 @@ public class NoteState extends VirtualSubsystem {
                 .onTrue(Commands.either(
                         Commands.sequence(
                                 setState(State.STORING_FORWARD),
-                                intake.storeCommand()
+                                intake.storeCommand().asProxy()
                         ),
                         setState(State.STORED),
                         shouldStoreNotes
@@ -90,7 +90,7 @@ public class NoteState extends VirtualSubsystem {
                 .onTrue(Commands.either(
                         Commands.sequence(
                                 setState(State.STORING_BACKWARD),
-                                intake.storeCommand()
+                                intake.storeCommand().asProxy()
                         ),
                         setState(State.STORED),
                         shouldStoreNotes

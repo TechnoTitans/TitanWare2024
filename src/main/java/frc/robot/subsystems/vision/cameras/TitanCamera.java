@@ -14,6 +14,7 @@ public enum TitanCamera {
             Constants.Vision.ROBOT_TO_FL_APRILTAG,
             CameraProperties.SEE3CAM_24CUG,
             1.0,
+            true,
             new TitanCameraCalibration()
                     .withCalibration(
                             CameraProperties.Resolution.R1920x1080,
@@ -60,6 +61,7 @@ public enum TitanCamera {
             Constants.Vision.ROBOT_TO_FC_APRILTAG,
             CameraProperties.ARDUCAM_OV9281,
             2.5,
+            true,
             new TitanCameraCalibration()
                     .withCalibration(
                             CameraProperties.Resolution.R640x480,
@@ -101,6 +103,7 @@ public enum TitanCamera {
             Constants.Vision.ROBOT_TO_FR_APRILTAG,
             CameraProperties.SEE3CAM_24CUG,
             1.0,
+            true,
             new TitanCameraCalibration()
                     .withCalibration(
                             CameraProperties.Resolution.R1920x1080,
@@ -143,7 +146,7 @@ public enum TitanCamera {
             false
     ),
     PHOTON_BC_NOTE_TRACKING(
-            "Photon_BC",
+            "BC_NoteTracking",
             new Transform3d(), // TODO: get transform
             CameraProperties.ARDUCAM_OV9782,
             false
@@ -161,6 +164,7 @@ public enum TitanCamera {
             final Transform3d robotToCameraTransform,
             final CameraProperties cameraProperties,
             final double stdDevFactor,
+            final boolean requiresCalibration,
             final TitanCameraCalibration titanCameraCalibration,
             final boolean driverCam
     ) {
@@ -172,7 +176,7 @@ public enum TitanCamera {
         this.driverCam = driverCam;
 
         // if it isn't a driverCam, then it should have proper calibration data
-        if (!driverCam) {
+        if (!driverCam && requiresCalibration) {
             for (final CameraProperties.Resolution resolution : cameraProperties.getResolutions()) {
                 if (!cameraCalibration.hasResolution(resolution)) {
                     throw new RuntimeException(
@@ -199,6 +203,7 @@ public enum TitanCamera {
                 robotToCameraTransform,
                 cameraProperties,
                 1.0,
+                false,
                 TitanCameraCalibration.fromSimCameraProperties(SimCameraProperties.PERFECT_90DEG()),
                 driverCam
         );

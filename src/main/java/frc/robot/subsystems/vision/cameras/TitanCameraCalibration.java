@@ -40,7 +40,11 @@ public class TitanCameraCalibration {
     }
 
     private static double getPxAvgError(final List<Double> pxErrors) {
-        return pxErrors.stream().mapToDouble(error -> error).average().orElse(0);
+        double sum = 0;
+        for (final double pxError : pxErrors) {
+            sum += pxError;
+        }
+        return sum / pxErrors.size();
     }
 
     private SimCameraProperties getOrMake(final CameraProperties.Resolution resolution) {

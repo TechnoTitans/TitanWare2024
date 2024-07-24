@@ -87,7 +87,7 @@ public class PhotonVision extends VirtualSubsystem {
                             new RealVisionRunner.VisionIOApriltagReal(TitanCamera.PHOTON_FR_APRILTAG)
                     ),
                     PhotonVision.makeVisionIOInputsMap(
-//                            new RealVisionRunner.VisionIONoteTrackingReal(TitanCamera.PHOTON_BC_NOTE_TRACKING)
+                            new RealVisionRunner.VisionIONoteTrackingReal(TitanCamera.PHOTON_BC_NOTE_TRACKING)
                     )
             );
             case SIM -> {
@@ -109,7 +109,14 @@ public class PhotonVision extends VirtualSubsystem {
                         )
                 );
             }
-            case REPLAY -> new PhotonVisionRunner() {};
+            case REPLAY -> new ReplayVisionRunner(
+                    PhotonVision.apriltagFieldLayout,
+                    PhotonVision.makeVisionIOInputsMap(
+                            new ReplayVisionRunner.VisionIOApriltagsReplay(TitanCamera.PHOTON_FL_APRILTAG),
+                            new ReplayVisionRunner.VisionIOApriltagsReplay(TitanCamera.PHOTON_FC_APRILTAG),
+                            new ReplayVisionRunner.VisionIOApriltagsReplay(TitanCamera.PHOTON_FR_APRILTAG)
+                    )
+            );
         };
 
         this.swerve = swerve;
@@ -180,36 +187,35 @@ public class PhotonVision extends VirtualSubsystem {
         final double secondsSinceLastUpdate =
                 estimatedRobotPose.timestampSeconds - lastEstimatedRobotPose.timestampSeconds;
 
-        if (lastEstimatedRobotPose.timestampSeconds == -1 || secondsSinceLastUpdate <= 0) {
+        // TODO: this rejection showed up very often at event-cmp and didn't seem to help much,
+        //  maybe re-evaluate why we added this rejection in the first place? (removed for now)
+//        if (lastEstimatedRobotPose.timestampSeconds == -1 || secondsSinceLastUpdate <= 0) {
             // TODO: do we always need to reject immediately here? maybe we can still use the next estimation even
             //  if the last estimation had no timestamp or was very close
-            return EstimationRejectionReason.LAST_ESTIMATED_POSE_TIMESTAMP_INVALID_OR_TOO_CLOSE;
+//            return EstimationRejectionReason.LAST_ESTIMATED_POSE_TIMESTAMP_INVALID_OR_TOO_CLOSE;
+//        }
+
+        // Only try calculating this rejection strategy if time > 0
+        if (secondsSinceLastUpdate > 0) {
+            final Pose2d nextEstimatedPosition2d = nextEstimatedPosition.toPose2d();
+            final Pose2d lastEstimatedPosition2d = lastEstimatedRobotPose.estimatedPose.toPose2d();
+            final Twist2d twist2dToNewEstimation = lastEstimatedPosition2d.log(nextEstimatedPosition2d);
+
+            final double xVel = twist2dToNewEstimation.dx / secondsSinceLastUpdate;
+            final double yVel = twist2dToNewEstimation.dy / secondsSinceLastUpdate;
+            final double thetaVel = twist2dToNewEstimation.dtheta / secondsSinceLastUpdate;
+            final double translationVel = Math.hypot(xVel, yVel);
+
+            Logger.recordOutput(PhotonLogKey + "/Rejection/TranslationVel", translationVel);
+            Logger.recordOutput(PhotonLogKey + "/Rejection/ThetaVel", thetaVel);
+
+            if ((Math.abs(translationVel) >= maxLinearVelocity + PhotonVision.TranslationalVelocityTolerance)
+                    || (Math.abs(thetaVel) >= maxAngularVelocity + PhotonVision.AngularVelocityTolerance)) {
+                // reject sudden pose changes resulting in an impossible velocity (cannot reach)
+                return EstimationRejectionReason.POSE_IMPOSSIBLE_VELOCITY;
+            }
         }
 
-        final Pose2d nextEstimatedPosition2d = nextEstimatedPosition.toPose2d();
-        final Pose2d lastEstimatedPosition2d = lastEstimatedRobotPose.estimatedPose.toPose2d();
-        final Twist2d twist2dToNewEstimation = lastEstimatedPosition2d.log(nextEstimatedPosition2d);
-
-        final double xVel = twist2dToNewEstimation.dx / secondsSinceLastUpdate;
-        final double yVel = twist2dToNewEstimation.dy / secondsSinceLastUpdate;
-        final double thetaVel = twist2dToNewEstimation.dtheta / secondsSinceLastUpdate;
-        final double translationVel = Math.hypot(xVel, yVel);
-
-        Logger.recordOutput(
-                PhotonLogKey + "/TranslationVel", translationVel
-        );
-        Logger.recordOutput(
-                PhotonLogKey + "/ThetaVel", thetaVel
-        );
-
-        // assume hypot is positive (>= 0)
-        if ((translationVel >= maxLinearVelocity + PhotonVision.TranslationalVelocityTolerance)
-                || (Math.abs(thetaVel) >= maxAngularVelocity + PhotonVision.AngularVelocityTolerance)) {
-            // reject sudden pose changes resulting in an impossible velocity (cannot reach)
-            return EstimationRejectionReason.POSE_IMPOSSIBLE_VELOCITY;
-        }
-
-        // TODO: more rejection stuff
         return EstimationRejectionReason.DID_NOT_REJECT;
     }
 

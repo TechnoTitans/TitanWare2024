@@ -33,7 +33,7 @@ public class Gyro {
         };
 
         this.inputs = new GyroIOInputsAutoLogged();
-        this.isReal = Constants.CURRENT_MODE == Constants.RobotMode.REAL;
+        this.isReal = mode == Constants.RobotMode.REAL;
 
         this.gyroIO.config();
     }

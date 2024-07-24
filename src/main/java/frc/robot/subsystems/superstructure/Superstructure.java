@@ -19,13 +19,14 @@ public class Superstructure extends VirtualSubsystem {
     private final Arm arm;
     private final Shooter shooter;
 
-    private Goal goal = Goal.IDLE;
+    private Goal desiredGoal = Goal.IDLE;
+    private Goal currentGoal = desiredGoal;
     public final Trigger atSetpoint;
 
     public enum Goal {
+        NONE(Arm.Goal.NONE, Shooter.Goal.NONE),
         IDLE(Arm.Goal.STOW, Shooter.Goal.IDLE),
         SUBWOOFER(Arm.Goal.SUBWOOFER, Shooter.Goal.SUBWOOFER),
-        READY_AMP(Arm.Goal.AMP, Shooter.Goal.READY_AMP),
         AMP(Arm.Goal.AMP, Shooter.Goal.AMP),
         EJECT(Arm.Goal.STOW, Shooter.Goal.EJECT),
         FERRY_CENTERLINE(Arm.Goal.FERRY_CENTERLINE, Shooter.Goal.FERRY_CENTERLINE),
@@ -43,39 +44,59 @@ public class Superstructure extends VirtualSubsystem {
     public Superstructure(final Arm arm, final Shooter shooter) {
         this.arm = arm;
         this.shooter = shooter;
-        this.atSetpoint = arm.atPivotSetpoint.and(shooter.atVelocitySetpoint);
+        this.atSetpoint = arm.atPivotSetpoint
+                .and(shooter.atVelocitySetpoint)
+                .and(() -> currentGoal == desiredGoal);
     }
 
     @Override
     public void periodic() {
+        if (desiredGoal != currentGoal) {
+            arm.setGoal(desiredGoal.armGoal);
+            shooter.setGoal(desiredGoal.shooterGoal);
+            this.currentGoal = desiredGoal;
+        }
+
+        Logger.recordOutput(LogKey + "/Goal", currentGoal.toString());
         Logger.recordOutput(LogKey + "/AtSetpoint", atSetpoint.getAsBoolean());
-        Logger.recordOutput(LogKey + "/Goal", goal.toString());
     }
 
     public Goal getGoal() {
-        return goal;
+        return desiredGoal;
     }
 
     public Command toInstantGoal(final Goal goal) {
-        return Commands.parallel(
-                arm.toInstantGoal(goal.armGoal),
-                shooter.toInstantGoal(goal.shooterGoal))
-                .beforeStarting(() -> this.goal = goal);
+        return Commands.runOnce(() -> this.desiredGoal = goal);
     }
 
     public Command toGoal(final Goal goal) {
-        return Commands.parallel(
-                        arm.toGoal(goal.armGoal),
-                        shooter.toGoal(goal.shooterGoal))
-                .beforeStarting(() -> this.goal = goal)
-                .finallyDo(() -> this.goal = Goal.IDLE);
+        return Commands.runEnd(() -> this.desiredGoal = goal, () -> this.desiredGoal = Goal.IDLE);
     }
 
     public Command runGoal(final Goal goal) {
+        return Commands.run(() -> this.desiredGoal = goal);
+    }
+
+    public Command toState(final Supplier<ShotParameters.Parameters> parametersSupplier) {
+        return toState(
+                () -> parametersSupplier.get().armPivotAngle(),
+                () -> parametersSupplier.get().ampVelocityRotsPerSec(),
+                () -> parametersSupplier.get().leftVelocityRotsPerSec(),
+                () -> parametersSupplier.get().rightVelocityRotsPerSec()
+        );
+    }
+
+    public Command toState(
+            final Supplier<Rotation2d> armPivotPosition,
+            final DoubleSupplier ampVelocityRotsPerSec,
+            final DoubleSupplier leftVelocityRotsPerSec,
+            final DoubleSupplier rightVelocityRotsPerSec
+    ) {
         return Commands.parallel(
-                        arm.runGoal(goal.armGoal),
-                        shooter.runGoal(goal.shooterGoal))
-                .beforeStarting(() -> this.goal = goal);
+                Commands.runEnd(() -> this.desiredGoal = Goal.NONE, () -> this.desiredGoal = Goal.IDLE),
+                arm.toPivotPositionCommand(() -> armPivotPosition.get().getRotations()),
+                shooter.toVelocityCommand(ampVelocityRotsPerSec, leftVelocityRotsPerSec, rightVelocityRotsPerSec)
+        );
     }
 
     public Command runState(final Supplier<ShotParameters.Parameters> parametersSupplier) {
@@ -94,8 +115,9 @@ public class Superstructure extends VirtualSubsystem {
             final DoubleSupplier rightVelocityRotsPerSec
     ) {
         return Commands.parallel(
-                arm.toPivotPositionCommand(() -> armPivotPosition.get().getRotations()),
-                shooter.toVelocityCommand(ampVelocityRotsPerSec, leftVelocityRotsPerSec, rightVelocityRotsPerSec)
+                Commands.run(() -> this.desiredGoal = Goal.NONE),
+                arm.runPivotPositionCommand(() -> armPivotPosition.get().getRotations()),
+                shooter.runVelocityCommand(ampVelocityRotsPerSec, leftVelocityRotsPerSec, rightVelocityRotsPerSec)
         );
     }
 
@@ -106,6 +128,7 @@ public class Superstructure extends VirtualSubsystem {
             final double rightVolts
     ) {
         return Commands.parallel(
+                Commands.run(() -> this.desiredGoal = Goal.NONE),
                 arm.runPivotVoltageCommand(armPivotVolts),
                 shooter.runVoltageCommand(
                         ampVolts,

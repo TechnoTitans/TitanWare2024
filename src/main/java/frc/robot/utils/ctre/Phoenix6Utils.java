@@ -8,6 +8,8 @@ import com.ctre.phoenix6.configs.TalonFXConfigurator;
 import com.ctre.phoenix6.hardware.ParentDevice;
 import com.ctre.phoenix6.hardware.TalonFX;
 import edu.wpi.first.wpilibj.DriverStation;
+import frc.robot.constants.Constants;
+import frc.robot.constants.SimConstants;
 
 public class Phoenix6Utils {
     /**
@@ -84,7 +86,16 @@ public class Phoenix6Utils {
     ) {
         final TalonFXConfigurator configurator = talonFX.getConfigurator();
         final TalonFXConfiguration configuration = new TalonFXConfiguration();
-        Phoenix6Utils.reportIfNotOk(talonFX, configurator.refresh(configuration));
+
+        if (Constants.CURRENT_MODE == Constants.RobotMode.REAL) {
+            Phoenix6Utils.reportIfNotOk(talonFX, configurator.refresh(configuration));
+        } else {
+            // use longer timeout when in sim
+            Phoenix6Utils.reportIfNotOk(
+                    talonFX,
+                    configurator.refresh(configuration, SimConstants.CTRE.CONFIG_TIMEOUT_SECONDS)
+            );
+        }
 
         configuration.SoftwareLimitSwitch.ReverseSoftLimitThreshold = reverseSoftLimitRots;
         configuration.SoftwareLimitSwitch.ReverseSoftLimitEnable = true;
