@@ -98,7 +98,8 @@ public class Robot extends LoggedRobot {
 
     private final Trigger autoEnabled = new Trigger(DriverStation::isAutonomousEnabled);
     private final Trigger teleopEnabled = new Trigger(DriverStation::isTeleopEnabled);
-    private final Trigger endgameTrigger = new Trigger(() -> DriverStation.getMatchTime() <= 20).and(teleopEnabled);
+    private final Trigger endgameTrigger = new Trigger(DriverStation::isFMSAttached)
+            .and(() -> DriverStation.getMatchTime() <= 20).and(teleopEnabled);
 
     @Override
     public void robotInit() {
