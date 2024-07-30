@@ -26,7 +26,6 @@ import org.photonvision.simulation.VisionSystemSim;
 import org.photonvision.targeting.PhotonTrackedTarget;
 
 import java.io.UncheckedIOException;
-import java.lang.reflect.Array;
 import java.util.*;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
@@ -247,6 +246,7 @@ public class PhotonVision extends VirtualSubsystem {
         ) {
             final VisionIO visionIO = visionIOInputsEntry.getKey();
             final VisionIO.VisionIOInputs inputs = visionIOInputsEntry.getValue();
+            final String logKey = PhotonLogKey + "/" + inputs.name;
 
             final EstimatedRobotPose estimatedRobotPose = runner.getEstimatedRobotPose(visionIO);
             if (estimatedRobotPose != null) {
@@ -254,15 +254,13 @@ public class PhotonVision extends VirtualSubsystem {
                 final EstimationRejectionReason rejectionReason =
                         shouldRejectEstimation(lastEstimatedPose, estimatedRobotPose);
 
-                Logger.recordOutput(
-                        PhotonLogKey + "/RejectionReason", rejectionReason.getId()
-                );
+                Logger.recordOutput(logKey + "/RejectionReason", rejectionReason.getId());
                 if (rejectionReason.wasRejected()) {
                     continue;
                 }
 
                 final Vector<N3> stdDevs = calculateStdDevs(estimatedRobotPose, inputs.stdDevFactor);
-                Logger.recordOutput(PhotonLogKey + "/" + inputs.name + "/StdDevs", stdDevs.getData());
+                Logger.recordOutput(logKey + "/StdDevs", stdDevs.getData());
 
                 lastEstimatedRobotPose.put(visionIO, estimatedRobotPose);
                 poseEstimator.addVisionMeasurement(
@@ -278,25 +276,27 @@ public class PhotonVision extends VirtualSubsystem {
                         visionIOInputsEntry : noteTrackingVisionIOInputsMap.entrySet()
         ) {
             final VisionIO visionIO = visionIOInputsEntry.getKey();
+            final VisionIO.VisionIOInputs inputs = visionIOInputsEntry.getValue();
+            final String logKey = PhotonLogKey + "/" + inputs.name;
 
             final NoteTrackingResult noteTrackingResult = runner.getNoteTrackingResult(visionIO);
             if (noteTrackingResult != null) {
-                Logger.recordOutput(PhotonLogKey + "/NoteTracking/HasTargets", noteTrackingResult.hasTargets);
+                Logger.recordOutput(logKey + "/HasTargets", noteTrackingResult.hasTargets);
                 final Optional<Pose2d> optionalBestNotePose = noteTrackingResult
                         .getBestNotePose(timestamp -> Optional.of(swerve.getPose()));
 
-                Logger.recordOutput(PhotonLogKey + "/NoteTracking/HasBestNotePose", optionalBestNotePose.isPresent());
+                Logger.recordOutput(logKey + "/HasBestNotePose", optionalBestNotePose.isPresent());
                 Logger.recordOutput(
-                        PhotonLogKey + "/NoteTracking/BestNotePose",
+                        logKey + "/BestNotePose",
                         optionalBestNotePose.orElseGet(Pose2d::new)
                 );
 
                 final Pose2d[] notePose2ds = noteTrackingResult
                         .getNotePoses(timestamp -> Optional.of(swerve.getPose()));
 
-                Logger.recordOutput(PhotonLogKey + "/NoteTracking/NotePoses", notePose2ds);
+                Logger.recordOutput(logKey + "/NotePoses", notePose2ds);
             } else {
-                Logger.recordOutput(PhotonLogKey + "/NoteTracking/HasTargets", false);
+                Logger.recordOutput(logKey + "/HasTargets", false);
             }
         }
     }
