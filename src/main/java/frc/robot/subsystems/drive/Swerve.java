@@ -89,6 +89,7 @@ public class Swerve extends SubsystemBase {
     private boolean headingControllerActive = false;
     private Rotation2d headingTarget = new Rotation2d();
     private final PIDController headingController;
+    private final Pose2d holonomicPoseTolerance = new Pose2d(0.05, 0.05, Rotation2d.fromDegrees(6));
 
     public final Trigger atHolonomicDrivePose;
     private boolean holonomicControllerActive = false;
@@ -612,6 +613,26 @@ public class Swerve extends SubsystemBase {
                 runOnce(this::stop)
         ).finallyDo(() -> holonomicControllerActive = false);
     }
+
+    public Command driveToPose(final Supplier<Pose2d> poseSupplier, final Pose2d poseTolerance) {
+        return Commands.sequence(
+                runOnce(() -> {
+                    holonomicControllerActive = true;
+                    holonomicDriveWithPIDController.setTolerance(poseTolerance);
+                    holonomicDriveWithPIDController.reset(getPose(), getRobotRelativeSpeeds());
+                }),
+                run(() -> {
+                    this.holonomicPoseTarget = poseSupplier.get();
+                    drive(holonomicDriveWithPIDController.calculate(getPose(), holonomicPoseTarget));
+                }).until(holonomicDriveWithPIDController::atReference),
+                runOnce(this::stop)
+        ).finallyDo(() -> {
+            holonomicControllerActive = false;
+            holonomicDriveWithPIDController.setTolerance(holonomicPoseTolerance);
+        });
+    }
+
+
 
     public Command driveToOptionalPose(final Supplier<Optional<Pose2d>> poseSupplier) {
         return Commands.sequence(

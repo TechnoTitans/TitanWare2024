@@ -1248,13 +1248,18 @@ public class Autos {
 
         autoTriggers.autoEnabled().whileTrue(preloadSubwooferAndFollow0(autoTriggers.trajectories, timer));
 
+        final ChoreoTrajectory nextTrajectory = autoTriggers.trajectories.get(1);
         autoTriggers.atTime(2.1).onTrue(
                 Commands.parallel(
-                        intake.intakeCommand(),
+                        intake.intakeCommand().asProxy(),
                         Commands.sequence(
 //                                swerve.driveToOptionalPose(() -> photonVision.getBestNotePose(swerve::getPose)), //idk if this will intake it
                                 swerve.driveToPose(() -> new Pose2d(8.282, 5.787, Rotation2d.fromRadians(2.458))),
-                                swerve.driveToPose(() -> autoTriggers.trajectories.get(1).getInitialPose())
+                                swerve.driveToPose(
+                                        nextTrajectory::getInitialPose,
+                                        new Pose2d(1.5, 1.5, Rotation2d.fromDegrees(6))
+                                ),
+                                followPath(nextTrajectory, timer).asProxy()
                         ),
                         Commands.sequence(
                                 Commands.waitUntil(noteState.hasNote),
