@@ -81,7 +81,7 @@ public class Robot extends LoggedRobot {
 
     public final NoteState noteState = new NoteState(Constants.CURRENT_MODE, intake);
     public final ShootCommands shootCommands = new ShootCommands(swerve, intake, superstructure, noteState);
-    public final Autos autos = new Autos(swerve, intake, superstructure, noteState, shootCommands);
+    public final Autos autos = new Autos(swerve, intake, superstructure, photonVision, noteState, shootCommands);
     public final AutoChooser<String, AutoOption> autoChooser = new AutoChooser<>(
             new AutoOption(
                     "DoNothing",
@@ -466,6 +466,12 @@ public class Robot extends LoggedRobot {
         autoChooser.addAutoOption(new AutoOption(
                 "Walton",
                 autos.walton(),
+                Constants.CompetitionType.TESTING
+        ));
+
+        autoChooser.addAutoOption(new AutoOption(
+                "FollowNote",
+                autos.followNote(),
                 Constants.CompetitionType.TESTING
         ));
     }

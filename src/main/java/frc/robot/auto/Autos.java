@@ -4,6 +4,7 @@ import com.choreo.lib.Choreo;
 import com.choreo.lib.ChoreoTrajectory;
 import edu.wpi.first.math.MathUtil;
 import edu.wpi.first.math.geometry.Pose2d;
+import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.Timer;
@@ -18,6 +19,9 @@ import frc.robot.subsystems.drive.Swerve;
 import frc.robot.subsystems.intake.Intake;
 import frc.robot.subsystems.superstructure.ShotParameters;
 import frc.robot.subsystems.superstructure.Superstructure;
+import frc.robot.subsystems.vision.PhotonVision;
+import jdk.jfr.Event;
+import org.opencv.photo.Photo;
 
 import java.util.*;
 import java.util.function.DoubleSupplier;
@@ -33,6 +37,7 @@ public class Autos {
     private final Swerve swerve;
     private final Intake intake;
     private final Superstructure superstructure;
+    private final PhotonVision photonVision;
 
     private final NoteState noteState;
     private final ShootCommands shootCommands;
@@ -41,12 +46,14 @@ public class Autos {
             final Swerve swerve,
             final Intake intake,
             final Superstructure superstructure,
+            final PhotonVision photonVision,
             final NoteState noteState,
             final ShootCommands shootCommands
     ) {
         this.swerve = swerve;
         this.intake = intake;
         this.superstructure = superstructure;
+        this.photonVision = photonVision;
         this.noteState = noteState;
         this.shootCommands = shootCommands;
     }
@@ -190,7 +197,7 @@ public class Autos {
 
         return doNothingEventLoop;
     }
-    
+
     public EventLoop sourceSpeaker0() {
         final Timer timer = new Timer();
         final AutoTriggers autoTriggers = new AutoTriggers("SourceSpeaker0", swerve::getPose, timer::get);
@@ -794,17 +801,17 @@ public class Autos {
         final AutoTriggers autoTriggers = new AutoTriggers(trajectoryName, swerve::getPose, timer::get);
 
         autoTriggers.autoEnabled().whileTrue(
-            Commands.sequence(
-                    noteState.setState(NoteState.State.STORED),
-                    resetPose(autoTriggers.trajectory),
-                    shootCommands.shootSubwoofer().withName("ShootPreload").asProxy(),
-                    Commands.runOnce(timer::reset),
-                    followIntakeAndInstantShoot(
-                            autoTriggers.trajectories.get(0),
-                            timer,
-                            0.4
-                    ).asProxy().withName("Follow0AndIntakeInstantShoot0")
-            ).withName("PreloadFollow0AndShoot0")
+                Commands.sequence(
+                        noteState.setState(NoteState.State.STORED),
+                        resetPose(autoTriggers.trajectory),
+                        shootCommands.shootSubwoofer().withName("ShootPreload").asProxy(),
+                        Commands.runOnce(timer::reset),
+                        followIntakeAndInstantShoot(
+                                autoTriggers.trajectories.get(0),
+                                timer,
+                                0.4
+                        ).asProxy().withName("Follow0AndIntakeInstantShoot0")
+                ).withName("PreloadFollow0AndShoot0")
         );
 
         autoTriggers.atTime(1.13).onTrue(
@@ -1219,5 +1226,18 @@ public class Autos {
         );
 
         return autoTriggers.eventLoop;
+    }
+
+    public EventLoop followNote() {
+        final EventLoop eventLoop = new EventLoop();
+        final Trigger trigger = new Trigger(eventLoop, DriverStation::isAutonomousEnabled);;
+
+        trigger.whileTrue(
+                Commands.repeatingSequence(
+                        swerve.driveToMaybePose(() -> photonVision.getBestNotePose(swerve::getPose))
+                )
+        );
+
+        return eventLoop;
     }
 }

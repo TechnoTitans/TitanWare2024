@@ -26,7 +26,9 @@ import org.photonvision.simulation.VisionSystemSim;
 import org.photonvision.targeting.PhotonTrackedTarget;
 
 import java.io.UncheckedIOException;
+import java.lang.reflect.Array;
 import java.util.*;
+import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
 public class PhotonVision extends VirtualSubsystem {
@@ -126,7 +128,6 @@ public class PhotonVision extends VirtualSubsystem {
         this.noteTrackingVisionIOInputsMap = runner.getNoteTrackingVisionIOInputsMap();
 
         this.lastEstimatedRobotPose = new HashMap<>();
-
         final Pose2d estimatedPose = poseEstimator.getEstimatedPosition();
         resetPosition(estimatedPose);
     }
@@ -192,8 +193,8 @@ public class PhotonVision extends VirtualSubsystem {
         // TODO: this rejection showed up very often at event-cmp and didn't seem to help much,
         //  maybe re-evaluate why we added this rejection in the first place? (removed for now)
 //        if (lastEstimatedRobotPose.timestampSeconds == -1 || secondsSinceLastUpdate <= 0) {
-            // TODO: do we always need to reject immediately here? maybe we can still use the next estimation even
-            //  if the last estimation had no timestamp or was very close
+        // TODO: do we always need to reject immediately here? maybe we can still use the next estimation even
+        //  if the last estimation had no timestamp or was very close
 //            return EstimationRejectionReason.LAST_ESTIMATED_POSE_TIMESTAMP_INVALID_OR_TOO_CLOSE;
 //        }
 
@@ -272,7 +273,7 @@ public class PhotonVision extends VirtualSubsystem {
             }
         }
 
-       for (
+        for (
                 final Map.Entry<? extends VisionIO, VisionIO.VisionIOInputs>
                         visionIOInputsEntry : noteTrackingVisionIOInputsMap.entrySet()
         ) {
@@ -290,10 +291,10 @@ public class PhotonVision extends VirtualSubsystem {
                         optionalBestNotePose.orElseGet(Pose2d::new)
                 );
 
-                final Pose2d[] notePoses = noteTrackingResult
+                final Pose2d[] notePose2ds = noteTrackingResult
                         .getNotePoses(timestamp -> Optional.of(swerve.getPose()));
 
-                Logger.recordOutput(PhotonLogKey + "/NoteTracking/NotePoses", notePoses);
+                Logger.recordOutput(PhotonLogKey + "/NoteTracking/NotePoses", notePose2ds);
             } else {
                 Logger.recordOutput(PhotonLogKey + "/NoteTracking/HasTargets", false);
             }
@@ -358,5 +359,36 @@ public class PhotonVision extends VirtualSubsystem {
 
     public void resetPosition(final Pose2d robotPose) {
         resetPosition(robotPose, swerve.getYaw());
+    }
+
+    public List<Pose2d> getNotePoses() {
+        final List<Pose2d> notePoses = new ArrayList<>();
+        for (final VisionIO visionIO : noteTrackingVisionIOInputsMap.keySet()) {
+            final NoteTrackingResult noteTrackingResult = runner.getNoteTrackingResult(visionIO);
+            if (noteTrackingResult != null) {
+                notePoses.addAll(Arrays.asList(noteTrackingResult
+                        .getNotePoses(timestamp -> Optional.of(swerve.getPose()))));
+            }
+        }
+        return notePoses;
+    }
+
+    public Optional<Pose2d> getBestNotePose(final Supplier<Pose2d> robotPoseSupplier) {
+        final List<Pose2d> notePoses = new ArrayList<>();
+
+        for (final VisionIO visionIO : noteTrackingVisionIOInputsMap.keySet()) {
+            final NoteTrackingResult noteTrackingResult = runner.getNoteTrackingResult(visionIO);
+            if (noteTrackingResult != null) {
+                final Optional<Pose2d> optionalBestNotePose = noteTrackingResult
+                        .getBestNotePose(timestamp -> Optional.of(swerve.getPose()));
+
+                optionalBestNotePose.ifPresent(notePoses::add);
+            }
+        }
+
+        notePoses.sort(Comparator.comparingDouble(pose ->
+                robotPoseSupplier.get().minus(pose).getTranslation().getNorm()));
+
+        return notePoses.isEmpty() ? Optional.empty() : Optional.of(notePoses.get(0));
     }
 }
