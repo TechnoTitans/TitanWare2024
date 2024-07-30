@@ -45,6 +45,7 @@ import frc.robot.utils.teleop.ControllerUtils;
 import frc.robot.utils.teleop.Profiler;
 import org.littletonrobotics.junction.Logger;
 
+import java.util.Optional;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.function.BooleanSupplier;
 import java.util.function.Consumer;
@@ -607,6 +608,25 @@ public class Swerve extends SubsystemBase {
                 run(() -> {
                     this.holonomicPoseTarget = poseSupplier.get();
                     drive(holonomicDriveWithPIDController.calculate(getPose(), holonomicPoseTarget));
+                }).until(holonomicDriveWithPIDController::atReference),
+                runOnce(this::stop)
+        ).finallyDo(() -> holonomicControllerActive = false);
+    }
+
+    public Command driveToMaybePose(final Supplier<Optional<Pose2d>> poseSupplier) {
+        return Commands.sequence(
+                runOnce(() -> {
+                    holonomicControllerActive = true;
+                    holonomicDriveWithPIDController.reset(getPose(), getRobotRelativeSpeeds());
+                }),
+                run(() -> {
+                    final Optional<Pose2d> pose = poseSupplier.get();
+                    if (pose.isPresent()) {
+                        this.holonomicPoseTarget = pose.get();
+                        drive(holonomicDriveWithPIDController.calculate(getPose(), holonomicPoseTarget));
+                    } else {
+                        stop();
+                    }
                 }).until(holonomicDriveWithPIDController::atReference),
                 runOnce(this::stop)
         ).finallyDo(() -> holonomicControllerActive = false);
