@@ -481,10 +481,6 @@ public class Robot extends LoggedRobot {
 
         //noinspection SuspiciousNameCombination
         this.driverController.rightTrigger(0.5, teleopEventLoop)
-                .whileTrue(shootCommands.readyShot(
-                        driverController::getLeftY,
-                        driverController::getLeftX
-                ))
                 .onFalse(shootCommands.deferredStopAimAndShoot());
 //                .whileTrue(shootCommands.deferredStopAimAndShoot());
 //                .whileTrue(shootCommands.teleopDriveAimAndShoot(

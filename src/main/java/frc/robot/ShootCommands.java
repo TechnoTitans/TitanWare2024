@@ -263,22 +263,15 @@ public class ShootCommands {
 
     public Command deferredStopAimAndShoot() {
         return Commands.deadline(
-                Commands.deadline(
-                        Commands.sequence(
-                                intake.runStopCommand()
-                                        .until(superstructure.atSetpoint.and(swerve.atHeadingSetpoint))
-                                        .withTimeout(1.5)
-                                        .andThen(intake.feedCommand())
-                                        .onlyIf(noteState.hasNote)
-                        ),
-                        Commands.defer(() ->
-                                        superstructure.toState(() -> ShotParameters.getShotParameters(swerve.getPose())),
-                                superstructure.getRequirements()
-                        )
+                Commands.sequence(
+                        intake.runStopCommand()
+                                .withTimeout(1)
+                                .andThen(intake.feedCommand())
+                                .onlyIf(noteState.hasNote)
                 ),
-                Commands.defer(
-                        () -> swerve.faceAngle(() -> ShootCommands.angleToSpeaker(swerve.getPose())),
-                        Set.of(swerve)
+                Commands.defer(() ->
+                                superstructure.toState(() -> ShotParameters.getShotParameters(swerve.getPose())),
+                        superstructure.getRequirements()
                 )
         );
     }
