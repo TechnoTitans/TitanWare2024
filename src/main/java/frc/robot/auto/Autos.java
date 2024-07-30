@@ -1252,11 +1252,9 @@ public class Autos {
                 Commands.parallel(
                         intake.intakeCommand(),
                         Commands.sequence(
-                                Commands.runOnce(timer::stop),
-                                swerve.driveToOptionalPose(() -> photonVision.getBestNotePose(swerve::getPose)), //idk if this will intake it
-//                                swerve.driveToPose(() -> new Pose2d(8.282, 5.787, Rotation2d.fromRadians(2.458))),
-                                swerve.driveToPose(() -> autoTriggers.trajectories.get(1).getInitialPose()),
-                                Commands.runOnce(timer::start)
+//                                swerve.driveToOptionalPose(() -> photonVision.getBestNotePose(swerve::getPose)), //idk if this will intake it
+                                swerve.driveToPose(() -> new Pose2d(8.282, 5.787, Rotation2d.fromRadians(2.458))),
+                                swerve.driveToPose(() -> autoTriggers.trajectories.get(1).getInitialPose())
                         ),
                         Commands.sequence(
                                 Commands.waitUntil(noteState.hasNote),
