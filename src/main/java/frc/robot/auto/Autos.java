@@ -4,7 +4,6 @@ import com.choreo.lib.Choreo;
 import com.choreo.lib.ChoreoTrajectory;
 import edu.wpi.first.math.MathUtil;
 import edu.wpi.first.math.geometry.Pose2d;
-import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.Timer;
@@ -20,8 +19,6 @@ import frc.robot.subsystems.intake.Intake;
 import frc.robot.subsystems.superstructure.ShotParameters;
 import frc.robot.subsystems.superstructure.Superstructure;
 import frc.robot.subsystems.vision.PhotonVision;
-import jdk.jfr.Event;
-import org.opencv.photo.Photo;
 
 import java.util.*;
 import java.util.function.DoubleSupplier;
@@ -1234,7 +1231,7 @@ public class Autos {
 
         trigger.whileTrue(
                 Commands.repeatingSequence(
-                        swerve.driveToMaybePose(() -> photonVision.getBestNotePose(swerve::getPose))
+                        swerve.driveToOptionalPose(() -> photonVision.getBestNotePose(swerve::getPose))
                 )
         );
 

@@ -613,7 +613,7 @@ public class Swerve extends SubsystemBase {
         ).finallyDo(() -> holonomicControllerActive = false);
     }
 
-    public Command driveToMaybePose(final Supplier<Optional<Pose2d>> poseSupplier) {
+    public Command driveToOptionalPose(final Supplier<Optional<Pose2d>> poseSupplier) {
         return Commands.sequence(
                 runOnce(() -> {
                     holonomicControllerActive = true;
