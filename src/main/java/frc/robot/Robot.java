@@ -85,7 +85,7 @@ public class Robot extends LoggedRobot {
     public final AutoChooser<String, AutoOption> autoChooser = new AutoChooser<>(
             new AutoOption(
                     "DoNothing",
-                    autos.doNothing(),
+                    autos.driveAndNoteDetect(),
                     Constants.CompetitionType.COMPETITION
             )
     );
