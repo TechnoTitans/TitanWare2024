@@ -45,6 +45,7 @@ public class SwerveModule {
 
     public void periodic() {
         final double modulePeriodicUpdateStart = Logger.getRealTimestamp();
+        Logger.processInputs(logKey, inputs);
 
         final int samples = inputs.odometryTimestampsSec.length;
         odometryPositions = new SwerveModulePosition[samples];
@@ -54,8 +55,6 @@ public class SwerveModule {
                     Rotation2d.fromRotations(inputs.odometryTurnPositionRots[i])
             );
         }
-
-        Logger.processInputs(logKey, inputs);
 
         Logger.recordOutput(logKey + "/CurrentState", getState());
         Logger.recordOutput(logKey + "/LastDesiredState", lastDesiredState);

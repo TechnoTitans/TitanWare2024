@@ -9,7 +9,6 @@ import edu.wpi.first.wpilibj.event.EventLoop;
 import edu.wpi.first.wpilibj.livewindow.LiveWindow;
 import edu.wpi.first.wpilibj2.command.CommandScheduler;
 import edu.wpi.first.wpilibj2.command.Commands;
-import edu.wpi.first.wpilibj2.command.Subsystem;
 import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
 import edu.wpi.first.wpilibj2.command.button.Trigger;
 import edu.wpi.first.wpilibj2.command.sysid.SysIdRoutine;
@@ -31,10 +30,12 @@ import frc.robot.subsystems.superstructure.arm.Arm;
 import frc.robot.subsystems.superstructure.shooter.Shooter;
 import frc.robot.subsystems.vision.PhotonVision;
 import frc.robot.utils.closeables.ToClose;
+import frc.robot.utils.logging.LogUtils;
 import frc.robot.utils.subsystems.VirtualSubsystem;
 import frc.robot.utils.teleop.ControllerUtils;
 import frc.robot.utils.teleop.Profiler;
 import org.littletonrobotics.junction.LogFileUtil;
+import org.littletonrobotics.junction.LogTable;
 import org.littletonrobotics.junction.LoggedRobot;
 import org.littletonrobotics.junction.Logger;
 import org.littletonrobotics.junction.networktables.NT4Publisher;
@@ -45,6 +46,7 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.Optional;
+import java.util.Set;
 import java.util.function.BooleanSupplier;
 
 public class Robot extends LoggedRobot {
@@ -78,7 +80,7 @@ public class Robot extends LoggedRobot {
     public final PhotonVision photonVision = new PhotonVision(Constants.CURRENT_MODE, swerve, swerve.getPoseEstimator());
 
     public final NoteState noteState = new NoteState(Constants.CURRENT_MODE, intake);
-    public final ShootCommands shootCommands = new ShootCommands(swerve, intake, superstructure);
+    public final ShootCommands shootCommands = new ShootCommands(swerve, intake, superstructure, noteState);
     public final Autos autos = new Autos(swerve, intake, superstructure, noteState, shootCommands);
     public final AutoChooser<String, AutoOption> autoChooser = new AutoChooser<>(
             new AutoOption(
@@ -95,7 +97,12 @@ public class Robot extends LoggedRobot {
     private final EventLoop teleopEventLoop = new EventLoop();
     private final EventLoop testEventLoop = new EventLoop();
 
+    private final Trigger autoEnabled = new Trigger(DriverStation::isAutonomousEnabled);
     private final Trigger teleopEnabled = new Trigger(DriverStation::isTeleopEnabled);
+    private final Trigger endgameTrigger = new Trigger(
+            () -> DriverStation.getMatchTime() <= 20
+                    && DriverStation.isFMSAttached()
+    ).and(teleopEnabled);
 
     @Override
     public void robotInit() {
@@ -169,10 +176,13 @@ public class Robot extends LoggedRobot {
                 Logger.addDataReceiver(new NT4Publisher());
             }
             case REPLAY -> {
+                // Disable Protobuf log overhead warning in replay
+                LogTable.disableProtobufWarning();
                 setUseTiming(false);
+
                 final String logPath = LogFileUtil.findReplayLog();
                 Logger.setReplaySource(new WPILOGReader(logPath));
-                Logger.addDataReceiver(new WPILOGWriter(LogFileUtil.addPathSuffix(logPath, "_sim")));
+                Logger.addDataReceiver(new WPILOGWriter(LogFileUtil.addPathSuffix(logPath, "_sim"), 0.005));
             }
         }
 
@@ -195,30 +205,25 @@ public class Robot extends LoggedRobot {
                 command -> Logger.recordOutput("Commands/Finished", command.getName())
         );
 
-        // TODO: don't use streams
         CommandScheduler.getInstance().onCommandInterrupt(
                 (interrupted, interrupting) -> {
                     Logger.recordOutput("Commands/Interrupted", interrupted.getName());
+
                     Logger.recordOutput(
                             "Commands/InterruptedRequirements",
-                            interrupted.getRequirements()
-                                    .stream()
-                                    .map(Subsystem::getName)
-                                    .toArray(String[]::new)
+                            LogUtils.getRequirementsFromSubsystems(interrupted.getRequirements())
                     );
 
                     Logger.recordOutput("Commands/Interrupting", interrupting.isPresent()
                             ? interrupting.get().getName()
                             : "None"
                     );
+
                     Logger.recordOutput(
                             "Commands/InterruptingRequirements",
-                            interrupting
-                                    .map(command -> command.getRequirements()
-                                            .stream()
-                                            .map(Subsystem::getName)
-                                            .toArray(String[]::new)
-                                    ).orElseGet(() -> new String[0])
+                            LogUtils.getRequirementsFromSubsystems(
+                                    interrupting.isPresent() ? interrupting.get().getRequirements() : Set.of()
+                            )
                     );
                 }
         );
@@ -235,13 +240,25 @@ public class Robot extends LoggedRobot {
                 .minus(FieldConstants.getSpeakerPose())
                 .getTranslation()
                 .getNorm();
-        final ShotParameters.Parameters shotParameters = ShotParameters.get(distanceToSpeaker);
+        final ShotParameters.Parameters shotParameters = ShotParameters.getShotParameters(swerve.getPose());
 
         Logger.recordOutput("ShotParameters/SpeakerDistance", distanceToSpeaker);
         Logger.recordOutput("ShotParameters/ArmPivotAngle", shotParameters.armPivotAngle().getRotations());
         Logger.recordOutput("ShotParameters/LeftVelocityRotsPerSec", shotParameters.leftVelocityRotsPerSec());
         Logger.recordOutput("ShotParameters/RightVelocityRotsPerSec", shotParameters.rightVelocityRotsPerSec());
         Logger.recordOutput("ShotParameters/AmpVelocityRotsPerSec", shotParameters.ampVelocityRotsPerSec());
+
+        final double distanceToFerry = swerve.getPose()
+                .minus(FieldConstants.getFerryPose())
+                .getTranslation()
+                .getNorm();
+        final ShotParameters.Parameters ferryParameters = ShotParameters.getFerryParameters(swerve.getPose());
+
+        Logger.recordOutput("FerryParameters/FerryDistance", distanceToFerry);
+        Logger.recordOutput("FerryParameters/ArmPivotAngle", ferryParameters.armPivotAngle().getRotations());
+        Logger.recordOutput("FerryParameters/LeftVelocityRotsPerSec", ferryParameters.leftVelocityRotsPerSec());
+        Logger.recordOutput("FerryParameters/RightVelocityRotsPerSec", ferryParameters.rightVelocityRotsPerSec());
+        Logger.recordOutput("FerryParameters/AmpVelocityRotsPerSec", ferryParameters.ampVelocityRotsPerSec());
 
         final ShootOnTheMove.Shot shotWhileMoving = ShootOnTheMove.calculate(
                 swerve.getPose(),
@@ -258,6 +275,11 @@ public class Robot extends LoggedRobot {
     @Override
     public void autonomousInit() {
         autonomousEventLoop = autoChooser.getSelected().autoEventLoop();
+        autoEnabled.onFalse(Commands.runOnce(() -> {
+            if (autonomousEventLoop != null) {
+                autonomousEventLoop.poll();
+            }
+        }).ignoringDisable(true));
     }
 
     @Override
@@ -274,7 +296,8 @@ public class Robot extends LoggedRobot {
                 swerve.teleopDriveCommand(
                         driverController::getLeftY,
                         driverController::getLeftX,
-                        driverController::getRightX
+                        driverController::getRightX,
+                        IsRedAlliance
                 )
         );
     }
@@ -303,13 +326,13 @@ public class Robot extends LoggedRobot {
                 .whileTrue(intake.torqueCurrentSysIdCommand());
 
         coDriverController.y(testEventLoop)
-                .whileTrue(swerve.angularVoltageSysIdQuasistaticCommand(SysIdRoutine.Direction.kForward));
+                .whileTrue(swerve.linearTorqueCurrentSysIdQuasistaticCommand(SysIdRoutine.Direction.kForward));
         coDriverController.a(testEventLoop)
-                .whileTrue(swerve.angularVoltageSysIdQuasistaticCommand(SysIdRoutine.Direction.kReverse));
+                .whileTrue(swerve.linearTorqueCurrentSysIdQuasistaticCommand(SysIdRoutine.Direction.kReverse));
         coDriverController.b(testEventLoop)
-                .whileTrue(swerve.angularVoltageSysIdDynamicCommand(SysIdRoutine.Direction.kForward));
+                .whileTrue(swerve.linearTorqueCurrentSysIdDynamicCommand(SysIdRoutine.Direction.kForward));
         coDriverController.x(testEventLoop)
-                .whileTrue(swerve.angularVoltageSysIdDynamicCommand(SysIdRoutine.Direction.kReverse));
+                .whileTrue(swerve.linearTorqueCurrentSysIdDynamicCommand(SysIdRoutine.Direction.kReverse));
     }
 
     @Override
@@ -323,13 +346,22 @@ public class Robot extends LoggedRobot {
     public void simulationPeriodic() {}
 
     public void configureStateTriggers() {
-        teleopEnabled.onTrue(superstructure.toGoal(Superstructure.Goal.IDLE));
+        teleopEnabled.onTrue(superstructure.toInstantGoal(Superstructure.Goal.IDLE));
+
+        endgameTrigger.onTrue(ControllerUtils.rumbleForDurationCommand(
+                coDriverController.getHID(), GenericHID.RumbleType.kBothRumble, 0.5, 1)
+        );
     }
 
     public void configureAutos() {
         autoChooser.addAutoOption(new AutoOption(
-                "Front4Piece",
+                "Speaker2_1_0",
                 autos.speaker2_1_0(),
+                Constants.CompetitionType.COMPETITION
+        ));
+        autoChooser.addAutoOption(new AutoOption(
+                "Speaker0_1_2",
+                autos.speaker0_1_2(),
                 Constants.CompetitionType.COMPETITION
         ));
         autoChooser.addAutoOption(new AutoOption(
@@ -364,6 +396,16 @@ public class Robot extends LoggedRobot {
                 Constants.CompetitionType.COMPETITION
         ));
         autoChooser.addAutoOption(new AutoOption(
+                "AmpCenter4_3_2",
+                autos.ampCenter4_3_2(),
+                Constants.CompetitionType.COMPETITION
+        ));
+        autoChooser.addAutoOption(new AutoOption(
+                "AmpCenter4_2_1",
+                autos.ampCenter4_2_1(),
+                Constants.CompetitionType.COMPETITION
+        ));
+        autoChooser.addAutoOption(new AutoOption(
                 "AmpSpeaker2",
                 autos.ampSpeaker2(),
                 Constants.CompetitionType.TESTING
@@ -374,8 +416,8 @@ public class Robot extends LoggedRobot {
                 Constants.CompetitionType.TESTING
         ));
         autoChooser.addAutoOption(new AutoOption(
-                "AmpSpeaker2_1Center2_3_4",
-                autos.ampSpeaker2_1Center2_3_4(),
+                "Amp2_1Center2_3_4",
+                autos.amp2_1Center2_3_4(),
                 Constants.CompetitionType.TESTING
         ));
 
@@ -428,6 +470,7 @@ public class Robot extends LoggedRobot {
         ));
     }
 
+    @SuppressWarnings("RedundantSuppression")
     public void configureButtonBindings(final EventLoop teleopEventLoop) {
         this.driverController.leftTrigger(0.5, teleopEventLoop)
                 .whileTrue(intake.intakeCommand());
@@ -442,13 +485,18 @@ public class Robot extends LoggedRobot {
                 )
         );
 
+        //noinspection SuspiciousNameCombination
         this.driverController.rightTrigger(0.5, teleopEventLoop)
-                .whileTrue(shootCommands.deferredStopAimAndShoot())
+                .whileTrue(shootCommands.readyShot(
+                        driverController::getLeftY,
+                        driverController::getLeftX
+                ))
+                .onFalse(shootCommands.deferredStopAimAndShoot());
+//                .whileTrue(shootCommands.deferredStopAimAndShoot());
 //                .whileTrue(shootCommands.teleopDriveAimAndShoot(
 //                        driverController::getLeftY,
 //                        driverController::getLeftX
-//                ))
-                .onFalse(superstructure.toGoal(Superstructure.Goal.IDLE));
+//                ));
 
 //        this.driverController.a(teleopEventLoop)
 //                .whileTrue(shootCommands.readyAmp())
@@ -479,11 +527,16 @@ public class Robot extends LoggedRobot {
                 .whileTrue(shootCommands.angleAndReadyAmp(
                         driverController::getLeftY,
                         driverController::getLeftX
-                ))
-                .onFalse(shootCommands.amp());
-
+                )).onFalse(shootCommands.amp());
+//                .whileTrue(shootCommands.lineupAndAmp());
+        //noinspection SuspiciousNameCombination
         this.coDriverController.leftTrigger(0.5, teleopEventLoop)
-                .whileTrue(shootCommands.ferryCenterToAmp());
+                .whileTrue(shootCommands.readyFerry(
+                        driverController::getLeftY,
+                        driverController::getLeftX
+                ))
+                .onFalse(shootCommands.ferry());
+
         this.coDriverController.rightTrigger(0.5, teleopEventLoop)
                 .whileTrue(shootCommands.shootSubwoofer());
     }

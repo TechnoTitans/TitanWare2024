@@ -14,6 +14,7 @@ public interface SimConstants {
         // TODO: verify that config calls in sim simply just take longer,
         //  and thus need a longer timeout than 0.05s (50ms)
         boolean DISABLE_NEUTRAL_MODE_IN_SIM = false;
+        double CONFIG_TIMEOUT_SECONDS = 0.2;
     }
 
     interface Arm {

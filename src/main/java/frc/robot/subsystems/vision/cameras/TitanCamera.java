@@ -1,4 +1,4 @@
-package frc.robot.subsystems.vision;
+package frc.robot.subsystems.vision.cameras;
 
 import edu.wpi.first.math.MatBuilder;
 import edu.wpi.first.math.Nat;
@@ -14,6 +14,7 @@ public enum TitanCamera {
             Constants.Vision.ROBOT_TO_FL_APRILTAG,
             CameraProperties.SEE3CAM_24CUG,
             1.0,
+            true,
             new TitanCameraCalibration()
                     .withCalibration(
                             CameraProperties.Resolution.R1920x1080,
@@ -60,6 +61,7 @@ public enum TitanCamera {
             Constants.Vision.ROBOT_TO_FC_APRILTAG,
             CameraProperties.ARDUCAM_OV9281,
             2.5,
+            true,
             new TitanCameraCalibration()
                     .withCalibration(
                             CameraProperties.Resolution.R640x480,
@@ -101,6 +103,7 @@ public enum TitanCamera {
             Constants.Vision.ROBOT_TO_FR_APRILTAG,
             CameraProperties.SEE3CAM_24CUG,
             1.0,
+            true,
             new TitanCameraCalibration()
                     .withCalibration(
                             CameraProperties.Resolution.R1920x1080,
@@ -141,10 +144,16 @@ public enum TitanCamera {
                             3
                     ),
             false
+    ),
+    PHOTON_BC_NOTE_TRACKING(
+            "BC_NoteTracking",
+            new Transform3d(), // TODO: get transform
+            CameraProperties.ARDUCAM_OV9782,
+            false
     );
 
     private final PhotonCamera photonCamera;
-    private final Transform3d robotRelativeToCameraTransform;
+    private final Transform3d robotToCameraTransform;
     private final CameraProperties cameraProperties;
     private final double stdDevFactor;
     private final TitanCameraCalibration cameraCalibration;
@@ -152,21 +161,22 @@ public enum TitanCamera {
 
     TitanCamera(
             final String photonCameraName,
-            final Transform3d robotRelativeToCameraTransform,
+            final Transform3d robotToCameraTransform,
             final CameraProperties cameraProperties,
             final double stdDevFactor,
+            final boolean requiresCalibration,
             final TitanCameraCalibration titanCameraCalibration,
             final boolean driverCam
     ) {
         this.photonCamera = new PhotonCamera(photonCameraName);
-        this.robotRelativeToCameraTransform = robotRelativeToCameraTransform;
+        this.robotToCameraTransform = robotToCameraTransform;
         this.cameraProperties = cameraProperties;
         this.stdDevFactor = stdDevFactor;
         this.cameraCalibration = titanCameraCalibration;
         this.driverCam = driverCam;
 
         // if it isn't a driverCam, then it should have proper calibration data
-        if (!driverCam) {
+        if (!driverCam && requiresCalibration) {
             for (final CameraProperties.Resolution resolution : cameraProperties.getResolutions()) {
                 if (!cameraCalibration.hasResolution(resolution)) {
                     throw new RuntimeException(
@@ -184,15 +194,16 @@ public enum TitanCamera {
 
     TitanCamera(
             final String photonCameraName,
-            final Transform3d robotRelativeToCameraTransform,
+            final Transform3d robotToCameraTransform,
             final CameraProperties cameraProperties,
             final boolean driverCam
     ) {
         this(
                 photonCameraName,
-                robotRelativeToCameraTransform,
+                robotToCameraTransform,
                 cameraProperties,
                 1.0,
+                false,
                 TitanCameraCalibration.fromSimCameraProperties(SimCameraProperties.PERFECT_90DEG()),
                 driverCam
         );
@@ -202,8 +213,8 @@ public enum TitanCamera {
         return photonCamera;
     }
 
-    public Transform3d getRobotRelativeToCameraTransform() {
-        return robotRelativeToCameraTransform;
+    public Transform3d getRobotToCameraTransform() {
+        return robotToCameraTransform;
     }
 
     public CameraProperties getCameraProperties() {

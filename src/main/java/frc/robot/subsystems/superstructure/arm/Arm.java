@@ -36,8 +36,8 @@ public class Arm extends SubsystemBase {
     private final SysIdRoutine voltageSysIdRoutine;
     private final SysIdRoutine torqueCurrentSysIdRoutine;
 
-    private Goal goal = Goal.STOW;
-    private Goal previousGoal = goal;
+    private Goal desiredGoal = Goal.STOW;
+    private Goal currentGoal = desiredGoal;
 
     private final PositionSetpoint setpoint;
     private final PositionSetpoint pivotSoftLowerLimit;
@@ -109,6 +109,7 @@ public class Arm extends SubsystemBase {
                 .withPivotPositionRots(armConstants.pivotSoftUpperLimitRots());
 
         this.armIO.config();
+        this.armIO.configureSoftLimits(pivotSoftLowerLimit, pivotSoftUpperLimit);
     }
 
     private Pose3d armPoseFromAngle(final double angleRads) {
@@ -132,17 +133,18 @@ public class Arm extends SubsystemBase {
                 LogUtils.microsecondsToMilliseconds(Logger.getRealTimestamp() - armPeriodicUpdateStart)
         );
 
-        if (goal != Goal.NONE && previousGoal != goal) {
-            setpoint.pivotPositionRots = goal.getPivotPositionGoal();
+        if (desiredGoal != Goal.NONE && currentGoal != desiredGoal) {
+            setpoint.pivotPositionRots = desiredGoal.getPivotPositionGoal();
             armIO.toPivotPosition(setpoint.pivotPositionRots);
 
-            this.previousGoal = goal;
-        } else if (goal == Goal.NONE) {
+            this.currentGoal = desiredGoal;
+        } else if (desiredGoal == Goal.NONE) {
             armIO.toPivotPosition(setpoint.pivotPositionRots);
-            this.previousGoal = Goal.NONE;
+            this.currentGoal = Goal.NONE;
         }
 
-        Logger.recordOutput(LogKey + "/Goal", goal.toString());
+        Logger.recordOutput(LogKey + "/CurrentGoal", currentGoal.toString());
+        Logger.recordOutput(LogKey + "/DesiredGoal", desiredGoal.toString());
         Logger.recordOutput(LogKey + "/PositionSetpoint/PivotPositionRots", setpoint.pivotPositionRots);
         Logger.recordOutput(LogKey + "/AtPositionSetpoint", atPositionSetpoint());
         Logger.recordOutput(LogKey + "/AtPivotLowerLimit", atPivotLowerLimit());
@@ -160,7 +162,8 @@ public class Arm extends SubsystemBase {
     }
 
     private boolean atPositionSetpoint() {
-        return setpoint.atSetpoint(inputs.leftPivotPositionRots, inputs.leftPivotVelocityRotsPerSec);
+        return setpoint.atSetpoint(inputs.leftPivotPositionRots, inputs.leftPivotVelocityRotsPerSec)
+                && currentGoal == desiredGoal;
     }
 
     private boolean atPivotLowerLimit() {
@@ -171,25 +174,27 @@ public class Arm extends SubsystemBase {
         return inputs.leftPivotPositionRots >= pivotSoftUpperLimit.pivotPositionRots;
     }
 
-    public Command toInstantGoal(final Goal goal) {
-        return runOnce(() -> this.goal = goal);
-    }
-
-    public Command toGoal(final Goal goal) {
-        // TODO: need to standardize on using runOnce vs. runEnd, i.e. whether this command,
-        //  on end/interrupt should schedule the default/idle goal (in this case, STOW)
-        return runEnd(() -> this.goal = goal, () -> this.goal = Goal.STOW);
-    }
-
-    public Command runGoal(final Goal goal) {
-        return run(() -> this.goal = goal);
+    public void setGoal(final Goal goal) {
+        this.desiredGoal = goal;
+        Logger.recordOutput(LogKey + "/CurrentGoal", currentGoal.toString());
+        Logger.recordOutput(LogKey + "/DesiredGoal", desiredGoal.toString());
     }
 
     public Command toPivotPositionCommand(final DoubleSupplier pivotPositionRots) {
-        return Commands.sequence(
-                Commands.runOnce(() -> this.goal = Goal.NONE),
-                run(() -> setpoint.pivotPositionRots = pivotPositionRots.getAsDouble())
+        return runEnd(
+                () -> {
+                    this.desiredGoal = Goal.NONE;
+                    setpoint.pivotPositionRots = pivotPositionRots.getAsDouble();
+                },
+                () -> this.desiredGoal = Goal.STOW
         );
+    }
+
+    public Command runPivotPositionCommand(final DoubleSupplier pivotPositionRots) {
+        return run(() -> {
+            this.desiredGoal = Goal.NONE;
+            setpoint.pivotPositionRots = pivotPositionRots.getAsDouble();
+        });
     }
 
     public Command runPivotVoltageCommand(final double pivotVoltageVolts) {
