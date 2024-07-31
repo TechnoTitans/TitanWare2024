@@ -63,7 +63,7 @@ public class HolonomicDriveWithPIDController {
 
     public void setTolerance(final Pose2d poseTolerance) {
         this.xController.setTolerance(poseTolerance.getX(), poseTolerance.getX() * 1.5);
-        this.yController.setTolerance(poseTolerance.getY(), poseTolerance.getX() * 1.5);
+        this.yController.setTolerance(poseTolerance.getY(), poseTolerance.getY() * 1.5);
     }
 
     /**

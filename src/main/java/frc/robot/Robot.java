@@ -85,7 +85,7 @@ public class Robot extends LoggedRobot {
     public final AutoChooser<String, AutoOption> autoChooser = new AutoChooser<>(
             new AutoOption(
                     "DoNothing",
-                    autos.doNothing(),
+                    autos.driveAndNoteDetect(),
                     Constants.CompetitionType.COMPETITION
             )
     );
@@ -99,10 +99,8 @@ public class Robot extends LoggedRobot {
 
     private final Trigger autoEnabled = new Trigger(DriverStation::isAutonomousEnabled);
     private final Trigger teleopEnabled = new Trigger(DriverStation::isTeleopEnabled);
-    private final Trigger endgameTrigger = new Trigger(
-            () -> DriverStation.getMatchTime() <= 20
-                    && DriverStation.isFMSAttached()
-    ).and(teleopEnabled);
+    private final Trigger endgameTrigger = new Trigger(() -> DriverStation.getMatchTime() <= 20)
+            .and(DriverStation::isFMSAttached).and(teleopEnabled);
 
     @Override
     public void robotInit() {
