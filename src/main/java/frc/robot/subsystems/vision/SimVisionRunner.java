@@ -3,6 +3,7 @@ package frc.robot.subsystems.vision;
 import edu.wpi.first.apriltag.AprilTagFieldLayout;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Pose3d;
+import edu.wpi.first.math.geometry.Rotation3d;
 import edu.wpi.first.math.geometry.Transform3d;
 import edu.wpi.first.math.kinematics.SwerveDriveOdometry;
 import frc.robot.constants.Constants;
@@ -114,7 +115,11 @@ public class SimVisionRunner implements PhotonVisionRunner {
         visionSystemSim.update(
                 GyroUtils.robotPose2dToPose3dWithGyro(
                         visionIndependentPose,
-                        GyroUtils.rpyToRotation3d(swerve.getRoll(), swerve.getPitch(), swerve.getYaw())
+                        new Rotation3d(
+                                swerve.getRoll().getRadians(),
+                                swerve.getPitch().getRadians(),
+                                swerve.getYaw().getRadians()
+                        )
                 )
         );
 
