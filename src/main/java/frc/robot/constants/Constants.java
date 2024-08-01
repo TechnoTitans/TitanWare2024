@@ -11,7 +11,7 @@ import org.photonvision.PhotonPoseEstimator;
 
 public interface Constants {
     RobotMode CURRENT_MODE = RobotMode.REAL;
-    CompetitionType CURRENT_COMPETITION_TYPE = CompetitionType.COMPETITION;
+    CompetitionType CURRENT_COMPETITION_TYPE = CompetitionType.TESTING;
     double LOOP_PERIOD_SECONDS = 0.02;
 
     enum RobotMode {

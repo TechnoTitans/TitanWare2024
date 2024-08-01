@@ -110,7 +110,7 @@ public class Autos {
                     () -> MathUtil.isNear(timeSeconds, timeSupplier.getAsDouble(), TimeToleranceSeconds)
             );
         }
-        
+
         @SuppressWarnings("unused")
         public Trigger atPlace(final double timeSeconds) {
             final Translation2d place = trajectory
@@ -188,7 +188,7 @@ public class Autos {
 
         return doNothingEventLoop;
     }
-    
+
     public EventLoop sourceSpeaker0() {
         final Timer timer = new Timer();
         final AutoTriggers autoTriggers = new AutoTriggers("SourceSpeaker0", swerve::getPose, timer::get);
@@ -792,17 +792,17 @@ public class Autos {
         final AutoTriggers autoTriggers = new AutoTriggers(trajectoryName, swerve::getPose, timer::get);
 
         autoTriggers.autoEnabled().whileTrue(
-            Commands.sequence(
-                    noteState.setState(NoteState.State.STORED),
-                    resetPose(autoTriggers.trajectory),
-                    shootCommands.shootSubwoofer().withName("ShootPreload").asProxy(),
-                    Commands.runOnce(timer::reset),
-                    followIntakeAndInstantShoot(
-                            autoTriggers.trajectories.get(0),
-                            timer,
-                            0.4
-                    ).asProxy().withName("Follow0AndIntakeInstantShoot0")
-            ).withName("PreloadFollow0AndShoot0")
+                Commands.sequence(
+                        noteState.setState(NoteState.State.STORED),
+                        resetPose(autoTriggers.trajectory),
+                        shootCommands.shootSubwoofer().withName("ShootPreload").asProxy(),
+                        Commands.runOnce(timer::reset),
+                        followIntakeAndInstantShoot(
+                                autoTriggers.trajectories.get(0),
+                                timer,
+                                0.4
+                        ).asProxy().withName("Follow0AndIntakeInstantShoot0")
+                ).withName("PreloadFollow0AndShoot0")
         );
 
         autoTriggers.atTime(1.13).onTrue(
@@ -1217,5 +1217,19 @@ public class Autos {
         );
 
         return autoTriggers.eventLoop;
+    }
+
+    public EventLoop spinAuto() {
+        final EventLoop eventLoop = new EventLoop();
+        final Trigger trigger = new Trigger(eventLoop, DriverStation::isAutonomousEnabled);
+
+        trigger.whileTrue(
+                Commands.run(() ->
+                        swerve.drive(0, 0, 0.8, true, false)
+                )
+
+        );
+
+        return eventLoop;
     }
 }

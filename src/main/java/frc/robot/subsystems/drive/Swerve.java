@@ -475,7 +475,7 @@ public class Swerve extends SubsystemBase {
     public void drive(
             final double xSpeed,
             final double ySpeed,
-            final double omega,
+            final double omegaRadians,
             final boolean fieldRelative,
             final boolean invertYaw
     ) {
@@ -485,13 +485,13 @@ public class Swerve extends SubsystemBase {
             speeds = ChassisSpeeds.fromFieldRelativeSpeeds(
                     xSpeed,
                     ySpeed,
-                    omega,
+                    omegaRadians,
                     invertYaw
                             ? poseYaw.plus(Rotation2d.fromRadians(Math.PI))
                             : poseYaw
             );
         } else {
-            speeds = new ChassisSpeeds(xSpeed, ySpeed, omega);
+            speeds = new ChassisSpeeds(xSpeed, ySpeed, omegaRadians);
         }
 
         drive(speeds);

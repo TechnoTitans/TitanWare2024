@@ -44,7 +44,8 @@ public class Shooter extends SubsystemBase {
     public enum Goal {
         NONE(0, 0, 0),
         STOP(0, 0, 0),
-        IDLE(40, 40, 40),
+        IDLE(0, 0, 0),
+//        IDLE(40, 40, 40),
         EJECT(80, 80, 80),
         BACK_FEED(-60, -60, -60),
         AMP(80, -40, -40),

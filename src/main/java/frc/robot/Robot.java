@@ -456,10 +456,15 @@ public class Robot extends LoggedRobot {
                 Constants.CompetitionType.TESTING
         ));
 
-
         autoChooser.addAutoOption(new AutoOption(
                 "Walton",
                 autos.walton(),
+                Constants.CompetitionType.TESTING
+        ));
+
+        autoChooser.addAutoOption(new AutoOption(
+                "SPIN",
+                autos.spinAuto(),
                 Constants.CompetitionType.TESTING
         ));
     }
