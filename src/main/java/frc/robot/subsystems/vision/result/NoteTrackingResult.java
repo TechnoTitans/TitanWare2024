@@ -1,8 +1,10 @@
 package frc.robot.subsystems.vision.result;
 
+import edu.wpi.first.math.ComputerVisionUtil;
 import edu.wpi.first.math.geometry.*;
 import edu.wpi.first.math.util.Units;
 import frc.robot.subsystems.vision.RealVisionRunner;
+import frc.robot.subsystems.vision.VisionUtils;
 import org.photonvision.PhotonUtils;
 import org.photonvision.targeting.PhotonPipelineResult;
 import org.photonvision.targeting.PhotonTrackedTarget;
@@ -93,11 +95,32 @@ public class NoteTrackingResult {
             final Transform3d robotToCamera,
             final PhotonTrackedTarget trackedTarget
     ) {
-        final Transform2d robotToNote = new Transform2d(
-                new Translation2d(getNoteDistance(robotToCamera, trackedTarget), getTargetYaw(trackedTarget)),
-                getTargetYaw(trackedTarget)
+        final Rotation2d targetYaw = getTargetYaw(trackedTarget);
+
+        final Translation2d estimatedTranslation = PhotonUtils.estimateCameraToTargetTranslation(
+                getNoteDistance(robotToCamera, trackedTarget),
+                targetYaw
         );
 
-        return poseAtTimestamp.transformBy(robotToNote);
+        final Transform2d estimatedTransform = new Transform2d(estimatedTranslation, targetYaw);
+
+        return poseAtTimestamp.transformBy(estimatedTransform);
+    }
+
+    //todo: see what this does. no idea if it'll work but maybe
+    public static Pose2d getNotePose2(
+            final Pose2d poseAtTimestamp,
+            final Transform3d robotToCamera,
+            final PhotonTrackedTarget trackedTarget
+    ) {
+        final Transform3d bestTransform = trackedTarget.getBestCameraToTarget();
+
+        final Transform2d estimatedTransform = new Transform2d(
+                bestTransform.getX(),
+                bestTransform.getY(),
+                bestTransform.getRotation().toRotation2d()
+        );
+
+        return poseAtTimestamp.transformBy(estimatedTransform);
     }
 }
