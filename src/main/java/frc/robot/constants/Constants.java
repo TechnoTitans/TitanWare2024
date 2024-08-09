@@ -10,7 +10,7 @@ import edu.wpi.first.math.util.Units;
 import org.photonvision.PhotonPoseEstimator;
 
 public interface Constants {
-    RobotMode CURRENT_MODE = RobotMode.SIM;
+    RobotMode CURRENT_MODE = RobotMode.REAL;
     CompetitionType CURRENT_COMPETITION_TYPE = CompetitionType.TESTING;
     double LOOP_PERIOD_SECONDS = 0.02;
 
@@ -48,6 +48,11 @@ public interface Constants {
         Transform3d ROBOT_TO_FR_APRILTAG = new Transform3d(
                 new Translation3d(Units.inchesToMeters(11.838), Units.inchesToMeters(-12.861), Units.inchesToMeters(8.947)),
                 new Rotation3d(0, Units.degreesToRadians(-25), Units.degreesToRadians(-20))
+        );
+
+        Transform3d ROBOT_TO_REAR_NOTED = new Transform3d(
+                new Translation3d(Units.inchesToMeters(-14), Units.inchesToMeters(0), Units.inchesToMeters(12)),
+                new Rotation3d(0, Units.degreesToRadians(-25), Units.degreesToRadians(0))
         );
 
         /**

@@ -147,7 +147,7 @@ public enum TitanCamera {
     ),
     PHOTON_BC_NOTE_TRACKING(
             "BC_NoteTracking",
-            new Transform3d(), // TODO: get transform
+            Constants.Vision.ROBOT_TO_REAR_NOTED, // TODO: get transform
             CameraProperties.ARDUCAM_OV9782,
             false
     );
