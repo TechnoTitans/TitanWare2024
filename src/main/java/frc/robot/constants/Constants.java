@@ -51,8 +51,8 @@ public interface Constants {
         );
 
         Transform3d ROBOT_TO_REAR_NOTED = new Transform3d(
-                new Translation3d(Units.inchesToMeters(-14), Units.inchesToMeters(0), Units.inchesToMeters(12)),
-                new Rotation3d(0, Units.degreesToRadians(-25), Units.degreesToRadians(0))
+                new Translation3d(Units.inchesToMeters(-14), Units.inchesToMeters(0), Units.inchesToMeters(16)),
+                new Rotation3d(0, Units.degreesToRadians(25), Units.degreesToRadians(180))
         );
 
         /**
