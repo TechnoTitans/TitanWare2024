@@ -3,9 +3,6 @@ package frc.robot.subsystems.vision.result;
 import edu.wpi.first.math.geometry.*;
 import edu.wpi.first.math.util.Units;
 import frc.robot.subsystems.vision.RealVisionRunner;
-import frc.robot.subsystems.vision.cameras.CameraProperties;
-import frc.robot.subsystems.vision.cameras.TitanCamera;
-import org.littletonrobotics.junction.Logger;
 import org.photonvision.PhotonUtils;
 import org.photonvision.targeting.PhotonPipelineResult;
 import org.photonvision.targeting.PhotonTrackedTarget;
@@ -14,7 +11,7 @@ import java.util.Optional;
 import java.util.function.Function;
 
 public class NoteTrackingResult {
-    private static final double DistanceOffsetMeters = Units.inchesToMeters(0);
+    private static final double DistanceOffsetMeters = Units.inchesToMeters(0); //Bounding box Offset (Selected in PV)
 
     private final Transform3d robotToCamera;
 
@@ -98,12 +95,12 @@ public class NoteTrackingResult {
     ) {
         final Rotation2d targetYaw = getTargetYaw(trackedTarget);
 
-        final Translation2d estimatedTranslation = PhotonUtils.estimateCameraToTargetTranslation(
-                -getNoteDistance(robotToCamera, trackedTarget),
+        final Translation2d estimatedTargetTranslation = new Translation2d(
+                getNoteDistance(robotToCamera, trackedTarget),
                 targetYaw
-        );
+        ).plus(robotToCamera.getTranslation().toTranslation2d());
 
-        final Transform2d estimatedTransform = new Transform2d(estimatedTranslation, targetYaw);
+        final Transform2d estimatedTransform = new Transform2d(estimatedTargetTranslation, targetYaw);
 
         return poseAtTimestamp.transformBy(estimatedTransform);
     }
