@@ -581,6 +581,45 @@ public class Swerve extends SubsystemBase {
         ).finallyDo(() -> headingControllerActive = false);
     }
 
+    public Command teleopDriveWithLineup(
+            final DoubleSupplier xSpeedSupplier,
+            final DoubleSupplier ySpeedSupplier,
+            final DoubleSupplier rotSupplier,
+            final BooleanSupplier invertYaw
+    ) {
+//        return run(() -> {
+//            final Profiler.DriverProfile driverProfile = Profiler.getDriverProfile();
+//            final Profiler.SwerveSpeed swerveSpeed = Profiler.getSwerveSpeed();
+//
+//            final Translation2d translationInput = ControllerUtils.calculateLinearVelocity(
+//                    -xSpeedSupplier.getAsDouble(),
+//                    -ySpeedSupplier.getAsDouble(),
+//                    0.01
+//            );
+//
+//            final double rotationInput = ControllerUtils.getStickSquaredInput(
+//                    -rotSupplier.getAsDouble(),
+//                    0.01
+//            );
+//
+//            drive(
+//                    translationInput.getX()
+//                            * swerveSpeed.getTranslationSpeed()
+//                            * driverProfile.getTranslationSensitivity(),
+//                    translationInput.getY()
+//                            * swerveSpeed.getTranslationSpeed()
+//                            * driverProfile.getTranslationSensitivity(),
+//                    rotationInput
+//                            * swerveSpeed.getRotationSpeed()
+//                            * driverProfile.getRotationalSensitivity(),
+//                    true,
+//                    invertYaw.getAsBoolean()
+//            );
+//        });
+        return Commands.none();
+    }
+
+
     public Command faceAngle(final Supplier<Rotation2d> rotationTargetSupplier) {
         return Commands.sequence(
                 runOnce(() -> {
