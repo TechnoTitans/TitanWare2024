@@ -632,8 +632,6 @@ public class Swerve extends SubsystemBase {
         });
     }
 
-
-
     public Command driveToOptionalPose(final Supplier<Optional<Pose2d>> poseSupplier) {
         return Commands.sequence(
                 runOnce(() -> {

@@ -77,7 +77,7 @@ public class Robot extends LoggedRobot {
     public final Superstructure superstructure = new Superstructure(arm, shooter);
 
     @SuppressWarnings("unused")
-    public final PhotonVision photonVision = new PhotonVision(Constants.RobotMode.REAL, swerve, swerve.getPoseEstimator());
+    public final PhotonVision photonVision = new PhotonVision(Constants.CURRENT_MODE, swerve, swerve.getPoseEstimator());
 
     public final NoteState noteState = new NoteState(Constants.CURRENT_MODE, intake);
     public final ShootCommands shootCommands = new ShootCommands(swerve, intake, superstructure, noteState);
