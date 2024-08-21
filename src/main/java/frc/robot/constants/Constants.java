@@ -17,7 +17,8 @@ public interface Constants {
     enum RobotMode {
         REAL,
         SIM,
-        REPLAY
+        REPLAY,
+        DISABLED
     }
 
     enum CompetitionType {

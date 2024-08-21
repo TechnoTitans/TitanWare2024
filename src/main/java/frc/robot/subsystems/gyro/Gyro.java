@@ -29,7 +29,7 @@ public class Gyro {
         this.gyroIO = switch (mode) {
             case REAL -> new GyroIOPigeon2(gyroConstants, odometryThreadRunner);
             case SIM -> new GyroIOSim(gyroConstants, odometryThreadRunner, kinematics, swerveModules);
-            case REPLAY -> new GyroIO() {};
+            case REPLAY, DISABLED -> new GyroIO() {};
         };
 
         this.inputs = new GyroIOInputsAutoLogged();

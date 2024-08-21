@@ -82,7 +82,7 @@ public class Shooter extends SubsystemBase {
         this.shooterIO = switch (mode) {
             case REAL -> new ShooterIOReal(shooterConstants);
             case SIM -> new ShooterIOSim(shooterConstants);
-            case REPLAY -> new ShooterIO() {};
+            case REPLAY, DISABLED -> new ShooterIO() {};
         };
 
         this.inputs = new ShooterIOInputsAutoLogged();

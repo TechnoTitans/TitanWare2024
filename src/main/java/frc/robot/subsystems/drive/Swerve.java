@@ -16,6 +16,7 @@ import edu.wpi.first.math.controller.ProfiledPIDController;
 import edu.wpi.first.math.estimator.SwerveDrivePoseEstimator;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
+import edu.wpi.first.math.geometry.Transform2d;
 import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.math.kinematics.ChassisSpeeds;
 import edu.wpi.first.math.kinematics.SwerveDriveKinematics;
@@ -550,7 +551,7 @@ public class Swerve extends SubsystemBase {
             final DoubleSupplier ySpeedSupplier,
             final DoubleSupplier rotSupplier,
             final BooleanSupplier invertYaw,
-            final Optional<Pose2d> optionalLineupPose
+            final Supplier<Optional<Pose2d>> optionalLineupPoseSupplier
     ) {
         return run(() -> {
             final Profiler.DriverProfile driverProfile = Profiler.getDriverProfile();
@@ -567,27 +568,48 @@ public class Swerve extends SubsystemBase {
                     0.01
             );
 
+            final Optional<Pose2d> optionalLineupPose = optionalLineupPoseSupplier.get();
+
             if (optionalLineupPose.isPresent()) {
+                final Pose2d robotPose = getPose();
                 final Pose2d lineupPose = optionalLineupPose.get();
 
-                Logger.recordOutput(LogKey + "/LastLineupPose", lineupPose);
+                Logger.recordOutput(LogKey + "/NoteLineUp/LastLineupPose", lineupPose);
 
-                final Pose2d robotRelativeLineupPose = lineupPose.relativeTo(getPose());
+                final Pose2d robotRelativeLineupPose = lineupPose.relativeTo(robotPose);
                 final Translation2d robotRelativeLineupTranslation = robotRelativeLineupPose.getTranslation();
 
-                final Translation2d joyStickUnitVector = translationInput.div(translationInput.getNorm());
+                final Translation2d robotRelativeJoysticks = translationInput
+                        .rotateBy(
+                                robotPose
+                                        .getRotation()
+                                        .rotateBy(Rotation2d.fromDegrees(invertYaw.getAsBoolean() ? 180 : 0))
+                                        .unaryMinus()
+                        );
+                final Translation2d joyStickUnitVector = robotRelativeJoysticks.div(robotRelativeJoysticks.getNorm());
                 final Translation2d lineupUnitVector = robotRelativeLineupTranslation
                         .div(robotRelativeLineupTranslation.getNorm());
-                final double dotProduct = MathUtil.clamp(
-                        joyStickUnitVector.getX() * lineupUnitVector.getX()
-                        + joyStickUnitVector.getY() * lineupUnitVector.getY(),
-                        0,
-                        1
-                );
+                final double dotProduct = joyStickUnitVector.getX() * lineupUnitVector.getX()
+                        + joyStickUnitVector.getY() * lineupUnitVector.getY();
 
-                final Translation2d assistedSpeeds = joyStickUnitVector.interpolate(lineupUnitVector, dotProduct);
 
-                Logger.recordOutput("AssistedSpeeds", assistedSpeeds);
+                Logger.recordOutput(LogKey + "/NoteLineUp/JoyStickUnitVector", robotPose.transformBy(
+                        new Transform2d(joyStickUnitVector, Rotation2d.fromDegrees(0))
+                ));
+                Logger.recordOutput(LogKey + "/NoteLineUp/LineupUnitVector", robotPose.transformBy(
+                        new Transform2d(lineupUnitVector, Rotation2d.fromDegrees(0))
+                ));
+                Logger.recordOutput(LogKey + "/NoteLineUp/DotProduct", dotProduct);
+
+                final Translation2d assistedSpeeds = joyStickUnitVector
+                        .interpolate(lineupUnitVector, dotProduct)
+                        .times(robotRelativeJoysticks.getNorm())
+                        .rotateBy(robotPose
+                                .getRotation()
+                                .rotateBy(Rotation2d.fromDegrees(invertYaw.getAsBoolean() ? 180 : 0))
+                        );
+
+                Logger.recordOutput(LogKey + "/NoteLineUp/AssistedSpeeds", assistedSpeeds);
 
                 drive(
                         assistedSpeeds.getX()
@@ -603,8 +625,6 @@ public class Swerve extends SubsystemBase {
                         invertYaw.getAsBoolean()
                 );
             } else {
-                Logger.recordOutput("AssistedSpeeds", "not running");
-
                 drive(
                         translationInput.getX()
                                 * swerveSpeed.getTranslationSpeed()
@@ -619,8 +639,6 @@ public class Swerve extends SubsystemBase {
                         invertYaw.getAsBoolean()
                 );
             }
-
-
         });
     }
 

@@ -119,6 +119,7 @@ public class PhotonVision extends VirtualSubsystem {
                             new ReplayVisionRunner.VisionIOApriltagsReplay(TitanCamera.PHOTON_FR_APRILTAG)
                     )
             );
+            case DISABLED -> new PhotonVisionRunner() {};
         };
 
         this.swerve = swerve;

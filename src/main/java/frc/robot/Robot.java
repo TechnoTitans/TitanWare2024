@@ -79,7 +79,7 @@ public class Robot extends LoggedRobot {
     public final Superstructure superstructure = new Superstructure(arm, shooter);
 
     @SuppressWarnings("unused")
-    public final PhotonVision photonVision = new PhotonVision(Constants.RobotMode.REAL, swerve, swerve.getPoseEstimator());
+    public final PhotonVision photonVision = new PhotonVision(Constants.RobotMode.DISABLED, swerve, swerve.getPoseEstimator());
 
     public final NoteState noteState = new NoteState(Constants.CURRENT_MODE, intake);
     public final ShootCommands shootCommands = new ShootCommands(swerve, intake, superstructure, noteState);
@@ -481,13 +481,13 @@ public class Robot extends LoggedRobot {
         //noinspection SuspiciousNameCombination
         this.driverController.leftTrigger(0.5, teleopEventLoop)
                 .whileTrue(Commands.parallel(
-                        intake.intakeCommand(),
+                        intake.intakeCommand().asProxy(),
                         swerve.teleopDriveAndAssistLineup(
                                 driverController::getLeftY,
                                 driverController::getLeftX,
                                 driverController::getRightX,
                                 IsRedAlliance,
-                                Optional.of(new Pose2d(5, 5, Rotation2d.fromDegrees(0)))
+                                () -> photonVision.getBestNotePose(swerve::getPose)
                         )
                 ));
         // TODO: this doesn't rumble early enough, or as early as we'd like it to

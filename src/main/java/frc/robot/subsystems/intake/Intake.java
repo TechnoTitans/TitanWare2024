@@ -54,7 +54,7 @@ public class Intake extends SubsystemBase {
         this.intakeIO = switch (robotMode) {
             case REAL -> new IntakeIOReal(intakeConstants);
             case SIM -> new IntakeIOSim(intakeConstants);
-            case REPLAY -> new IntakeIO() {};
+            case REPLAY, DISABLED -> new IntakeIO() {};
         };
 
         this.inputs = new IntakeIOInputsAutoLogged();
