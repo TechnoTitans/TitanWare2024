@@ -487,7 +487,7 @@ public class Robot extends LoggedRobot {
                                 driverController::getLeftX,
                                 driverController::getRightX,
                                 IsRedAlliance,
-                                new Pose2d(5, 5, Rotation2d.fromDegrees(0))
+                                Optional.of(new Pose2d(5, 5, Rotation2d.fromDegrees(0)))
                         )
                 ));
         // TODO: this doesn't rumble early enough, or as early as we'd like it to
