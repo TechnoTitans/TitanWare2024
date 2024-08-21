@@ -475,9 +475,9 @@ public class Swerve extends SubsystemBase {
     }
 
     public void drive(
-            final double xSpeed,
-            final double ySpeed,
-            final double omega,
+            final double xSpeedMeterPerSec,
+            final double ySpeedMetersPerSec,
+            final double omegaRadsPerSec,
             final boolean fieldRelative,
             final boolean invertYaw
     ) {
@@ -485,15 +485,15 @@ public class Swerve extends SubsystemBase {
         if (fieldRelative) {
             final Rotation2d poseYaw = getYaw();
             speeds = ChassisSpeeds.fromFieldRelativeSpeeds(
-                    xSpeed,
-                    ySpeed,
-                    omega,
+                    xSpeedMeterPerSec,
+                    ySpeedMetersPerSec,
+                    omegaRadsPerSec,
                     invertYaw
                             ? poseYaw.plus(Rotation2d.fromRadians(Math.PI))
                             : poseYaw
             );
         } else {
-            speeds = new ChassisSpeeds(xSpeed, ySpeed, omega);
+            speeds = new ChassisSpeeds(xSpeedMeterPerSec, ySpeedMetersPerSec, omegaRadsPerSec);
         }
 
         drive(speeds);
@@ -542,6 +542,81 @@ public class Swerve extends SubsystemBase {
                     true,
                     invertYaw.getAsBoolean()
             );
+        });
+    }
+
+    public Command teleopDriveAndAssistLineup(
+            final DoubleSupplier xSpeedSupplier,
+            final DoubleSupplier ySpeedSupplier,
+            final DoubleSupplier rotSupplier,
+            final BooleanSupplier invertYaw,
+            final Optional<Pose2d> optionalLineupPose
+    ) {
+        return run(() -> {
+            final Profiler.DriverProfile driverProfile = Profiler.getDriverProfile();
+            final Profiler.SwerveSpeed swerveSpeed = Profiler.getSwerveSpeed();
+
+            final Translation2d translationInput = ControllerUtils.calculateLinearVelocity(
+                    -xSpeedSupplier.getAsDouble(),
+                    -ySpeedSupplier.getAsDouble(),
+                    0.01
+            );
+
+            final double rotationInput = ControllerUtils.getStickSquaredInput(
+                    -rotSupplier.getAsDouble(),
+                    0.01
+            );
+
+            if (optionalLineupPose.isPresent()) {
+                final Pose2d lineupPose = optionalLineupPose.get();
+
+                Logger.recordOutput(LogKey + "/LastLineupPose", lineupPose);
+
+                final Pose2d robotRelativeLineupPose = lineupPose.relativeTo(getPose());
+                final Translation2d robotRelativeLineupTranslation = robotRelativeLineupPose.getTranslation();
+
+                final Translation2d joyStickUnitVector = translationInput.div(translationInput.getNorm());
+                final Translation2d lineupUnitVector = robotRelativeLineupTranslation
+                        .div(robotRelativeLineupTranslation.getNorm());
+                final double dotProduct = MathUtil.clamp(
+                        joyStickUnitVector.getX() * lineupUnitVector.getX()
+                        + joyStickUnitVector.getY() * lineupUnitVector.getY(),
+                        0,
+                        1
+                );
+
+                final Translation2d assistedSpeeds = joyStickUnitVector.interpolate(lineupUnitVector, dotProduct);
+
+                drive(
+                        assistedSpeeds.getX()
+                                * swerveSpeed.getTranslationSpeed()
+                                * driverProfile.getTranslationSensitivity(),
+                        assistedSpeeds.getY()
+                                * swerveSpeed.getTranslationSpeed()
+                                * driverProfile.getTranslationSensitivity(),
+                        rotationInput
+                                * swerveSpeed.getRotationSpeed()
+                                * driverProfile.getRotationalSensitivity(),
+                        true,
+                        invertYaw.getAsBoolean()
+                );
+            } else {
+                drive(
+                        translationInput.getX()
+                                * swerveSpeed.getTranslationSpeed()
+                                * driverProfile.getTranslationSensitivity(),
+                        translationInput.getY()
+                                * swerveSpeed.getTranslationSpeed()
+                                * driverProfile.getTranslationSensitivity(),
+                        rotationInput
+                                * swerveSpeed.getRotationSpeed()
+                                * driverProfile.getRotationalSensitivity(),
+                        true,
+                        invertYaw.getAsBoolean()
+                );
+            }
+
+
         });
     }
 

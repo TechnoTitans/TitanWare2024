@@ -1,6 +1,8 @@
 package frc.robot;
 
 import com.ctre.phoenix6.SignalLogger;
+import edu.wpi.first.math.geometry.Pose2d;
+import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.GenericHID;
 import edu.wpi.first.wpilibj.PowerDistribution;
@@ -476,8 +478,18 @@ public class Robot extends LoggedRobot {
 
     @SuppressWarnings("RedundantSuppression")
     public void configureButtonBindings(final EventLoop teleopEventLoop) {
+        //noinspection SuspiciousNameCombination
         this.driverController.leftTrigger(0.5, teleopEventLoop)
-                .whileTrue(intake.intakeCommand());
+                .whileTrue(Commands.parallel(
+                        intake.intakeCommand(),
+                        swerve.teleopDriveAndAssistLineup(
+                                driverController::getLeftY,
+                                driverController::getLeftX,
+                                driverController::getRightX,
+                                IsRedAlliance,
+                                new Pose2d(5, 5, Rotation2d.fromDegrees(0))
+                        )
+                ));
         // TODO: this doesn't rumble early enough, or as early as we'd like it to
         //  not sure if we're hardware limited or its behind by a few cycles and we can speed it up
         this.noteState.hasNote.onTrue(
