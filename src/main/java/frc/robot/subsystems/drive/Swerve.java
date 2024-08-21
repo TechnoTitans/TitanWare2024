@@ -587,6 +587,8 @@ public class Swerve extends SubsystemBase {
 
                 final Translation2d assistedSpeeds = joyStickUnitVector.interpolate(lineupUnitVector, dotProduct);
 
+                Logger.recordOutput("AssistedSpeeds", assistedSpeeds);
+
                 drive(
                         assistedSpeeds.getX()
                                 * swerveSpeed.getTranslationSpeed()
@@ -601,6 +603,8 @@ public class Swerve extends SubsystemBase {
                         invertYaw.getAsBoolean()
                 );
             } else {
+                Logger.recordOutput("AssistedSpeeds", "not running");
+
                 drive(
                         translationInput.getX()
                                 * swerveSpeed.getTranslationSpeed()
