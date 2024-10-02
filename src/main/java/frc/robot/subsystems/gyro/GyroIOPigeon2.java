@@ -2,6 +2,7 @@ package frc.robot.subsystems.gyro;
 
 import com.ctre.phoenix6.BaseStatusSignal;
 import com.ctre.phoenix6.StatusSignal;
+import com.ctre.phoenix6.configs.MountPoseConfigs;
 import com.ctre.phoenix6.configs.Pigeon2Configuration;
 import com.ctre.phoenix6.hardware.ParentDevice;
 import com.ctre.phoenix6.hardware.Pigeon2;
@@ -80,7 +81,9 @@ public class GyroIOPigeon2 implements GyroIO {
     public void config() {
         //TODO fill in correct mount pose
         final Pigeon2Configuration pigeon2Configuration = new Pigeon2Configuration();
-        pigeon2Configuration.MountPose.MountPoseYaw = 0;
+        pigeon2Configuration.MountPose.MountPoseRoll = 0;
+        pigeon2Configuration.MountPose.MountPosePitch = 0;
+        pigeon2Configuration.MountPose.MountPoseYaw = -90;
         pigeon.getConfigurator().apply(pigeon2Configuration);
 
         BaseStatusSignal.setUpdateFrequencyForAll(
