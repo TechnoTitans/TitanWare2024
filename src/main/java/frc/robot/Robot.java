@@ -79,7 +79,7 @@ public class Robot extends LoggedRobot {
     public final Superstructure superstructure = new Superstructure(arm, shooter);
 
     @SuppressWarnings("unused")
-    public final PhotonVision photonVision = new PhotonVision(Constants.RobotMode.DISABLED, swerve, swerve.getPoseEstimator());
+    public final PhotonVision photonVision = new PhotonVision(Constants.CURRENT_MODE, swerve, swerve.getPoseEstimator());
 
     public final NoteState noteState = new NoteState(Constants.CURRENT_MODE, intake);
     public final ShootCommands shootCommands = new ShootCommands(swerve, intake, superstructure, noteState);
@@ -319,20 +319,20 @@ public class Robot extends LoggedRobot {
         coDriverController.y(testEventLoop).and(coDriverController.rightBumper(testEventLoop))
                 .whileTrue(shooter.torqueCurrentSysIdCommand());
 
-        coDriverController.x(testEventLoop).and(coDriverController.rightBumper(testEventLoop))
-                .whileTrue(arm.voltageSysIdCommand());
+//        coDriverController.x(testEventLoop).and(coDriverController.rightBumper(testEventLoop))
+//                .whileTrue(arm.voltageSysIdCommand());
+//
+//        coDriverController.a(testEventLoop).and(coDriverController.rightBumper(testEventLoop))
+//                .whileTrue(intake.torqueCurrentSysIdCommand());
 
-        coDriverController.a(testEventLoop).and(coDriverController.rightBumper(testEventLoop))
-                .whileTrue(intake.torqueCurrentSysIdCommand());
-
-        coDriverController.y(testEventLoop)
-                .whileTrue(swerve.linearTorqueCurrentSysIdQuasistaticCommand(SysIdRoutine.Direction.kForward));
-        coDriverController.a(testEventLoop)
-                .whileTrue(swerve.linearTorqueCurrentSysIdQuasistaticCommand(SysIdRoutine.Direction.kReverse));
-        coDriverController.b(testEventLoop)
-                .whileTrue(swerve.linearTorqueCurrentSysIdDynamicCommand(SysIdRoutine.Direction.kForward));
-        coDriverController.x(testEventLoop)
-                .whileTrue(swerve.linearTorqueCurrentSysIdDynamicCommand(SysIdRoutine.Direction.kReverse));
+//        coDriverController.y(testEventLoop)
+//                .whileTrue(swerve.linearTorqueCurrentSysIdQuasistaticCommand(SysIdRoutine.Direction.kForward));
+//        coDriverController.a(testEventLoop)
+//                .whileTrue(swerve.linearTorqueCurrentSysIdQuasistaticCommand(SysIdRoutine.Direction.kReverse));
+//        coDriverController.b(testEventLoop)
+//                .whileTrue(swerve.linearTorqueCurrentSysIdDynamicCommand(SysIdRoutine.Direction.kForward));
+//        coDriverController.x(testEventLoop)
+//                .whileTrue(swerve.linearTorqueCurrentSysIdDynamicCommand(SysIdRoutine.Direction.kReverse));
     }
 
     @Override

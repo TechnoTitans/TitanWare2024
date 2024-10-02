@@ -2,6 +2,7 @@ package frc.robot.subsystems.vision.result;
 
 import edu.wpi.first.math.geometry.*;
 import edu.wpi.first.math.util.Units;
+import edu.wpi.first.wpilibj.Timer;
 import frc.robot.subsystems.vision.RealVisionRunner;
 import org.photonvision.PhotonUtils;
 import org.photonvision.targeting.PhotonPipelineResult;
@@ -12,6 +13,7 @@ import java.util.function.Function;
 
 public class NoteTrackingResult {
     private static final double DistanceOffsetMeters = Units.inchesToMeters(0); //Bounding box Offset (Selected in PV)
+    private static final double TimestampAllowableTimeout = 2;
 
     private final Transform3d robotToCamera;
 
@@ -47,6 +49,10 @@ public class NoteTrackingResult {
             return Optional.empty();
         }
 
+        if (Timer.getFPGATimestamp() - pipelineResult.getTimestampSeconds() > TimestampAllowableTimeout) {
+            return Optional.empty();
+        }
+
         final Optional<Pose2d> optionalRobotPose = timestampedRobotPoseFunction.apply(pipelineResult.getTimestampSeconds());
         return optionalRobotPose.map(pose2d -> getNotePose(pose2d, robotToCamera, bestTarget));
     }
@@ -58,6 +64,10 @@ public class NoteTrackingResult {
 
         final Optional<Pose2d> optionalRobotPose = timestampedRobotPoseFunction.apply(pipelineResult.getTimestampSeconds());
         if (optionalRobotPose.isEmpty()) {
+            return new Pose2d[]{};
+        }
+
+        if (Timer.getFPGATimestamp() - pipelineResult.getTimestampSeconds() > TimestampAllowableTimeout) {
             return new Pose2d[]{};
         }
 
@@ -98,7 +108,8 @@ public class NoteTrackingResult {
         final Translation2d estimatedTargetTranslation = new Translation2d(
                 getNoteDistance(robotToCamera, trackedTarget),
                 targetYaw
-        ).plus(robotToCamera.getTranslation().toTranslation2d());
+        ).rotateBy(robotToCamera.getRotation().toRotation2d())
+                .plus(robotToCamera.getTranslation().toTranslation2d());
 
         final Transform2d estimatedTransform = new Transform2d(estimatedTargetTranslation, targetYaw);
 

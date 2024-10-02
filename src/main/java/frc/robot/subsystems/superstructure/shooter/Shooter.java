@@ -268,10 +268,10 @@ public class Shooter extends SubsystemBase {
 
         return Commands.sequence(
                 sysIdRoutine.quasistatic(SysIdRoutine.Direction.kForward)
-                        .withTimeout(10),
+                        .withTimeout(8),
                 Commands.waitUntil(isStopped),
                 sysIdRoutine.quasistatic(SysIdRoutine.Direction.kReverse)
-                        .withTimeout(10),
+                        .withTimeout(8),
                 Commands.waitUntil(isStopped),
                 sysIdRoutine.dynamic(SysIdRoutine.Direction.kForward)
                         .withTimeout(6),

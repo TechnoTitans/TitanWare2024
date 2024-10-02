@@ -14,10 +14,7 @@ import edu.wpi.first.math.VecBuilder;
 import edu.wpi.first.math.controller.PIDController;
 import edu.wpi.first.math.controller.ProfiledPIDController;
 import edu.wpi.first.math.estimator.SwerveDrivePoseEstimator;
-import edu.wpi.first.math.geometry.Pose2d;
-import edu.wpi.first.math.geometry.Rotation2d;
-import edu.wpi.first.math.geometry.Transform2d;
-import edu.wpi.first.math.geometry.Translation2d;
+import edu.wpi.first.math.geometry.*;
 import edu.wpi.first.math.kinematics.ChassisSpeeds;
 import edu.wpi.first.math.kinematics.SwerveDriveKinematics;
 import edu.wpi.first.math.kinematics.SwerveModulePosition;
@@ -47,6 +44,8 @@ import frc.robot.utils.teleop.Profiler;
 import org.littletonrobotics.junction.Logger;
 
 import java.util.Optional;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.function.BooleanSupplier;
 import java.util.function.Consumer;
@@ -319,8 +318,8 @@ public class Swerve extends SubsystemBase {
         }
 
         Logger.recordOutput(
-               LogKey + "/IsUsingFallbackSimGyro",
-               mode == Constants.RobotMode.REAL && !gyro.isReal()
+                LogKey + "/IsUsingFallbackSimGyro",
+                mode == Constants.RobotMode.REAL && !gyro.isReal()
         );
 
         Logger.recordOutput(
@@ -329,7 +328,7 @@ public class Swerve extends SubsystemBase {
         Logger.recordOutput(OdometryLogKey + "/Robot2d", getPose());
         Logger.recordOutput(OdometryLogKey + "/Robot3d", GyroUtils.robotPose2dToPose3dWithGyro(
                 getPose(),
-                GyroUtils.rpyToRotation3d(getRoll(), getPitch(), getYaw())
+                new Rotation3d(getRoll().getRadians(), getPitch().getRadians(), getYaw().getRadians())
         ));
 
         Logger.recordOutput(LogKey + "/HeadingController/Active", headingControllerActive);
@@ -411,10 +410,10 @@ public class Swerve extends SubsystemBase {
 
     public ChassisSpeeds getRobotRelativeSpeeds() {
         return kinematics.toChassisSpeeds(
-                    frontLeft.getState(),
-                    frontRight.getState(),
-                    backLeft.getState(),
-                    backRight.getState()
+                frontLeft.getState(),
+                frontRight.getState(),
+                backLeft.getState(),
+                backRight.getState()
         );
     }
 
@@ -553,93 +552,117 @@ public class Swerve extends SubsystemBase {
             final BooleanSupplier invertYaw,
             final Supplier<Optional<Pose2d>> optionalLineupPoseSupplier
     ) {
-        return run(() -> {
-            final Profiler.DriverProfile driverProfile = Profiler.getDriverProfile();
-            final Profiler.SwerveSpeed swerveSpeed = Profiler.getSwerveSpeed();
+        final AtomicBoolean continuousTracking = new AtomicBoolean(true);
+        final AtomicReference<Pose2d> steadyNotePose = new AtomicReference<>();
 
-            final Translation2d translationInput = ControllerUtils.calculateLinearVelocity(
-                    -xSpeedSupplier.getAsDouble(),
-                    -ySpeedSupplier.getAsDouble(),
-                    0.01
-            );
+        return Commands.sequence(
+                runOnce(() -> {
+                    headingControllerActive = true;
+                    headingController.reset();
+                    continuousTracking.set(true);
+                    steadyNotePose.set(new Pose2d());
+                }),
+                run(() -> {
+                    final Profiler.DriverProfile driverProfile = Profiler.getDriverProfile();
+                    final Profiler.SwerveSpeed swerveSpeed = Profiler.getSwerveSpeed();
 
-            final double rotationInput = ControllerUtils.getStickSquaredInput(
-                    -rotSupplier.getAsDouble(),
-                    0.01
-            );
+                    final Translation2d translationInput = ControllerUtils.calculateLinearVelocity(
+                            -xSpeedSupplier.getAsDouble(),
+                            -ySpeedSupplier.getAsDouble(),
+                            0.01
+                    );
 
-            final Optional<Pose2d> optionalLineupPose = optionalLineupPoseSupplier.get();
+                    final double rotationInput = ControllerUtils.getStickSquaredInput(
+                            -rotSupplier.getAsDouble(),
+                            0.01
+                    );
 
-            if (optionalLineupPose.isPresent()) {
-                final Pose2d robotPose = getPose();
-                final Pose2d lineupPose = optionalLineupPose.get();
+                    final Optional<Pose2d> optionalLineupPose = optionalLineupPoseSupplier.get();
 
-                Logger.recordOutput(LogKey + "/NoteLineUp/LastLineupPose", lineupPose);
+                    final Pose2d lineupPose;
+                    if (optionalLineupPose.isPresent()) {
+                        final Pose2d robotPose = getPose();
+                        if (continuousTracking.get()) {
+                            lineupPose = optionalLineupPose.get();
+                        } else {
+                            lineupPose = steadyNotePose.get();
+                        }
 
-                final Pose2d robotRelativeLineupPose = lineupPose.relativeTo(robotPose);
-                final Translation2d robotRelativeLineupTranslation = robotRelativeLineupPose.getTranslation();
+                        Logger.recordOutput(LogKey + "/NoteLineUp/LastLineupPose", lineupPose);
 
-                final Translation2d robotRelativeJoysticks = translationInput
-                        .rotateBy(
-                                robotPose
+                        final Pose2d robotRelativeLineupPose = lineupPose.relativeTo(robotPose);
+                        final Translation2d robotRelativeLineupTranslation = robotRelativeLineupPose.getTranslation();
+
+                        final Translation2d robotRelativeJoysticks = translationInput
+                                .rotateBy(
+                                        robotPose
+                                                .getRotation()
+                                                .rotateBy(Rotation2d.fromDegrees(invertYaw.getAsBoolean() ? 180 : 0))
+                                                .unaryMinus()
+                                );
+                        final Translation2d joyStickUnitVector = robotRelativeJoysticks.div(robotRelativeJoysticks.getNorm());
+                        final Translation2d lineupUnitVector = robotRelativeLineupTranslation
+                                .div(robotRelativeLineupTranslation.getNorm());
+                        final double dotProduct = joyStickUnitVector.getX() * lineupUnitVector.getX()
+                                + joyStickUnitVector.getY() * lineupUnitVector.getY();
+
+
+                        Logger.recordOutput(LogKey + "/NoteLineUp/JoyStickUnitVector", robotPose.transformBy(
+                                new Transform2d(joyStickUnitVector, Rotation2d.fromDegrees(0))
+                        ));
+                        Logger.recordOutput(LogKey + "/NoteLineUp/LineupUnitVector", robotPose.transformBy(
+                                new Transform2d(lineupUnitVector, Rotation2d.fromDegrees(0))
+                        ));
+                        Logger.recordOutput(LogKey + "/NoteLineUp/DotProduct", dotProduct);
+
+                        final Translation2d assistedSpeeds = joyStickUnitVector
+                                .interpolate(lineupUnitVector, dotProduct)
+                                .times(robotRelativeJoysticks.getNorm())
+                                .rotateBy(robotPose
                                         .getRotation()
                                         .rotateBy(Rotation2d.fromDegrees(invertYaw.getAsBoolean() ? 180 : 0))
-                                        .unaryMinus()
+                                );
+
+                        Logger.recordOutput(LogKey + "/NoteLineUp/AssistedSpeeds", assistedSpeeds);
+
+                        this.headingTarget = lineupPose.getRotation();
+
+                        final double noteDistance = robotPose.minus(lineupPose).getTranslation().getNorm();
+                        Logger.recordOutput(LogKey + "/NoteLineUp/NoteDistance", noteDistance);
+
+                        if (continuousTracking.get() && noteDistance < 0.8) {
+                            continuousTracking.set(false);
+                            steadyNotePose.set(lineupPose);
+                        }
+
+                        drive(
+                                assistedSpeeds.getX()
+                                        * swerveSpeed.getTranslationSpeed()
+                                        * driverProfile.getTranslationSensitivity(),
+                                assistedSpeeds.getY()
+                                        * swerveSpeed.getTranslationSpeed()
+                                        * driverProfile.getTranslationSensitivity(),
+                                headingController.calculate(getYaw().getRadians(), headingTarget.getRadians()),
+                                true,
+                                invertYaw.getAsBoolean()
                         );
-                final Translation2d joyStickUnitVector = robotRelativeJoysticks.div(robotRelativeJoysticks.getNorm());
-                final Translation2d lineupUnitVector = robotRelativeLineupTranslation
-                        .div(robotRelativeLineupTranslation.getNorm());
-                final double dotProduct = joyStickUnitVector.getX() * lineupUnitVector.getX()
-                        + joyStickUnitVector.getY() * lineupUnitVector.getY();
-
-
-                Logger.recordOutput(LogKey + "/NoteLineUp/JoyStickUnitVector", robotPose.transformBy(
-                        new Transform2d(joyStickUnitVector, Rotation2d.fromDegrees(0))
-                ));
-                Logger.recordOutput(LogKey + "/NoteLineUp/LineupUnitVector", robotPose.transformBy(
-                        new Transform2d(lineupUnitVector, Rotation2d.fromDegrees(0))
-                ));
-                Logger.recordOutput(LogKey + "/NoteLineUp/DotProduct", dotProduct);
-
-                final Translation2d assistedSpeeds = joyStickUnitVector
-                        .interpolate(lineupUnitVector, dotProduct)
-                        .times(robotRelativeJoysticks.getNorm())
-                        .rotateBy(robotPose
-                                .getRotation()
-                                .rotateBy(Rotation2d.fromDegrees(invertYaw.getAsBoolean() ? 180 : 0))
+                    } else {
+                        drive(
+                                translationInput.getX()
+                                        * swerveSpeed.getTranslationSpeed()
+                                        * driverProfile.getTranslationSensitivity(),
+                                translationInput.getY()
+                                        * swerveSpeed.getTranslationSpeed()
+                                        * driverProfile.getTranslationSensitivity(),
+                                rotationInput
+                                        * swerveSpeed.getRotationSpeed()
+                                        * driverProfile.getRotationalSensitivity(),
+                                true,
+                                invertYaw.getAsBoolean()
                         );
-
-                Logger.recordOutput(LogKey + "/NoteLineUp/AssistedSpeeds", assistedSpeeds);
-
-                drive(
-                        assistedSpeeds.getX()
-                                * swerveSpeed.getTranslationSpeed()
-                                * driverProfile.getTranslationSensitivity(),
-                        assistedSpeeds.getY()
-                                * swerveSpeed.getTranslationSpeed()
-                                * driverProfile.getTranslationSensitivity(),
-                        rotationInput
-                                * swerveSpeed.getRotationSpeed()
-                                * driverProfile.getRotationalSensitivity(),
-                        true,
-                        invertYaw.getAsBoolean()
-                );
-            } else {
-                drive(
-                        translationInput.getX()
-                                * swerveSpeed.getTranslationSpeed()
-                                * driverProfile.getTranslationSensitivity(),
-                        translationInput.getY()
-                                * swerveSpeed.getTranslationSpeed()
-                                * driverProfile.getTranslationSensitivity(),
-                        rotationInput
-                                * swerveSpeed.getRotationSpeed()
-                                * driverProfile.getRotationalSensitivity(),
-                        true,
-                        invertYaw.getAsBoolean()
-                );
-            }
-        });
+                    }
+                })
+        ).finallyDo(() -> headingControllerActive = false);
     }
 
     public Command teleopFacingAngleCommand(
