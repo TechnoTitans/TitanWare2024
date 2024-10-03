@@ -13,7 +13,7 @@ import java.util.function.Function;
 
 public class NoteTrackingResult {
     private static final double DistanceOffsetMeters = Units.inchesToMeters(0); //Bounding box Offset (Selected in PV)
-    private static final double TimestampAllowableTimeout = 2;
+    private static final double AllowableTimestampTimeout = 1;
 
     private final Transform3d robotToCamera;
 
@@ -49,7 +49,7 @@ public class NoteTrackingResult {
             return Optional.empty();
         }
 
-        if (Timer.getFPGATimestamp() - pipelineResult.getTimestampSeconds() > TimestampAllowableTimeout) {
+        if (Timer.getFPGATimestamp() - pipelineResult.getTimestampSeconds() > AllowableTimestampTimeout) {
             return Optional.empty();
         }
 
@@ -67,7 +67,7 @@ public class NoteTrackingResult {
             return new Pose2d[]{};
         }
 
-        if (Timer.getFPGATimestamp() - pipelineResult.getTimestampSeconds() > TimestampAllowableTimeout) {
+        if (Timer.getFPGATimestamp() - pipelineResult.getTimestampSeconds() > AllowableTimestampTimeout) {
             return new Pose2d[]{};
         }
 

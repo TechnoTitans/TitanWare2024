@@ -150,9 +150,10 @@ public class RealVisionRunner implements PhotonVisionRunner {
             final PhotonPipelineResult pipelineResult = inputs.latestResult;
             VisionUtils.correctPipelineResultTimestamp(pipelineResult);
 
-            // TODO: HasTarget is true at this point, but when it gets sent through
-            //  NoteTrackingResult and logged outside of here, it becomes always false.
-            Logger.recordOutput("HasTarget", pipelineResult.hasTargets());
+            Logger.recordOutput(
+                    String.format("%s/%s/HasTarget", PhotonVision.PhotonLogKey, inputs.name),
+                    pipelineResult.hasTargets()
+            );
 
             final NoteTrackingResult noteTrackingResult = new NoteTrackingResult(inputs.robotToCamera, pipelineResult);
             noteTrackingResultMap.put(visionIO, noteTrackingResult);

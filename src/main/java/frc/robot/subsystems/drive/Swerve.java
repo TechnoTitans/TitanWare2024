@@ -587,8 +587,14 @@ public class Swerve extends SubsystemBase {
                         } else {
                             lineupPose = steadyNotePose.get();
                         }
-
                         Logger.recordOutput(LogKey + "/NoteLineUp/LastLineupPose", lineupPose);
+
+                        final double noteDistance = robotPose.minus(lineupPose).getTranslation().getNorm();
+                        if (continuousTracking.get() && noteDistance < 0.8) {
+                            continuousTracking.set(false);
+                            steadyNotePose.set(lineupPose);
+                        }
+                        Logger.recordOutput(LogKey + "/NoteLineUp/NoteDistance", noteDistance);
 
                         final Pose2d robotRelativeLineupPose = lineupPose.relativeTo(robotPose);
                         final Translation2d robotRelativeLineupTranslation = robotRelativeLineupPose.getTranslation();
@@ -605,7 +611,6 @@ public class Swerve extends SubsystemBase {
                                 .div(robotRelativeLineupTranslation.getNorm());
                         final double dotProduct = joyStickUnitVector.getX() * lineupUnitVector.getX()
                                 + joyStickUnitVector.getY() * lineupUnitVector.getY();
-
 
                         Logger.recordOutput(LogKey + "/NoteLineUp/JoyStickUnitVector", robotPose.transformBy(
                                 new Transform2d(joyStickUnitVector, Rotation2d.fromDegrees(0))
@@ -626,15 +631,6 @@ public class Swerve extends SubsystemBase {
                         Logger.recordOutput(LogKey + "/NoteLineUp/AssistedSpeeds", assistedSpeeds);
 
                         this.headingTarget = lineupPose.getRotation();
-
-                        final double noteDistance = robotPose.minus(lineupPose).getTranslation().getNorm();
-                        Logger.recordOutput(LogKey + "/NoteLineUp/NoteDistance", noteDistance);
-
-                        if (continuousTracking.get() && noteDistance < 0.8) {
-                            continuousTracking.set(false);
-                            steadyNotePose.set(lineupPose);
-                        }
-
                         drive(
                                 assistedSpeeds.getX()
                                         * swerveSpeed.getTranslationSpeed()
