@@ -572,16 +572,11 @@ public class Swerve extends SubsystemBase {
                             0.01
                     );
 
-                    final double rotationInput = ControllerUtils.getStickSquaredInput(
-                            -rotSupplier.getAsDouble(),
-                            0.01
-                    );
-
                     final Optional<Pose2d> optionalLineupPose = optionalLineupPoseSupplier.get();
 
-                    final Pose2d lineupPose;
                     if (optionalLineupPose.isPresent()) {
                         final Pose2d robotPose = getPose();
+                        final Pose2d lineupPose;
                         if (continuousTracking.get()) {
                             lineupPose = optionalLineupPose.get();
                         } else {
@@ -643,6 +638,11 @@ public class Swerve extends SubsystemBase {
                                 invertYaw.getAsBoolean()
                         );
                     } else {
+                        final double rotationInput = ControllerUtils.getStickSquaredInput(
+                                -rotSupplier.getAsDouble(),
+                                0.01
+                        );
+
                         drive(
                                 translationInput.getX()
                                         * swerveSpeed.getTranslationSpeed()
