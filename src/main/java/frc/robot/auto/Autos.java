@@ -1236,7 +1236,7 @@ public class Autos {
                 Commands.repeatingSequence(
                         Commands.parallel(
                                 superstructure.toInstantGoal(Superstructure.Goal.IDLE).asProxy(),
-                                swerve.driveToOptionalPose(() -> photonVision.getBestNotePose(swerve::getPose)),
+                                swerve.driveToNotePose(() -> photonVision.getBestNotePose(swerve::getPose)),
                                 Commands.repeatingSequence(
                                         intake.intakeCommand().asProxy(),
                                         superstructure.toInstantGoal(Superstructure.Goal.EJECT).asProxy(),
@@ -1262,7 +1262,7 @@ public class Autos {
                 Commands.parallel(
                         intake.intakeCommand().asProxy(),
                         Commands.sequence(
-                                swerve.driveToOptionalPose(() -> photonVision.getBestNotePose(swerve::getPose)), //idk if this will intake it
+                                swerve.driveToNotePose(() -> photonVision.getBestNotePose(swerve::getPose)), //idk if this will intake it
 //                                swerve.driveToPose(() -> new Pose2d(8.282, 5.787, Rotation2d.fromRadians(2.458))),
                                 swerve.driveToPose(
                                         nextTrajectory::getInitialPose,
@@ -1301,7 +1301,7 @@ public class Autos {
                 Commands.parallel(
                         intake.intakeCommand().asProxy(),
                         Commands.sequence(
-                                swerve.driveToOptionalPose(() -> photonVision.getBestNotePose(swerve::getPose))
+                                swerve.driveToNotePose(() -> photonVision.getBestNotePose(swerve::getPose))
                                         .until(noteState.hasNote),
                                 swerve.driveToPose(
                                         autoTriggers.trajectories.get(0)::getFinalPose,
@@ -1331,7 +1331,7 @@ public class Autos {
                 Commands.parallel(
                         intake.intakeCommand().asProxy(),
                         Commands.sequence(
-                                swerve.driveToOptionalPose(() -> photonVision.getBestNotePose(swerve::getPose)), //idk if this will intake it
+                                swerve.driveToNotePose(() -> photonVision.getBestNotePose(swerve::getPose)), //idk if this will intake it
                                 swerve.driveToPose(
                                         autoTriggers.trajectories.get(2)::getInitialPose,
                                         new Pose2d(1.5, 1.5, Rotation2d.fromDegrees(6))
@@ -1360,7 +1360,7 @@ public class Autos {
                 Commands.parallel(
                         intake.intakeCommand().asProxy(),
                         Commands.sequence(
-                                swerve.driveToOptionalPose(() -> photonVision.getBestNotePose(swerve::getPose)), //idk if this will intake it
+                                swerve.driveToNotePose(() -> photonVision.getBestNotePose(swerve::getPose)), //idk if this will intake it
                                 swerve.driveToPose(
                                         autoTriggers.trajectories.get(2)::getInitialPose,
                                         new Pose2d(1.5, 1.5, Rotation2d.fromDegrees(6))
