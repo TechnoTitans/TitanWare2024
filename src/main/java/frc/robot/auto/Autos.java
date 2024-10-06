@@ -1289,4 +1289,101 @@ public class Autos {
 
         return autoTriggers.eventLoop;
     }
+
+    public EventLoop AltSourceCenter0_1_2NOTE() {
+        final String trajectoryName = "AltSourceCenter0_1_2NOTE";
+        final Timer timer = new Timer();
+        final AutoTriggers autoTriggers = new AutoTriggers(trajectoryName, swerve::getPose, timer::get);
+
+        autoTriggers.autoEnabled().whileTrue(preloadSubwooferAndFollow0(autoTriggers.trajectories, timer));
+
+        autoTriggers.atTime(2.49).onTrue(
+                Commands.parallel(
+                        intake.intakeCommand().asProxy(),
+                        Commands.sequence(
+                                swerve.driveToOptionalPose(() -> photonVision.getBestNotePose(swerve::getPose))
+                                        .until(noteState.hasNote),
+                                swerve.driveToPose(
+                                        autoTriggers.trajectories.get(0)::getFinalPose,
+                                        new Pose2d(1.5, 1.5, Rotation2d.fromDegrees(7))
+                                ),
+                                followPath(autoTriggers.trajectories.get(1), timer).asProxy()
+                        ),
+                        Commands.sequence(
+                                Commands.waitUntil(noteState.hasNote),
+                                shootCommands.readySuperstructureForShot().asProxy()
+                        )
+                ).withName("Intake0")
+        );
+
+        autoTriggers.atTime(4.17).onTrue(
+                Commands.sequence(
+                        shootCommands.deferredStopAimAndShoot()
+                                .onlyIf(noteState.hasNote)
+                                .withName("Shoot0")
+                                .asProxy(),
+                        superstructure.toInstantGoal(Superstructure.Goal.IDLE).asProxy(),
+                        followPath(autoTriggers.trajectories.get(1), timer).asProxy()
+                ).withName("Shoot0AndFollow1")
+        );
+
+        autoTriggers.atTime(5.8).onTrue(
+                Commands.parallel(
+                        intake.intakeCommand().asProxy(),
+                        Commands.sequence(
+                                swerve.driveToOptionalPose(() -> photonVision.getBestNotePose(swerve::getPose)), //idk if this will intake it
+                                swerve.driveToPose(
+                                        autoTriggers.trajectories.get(2)::getInitialPose,
+                                        new Pose2d(1.5, 1.5, Rotation2d.fromDegrees(6))
+                                ),
+                                followPath(autoTriggers.trajectories.get(2), timer).asProxy()
+                        ),
+                        Commands.sequence(
+                                Commands.waitUntil(noteState.hasNote),
+                                shootCommands.readySuperstructureForShot().asProxy()
+                        )
+                ).withName("Intake1")
+        );
+
+        autoTriggers.atTime(7.5).onTrue(
+                Commands.sequence(
+                        shootCommands.deferredStopAimAndShoot()
+                                .onlyIf(noteState.hasNote)
+                                .withName("Shoot1")
+                                .asProxy(),
+                        superstructure.toInstantGoal(Superstructure.Goal.IDLE).asProxy(),
+                        followPath(autoTriggers.trajectories.get(2), timer).asProxy()
+                ).withName("Shoot1AndFollow2")
+        );
+
+        autoTriggers.atTime(9.36).onTrue(
+                Commands.parallel(
+                        intake.intakeCommand().asProxy(),
+                        Commands.sequence(
+                                swerve.driveToOptionalPose(() -> photonVision.getBestNotePose(swerve::getPose)), //idk if this will intake it
+                                swerve.driveToPose(
+                                        autoTriggers.trajectories.get(2)::getInitialPose,
+                                        new Pose2d(1.5, 1.5, Rotation2d.fromDegrees(6))
+                                ),
+                                followPath(autoTriggers.trajectories.get(2), timer).asProxy()
+                        ),
+                        Commands.sequence(
+                                Commands.waitUntil(noteState.hasNote),
+                                shootCommands.readySuperstructureForShot().asProxy()
+                        )
+                ).withName("Intake2")
+        );
+
+        autoTriggers.atTime(11.1).onTrue(
+                Commands.sequence(
+                        shootCommands.deferredStopAimAndShoot()
+                                .onlyIf(noteState.hasNote)
+                                .withName("Shoot2")
+                                .asProxy(),
+                        superstructure.toInstantGoal(Superstructure.Goal.IDLE).asProxy()
+                ).withName("Shoot2")
+        );
+
+        return autoTriggers.eventLoop;
+    }
 }

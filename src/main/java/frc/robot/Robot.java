@@ -461,43 +461,52 @@ public class Robot extends LoggedRobot {
                 autos.sourceSpeaker0Center1_2(),
                 Constants.CompetitionType.TESTING
         ));
-
-
         autoChooser.addAutoOption(new AutoOption(
                 "Walton",
                 autos.walton(),
                 Constants.CompetitionType.TESTING
         ));
-
         autoChooser.addAutoOption(new AutoOption(
                 "FollowNote",
-                autos.followNote(),
+                autos.AltSourceCenter0_1_2NOTE(),
                 Constants.CompetitionType.TESTING
         ));
+
     }
 
     @SuppressWarnings("RedundantSuppression")
     public void configureButtonBindings(final EventLoop teleopEventLoop) {
         //noinspection SuspiciousNameCombination
+//        this.driverController.leftTrigger(0.5, teleopEventLoop)
+//                .whileTrue(Commands.parallel(
+//                        intake.intakeCommand().asProxy(),
+//                        swerve.teleopDriveAndAssistLineup(
+//                                driverController::getLeftY,
+//                                driverController::getLeftX,
+//                                driverController::getRightX,
+//                                IsRedAlliance,
+//                                () -> photonVision.getBestNotePose(swerve::getPose)
+//                        )
+//                ));
         this.driverController.leftTrigger(0.5, teleopEventLoop)
-                .whileTrue(Commands.parallel(
-                        intake.intakeCommand().asProxy(),
-                        swerve.teleopDriveAndAssistLineup(
-                                driverController::getLeftY,
-                                driverController::getLeftX,
-                                driverController::getRightX,
-                                IsRedAlliance,
-                                () -> photonVision.getBestNotePose(swerve::getPose)
-                        )
-                ));
+                .whileTrue(intake.intakeCommand());
+
         // TODO: this doesn't rumble early enough, or as early as we'd like it to
         //  not sure if we're hardware limited or its behind by a few cycles and we can speed it up
         this.noteState.hasNote.onTrue(
-                ControllerUtils.rumbleForDurationCommand(
-                        driverController.getHID(),
-                        GenericHID.RumbleType.kBothRumble,
-                        0.5,
-                        0.5
+                Commands.parallel(
+                        ControllerUtils.rumbleForDurationCommand(
+                                driverController.getHID(),
+                                GenericHID.RumbleType.kBothRumble,
+                                0.5,
+                                0.5
+                        ),
+                        ControllerUtils.rumbleForDurationCommand(
+                                coDriverController.getHID(),
+                                GenericHID.RumbleType.kBothRumble,
+                                0.5,
+                                0.5
+                        )
                 )
         );
 
