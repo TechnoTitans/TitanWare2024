@@ -557,8 +557,6 @@ public class Swerve extends SubsystemBase {
 
         return Commands.sequence(
                 runOnce(() -> {
-                    headingControllerActive = true;
-                    headingController.reset();
                     continuousTracking.set(true);
                     steadyNotePose.set(new Pose2d());
                 }),
@@ -571,9 +569,12 @@ public class Swerve extends SubsystemBase {
                             -ySpeedSupplier.getAsDouble(),
                             0.01
                     );
+                    final double rotationInput = ControllerUtils.getStickSquaredInput(
+                            -rotSupplier.getAsDouble(),
+                            0.01
+                    );
 
                     final Optional<Pose2d> optionalLineupPose = optionalLineupPoseSupplier.get();
-
                     if (optionalLineupPose.isPresent()) {
                         final Pose2d robotPose = getPose();
                         final Pose2d lineupPose;
@@ -625,7 +626,6 @@ public class Swerve extends SubsystemBase {
 
                         Logger.recordOutput(LogKey + "/NoteLineUp/AssistedSpeeds", assistedSpeeds);
 
-                        this.headingTarget = lineupPose.getRotation();
                         drive(
                                 assistedSpeeds.getX()
                                         * swerveSpeed.getTranslationSpeed()
@@ -633,16 +633,13 @@ public class Swerve extends SubsystemBase {
                                 assistedSpeeds.getY()
                                         * swerveSpeed.getTranslationSpeed()
                                         * driverProfile.getTranslationSensitivity(),
-                                headingController.calculate(getYaw().getRadians(), headingTarget.getRadians()),
+                                rotationInput
+                                        * swerveSpeed.getRotationSpeed()
+                                        * driverProfile.getRotationalSensitivity(),
                                 true,
                                 invertYaw.getAsBoolean()
                         );
                     } else {
-                        final double rotationInput = ControllerUtils.getStickSquaredInput(
-                                -rotSupplier.getAsDouble(),
-                                0.01
-                        );
-
                         drive(
                                 translationInput.getX()
                                         * swerveSpeed.getTranslationSpeed()
@@ -658,7 +655,7 @@ public class Swerve extends SubsystemBase {
                         );
                     }
                 })
-        ).finallyDo(() -> headingControllerActive = false);
+        );
     }
 
     public Command teleopFacingAngleCommand(
