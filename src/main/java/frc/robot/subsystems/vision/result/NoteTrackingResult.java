@@ -91,16 +91,9 @@ public class NoteTrackingResult {
     }
 
     public static double getNoteDistance(final Transform3d robotToCamera, final PhotonTrackedTarget trackedTarget) {
-//        return PhotonUtils.calculateDistanceToTargetMeters(
-//                robotToCamera.getZ(),
-//                RealVisionRunner.VisionIONoteTrackingReal.NOTE_HEIGHT_Z,
-//                -robotToCamera.getRotation().getY(), // CCW+ convert to CW+
-//                Units.degreesToRadians(trackedTarget.getPitch()) // doesn't need negative, PhotonUtils expects CW+
-//        ) + DistanceOffsetMeters;
-        Logger.recordOutput("funkypitch", Units.degreesToRadians(trackedTarget.getPitch()));
-
-        return (robotToCamera.getZ() - RealVisionRunner.VisionIONoteTrackingReal.NOTE_HEIGHT_Z)
-                / Math.tan(robotToCamera.getRotation().getY() - Units.degreesToRadians(trackedTarget.getPitch()));
+        return ((robotToCamera.getZ() - RealVisionRunner.VisionIONoteTrackingReal.NOTE_HEIGHT_Z)
+                / Math.tan(robotToCamera.getRotation().getY() - Units.degreesToRadians(trackedTarget.getPitch())))
+                / Math.cos(trackedTarget.getYaw());
     }
 
     public static Pose2d getNotePose(
@@ -119,11 +112,6 @@ public class NoteTrackingResult {
         final Transform2d estimatedTransform = new Transform2d(
                 estimatedTargetTranslation,
                 targetYaw
-        );
-
-        Logger.recordOutput(
-                "NoteDist",
-                getNoteDistance(robotToCamera, trackedTarget)
         );
 
         return poseAtTimestamp.transformBy(estimatedTransform);
