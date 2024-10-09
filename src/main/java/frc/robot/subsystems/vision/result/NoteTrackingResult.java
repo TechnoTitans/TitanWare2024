@@ -4,6 +4,7 @@ import edu.wpi.first.math.geometry.*;
 import edu.wpi.first.math.util.Units;
 import edu.wpi.first.wpilibj.Timer;
 import frc.robot.subsystems.vision.RealVisionRunner;
+import org.littletonrobotics.junction.Logger;
 import org.photonvision.PhotonUtils;
 import org.photonvision.targeting.PhotonPipelineResult;
 import org.photonvision.targeting.PhotonTrackedTarget;
@@ -90,12 +91,16 @@ public class NoteTrackingResult {
     }
 
     public static double getNoteDistance(final Transform3d robotToCamera, final PhotonTrackedTarget trackedTarget) {
-        return PhotonUtils.calculateDistanceToTargetMeters(
-                robotToCamera.getZ(),
-                RealVisionRunner.VisionIONoteTrackingReal.NOTE_HEIGHT_Z,
-                -robotToCamera.getRotation().getY(), // CCW+ convert to CW+
-                Units.degreesToRadians(trackedTarget.getPitch()) // doesn't need negative, PhotonUtils expects CW+
-        ) + DistanceOffsetMeters;
+//        return PhotonUtils.calculateDistanceToTargetMeters(
+//                robotToCamera.getZ(),
+//                RealVisionRunner.VisionIONoteTrackingReal.NOTE_HEIGHT_Z,
+//                -robotToCamera.getRotation().getY(), // CCW+ convert to CW+
+//                Units.degreesToRadians(trackedTarget.getPitch()) // doesn't need negative, PhotonUtils expects CW+
+//        ) + DistanceOffsetMeters;
+        Logger.recordOutput("funkypitch", Units.degreesToRadians(trackedTarget.getPitch()));
+
+        return (robotToCamera.getZ() - RealVisionRunner.VisionIONoteTrackingReal.NOTE_HEIGHT_Z)
+                / Math.tan(robotToCamera.getRotation().getY() - Units.degreesToRadians(trackedTarget.getPitch()));
     }
 
     public static Pose2d getNotePose(
@@ -111,7 +116,15 @@ public class NoteTrackingResult {
         ).rotateBy(robotToCamera.getRotation().toRotation2d())
                 .plus(robotToCamera.getTranslation().toTranslation2d());
 
-        final Transform2d estimatedTransform = new Transform2d(estimatedTargetTranslation, targetYaw);
+        final Transform2d estimatedTransform = new Transform2d(
+                estimatedTargetTranslation,
+                targetYaw
+        );
+
+        Logger.recordOutput(
+                "NoteDist",
+                getNoteDistance(robotToCamera, trackedTarget)
+        );
 
         return poseAtTimestamp.transformBy(estimatedTransform);
     }

@@ -45,7 +45,7 @@ public class RealVisionRunner implements PhotonVisionRunner {
     }
 
     public static class VisionIONoteTrackingReal implements VisionIO {
-        public static final double NOTE_HEIGHT_Z = Units.inchesToMeters(1);
+        public static final double NOTE_HEIGHT_Z = Units.inchesToMeters(2);
 
         private final PhotonCamera photonCamera;
         private final String cameraName;

@@ -286,13 +286,22 @@ public class PhotonVision extends VirtualSubsystem {
                 Logger.recordOutput(logKey + "/HasBestNotePose", optionalBestNotePose.isPresent());
                 Logger.recordOutput(
                         logKey + "/BestNotePose",
-                        optionalBestNotePose.orElseGet(Pose2d::new)
+                        new Pose3d(optionalBestNotePose.orElseGet(Pose2d::new))
+                );
+                Logger.recordOutput(
+                        "NoteCameraPose",
+                        new Pose3d(swerve.getPose()).transformBy(Constants.Vision.ROBOT_TO_REAR_NOTED)
                 );
 
                 final Pose2d[] notePose2ds = noteTrackingResult
                         .getNotePoses(timestamp -> Optional.of(swerve.getPose()));
 
-                Logger.recordOutput(logKey + "/NotePoses", notePose2ds);
+                final Pose3d[] notePose3ds = new Pose3d[notePose2ds.length];
+                for (int i = 0; i < notePose2ds.length; i++) {
+                    notePose3ds[i] = new Pose3d(notePose2ds[i]);
+                }
+
+                Logger.recordOutput(logKey + "/NotePoses", notePose3ds);
             } else {
                 Logger.recordOutput(logKey + "/HasTargets", false);
             }
