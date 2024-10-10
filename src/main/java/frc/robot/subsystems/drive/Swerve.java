@@ -745,36 +745,16 @@ public class Swerve extends SubsystemBase {
         });
     }
 
-    public Command driveToNotePose(final Supplier<Optional<Pose2d>> poseSupplier) {
-        final AtomicBoolean continuousTracking = new AtomicBoolean(true);
-        final AtomicReference<Pose2d> steadyNotePose = new AtomicReference<>();
-
+    public Command driveToOptionalPose(final Supplier<Optional<Pose2d>> poseSupplier) {
         return Commands.sequence(
                 runOnce(() -> {
                     holonomicControllerActive = true;
                     holonomicDriveWithPIDController.reset(getPose(), getRobotRelativeSpeeds());
-                    continuousTracking.set(true);
-                    steadyNotePose.set(new Pose2d());
                 }),
                 run(() -> {
                     final Optional<Pose2d> pose = poseSupplier.get();
                     if (pose.isPresent()) {
-                        final Pose2d lineupPose;
-                        if (continuousTracking.get()) {
-                            lineupPose = pose.get();
-                        } else {
-                            lineupPose = steadyNotePose.get();
-                        }
-                        Logger.recordOutput(LogKey + "/NoteLineUp/LastLineupPose", lineupPose);
-
-                        final double noteDistance = getPose().minus(lineupPose).getTranslation().getNorm();
-                        if (continuousTracking.get() && noteDistance < 0.8) {
-                            continuousTracking.set(false);
-                            steadyNotePose.set(lineupPose);
-                        }
-                        Logger.recordOutput(LogKey + "/NoteLineUp/NoteDistance", noteDistance);
-
-                        this.holonomicPoseTarget = lineupPose;
+                        this.holonomicPoseTarget = pose.get();
                         drive(holonomicDriveWithPIDController.calculate(getPose(), holonomicPoseTarget));
                     } else {
                         stop();
@@ -783,6 +763,7 @@ public class Swerve extends SubsystemBase {
                 runOnce(this::stop)
         ).finallyDo(() -> holonomicControllerActive = false);
     }
+
 
     public void stop() {
         drive(new ChassisSpeeds());

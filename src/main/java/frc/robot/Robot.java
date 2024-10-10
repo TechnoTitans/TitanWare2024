@@ -467,11 +467,15 @@ public class Robot extends LoggedRobot {
                 Constants.CompetitionType.TESTING
         ));
         autoChooser.addAutoOption(new AutoOption(
-                "FollowNote",
+                "FollowNoteAmp",
+                autos.driveAndNoteDetect(),
+                Constants.CompetitionType.TESTING
+        ));
+        autoChooser.addAutoOption(new AutoOption(
+                "FollowNoteSource",
                 autos.AltSourceCenter0_1_2NOTE(),
                 Constants.CompetitionType.TESTING
         ));
-
     }
 
     @SuppressWarnings("RedundantSuppression")
@@ -493,7 +497,7 @@ public class Robot extends LoggedRobot {
 
         // TODO: this doesn't rumble early enough, or as early as we'd like it to
         //  not sure if we're hardware limited or its behind by a few cycles and we can speed it up
-        this.noteState.hasNote.onTrue(
+        this.noteState.hasNote.and(teleopEnabled).onTrue(
                 Commands.parallel(
                         ControllerUtils.rumbleForDurationCommand(
                                 driverController.getHID(),

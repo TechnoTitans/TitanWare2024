@@ -21,6 +21,7 @@ import frc.robot.subsystems.intake.Intake;
 import frc.robot.subsystems.superstructure.ShotParameters;
 import frc.robot.subsystems.superstructure.Superstructure;
 import frc.robot.subsystems.vision.PhotonVision;
+import org.littletonrobotics.junction.Logger;
 
 import java.util.List;
 import java.util.Set;
@@ -1236,7 +1237,7 @@ public class Autos {
                 Commands.repeatingSequence(
                         Commands.parallel(
                                 superstructure.toInstantGoal(Superstructure.Goal.IDLE).asProxy(),
-                                swerve.driveToNotePose(() -> photonVision.getBestNotePose(swerve::getPose)),
+                                swerve.driveToOptionalPose(() -> photonVision.getBestNotePose(swerve::getPose)),
                                 Commands.repeatingSequence(
                                         intake.intakeCommand().asProxy(),
                                         superstructure.toInstantGoal(Superstructure.Goal.EJECT).asProxy(),
@@ -1246,7 +1247,6 @@ public class Autos {
                         )
                 )
         );
-
         return eventLoop;
     }
 
@@ -1257,18 +1257,19 @@ public class Autos {
 
         autoTriggers.autoEnabled().whileTrue(preloadSubwooferAndFollow0(autoTriggers.trajectories, timer));
 
-        final ChoreoTrajectory nextTrajectory = autoTriggers.trajectories.get(1);
-        autoTriggers.atTime(2.1).onTrue(
+        autoTriggers.atTime(2.23).onTrue(
                 Commands.parallel(
                         intake.intakeCommand().asProxy(),
                         Commands.sequence(
-                                swerve.driveToNotePose(() -> photonVision.getBestNotePose(swerve::getPose)), //idk if this will intake it
-//                                swerve.driveToPose(() -> new Pose2d(8.282, 5.787, Rotation2d.fromRadians(2.458))),
+                                swerve.driveToOptionalPose(() -> photonVision.getBestNotePose(swerve::getPose))
+                                        .until(noteState.hasNote),
                                 swerve.driveToPose(
-                                        nextTrajectory::getInitialPose,
-                                        new Pose2d(1.5, 1.5, Rotation2d.fromDegrees(6))
+                                        Robot.IsRedAlliance.getAsBoolean()
+                                                ? autoTriggers.trajectories.get(1)::getFlippedInitialPose
+                                                : autoTriggers.trajectories.get(1)::getInitialPose,
+                                        new Pose2d(1, 1, Rotation2d.fromDegrees(6))
                                 ),
-                                followPath(nextTrajectory, timer).asProxy()
+                                followPath(autoTriggers.trajectories.get(1), timer)
                         ),
                         Commands.sequence(
                                 Commands.waitUntil(noteState.hasNote),
@@ -1277,7 +1278,7 @@ public class Autos {
                 ).withName("Intake0")
         );
 
-        autoTriggers.atTime(4.3).onTrue(
+        autoTriggers.atTime(3.37).onTrue(
                 Commands.sequence(
                         shootCommands.deferredStopAimAndShoot()
                                 .onlyIf(noteState.hasNote)
@@ -1286,7 +1287,6 @@ public class Autos {
                         superstructure.toInstantGoal(Superstructure.Goal.IDLE).asProxy()
                 ).withName("Shoot0AndFollow1")
         );
-
         return autoTriggers.eventLoop;
     }
 
@@ -1301,7 +1301,7 @@ public class Autos {
                 Commands.parallel(
                         intake.intakeCommand().asProxy(),
                         Commands.sequence(
-                                swerve.driveToNotePose(() -> photonVision.getBestNotePose(swerve::getPose))
+                                swerve.driveToOptionalPose(() -> photonVision.getBestNotePose(swerve::getPose))
                                         .until(noteState.hasNote),
                                 swerve.driveToPose(
                                         autoTriggers.trajectories.get(0)::getFinalPose,
@@ -1331,7 +1331,7 @@ public class Autos {
                 Commands.parallel(
                         intake.intakeCommand().asProxy(),
                         Commands.sequence(
-                                swerve.driveToNotePose(() -> photonVision.getBestNotePose(swerve::getPose)), //idk if this will intake it
+                                swerve.driveToOptionalPose(() -> photonVision.getBestNotePose(swerve::getPose)), //idk if this will intake it
                                 swerve.driveToPose(
                                         autoTriggers.trajectories.get(2)::getInitialPose,
                                         new Pose2d(1.5, 1.5, Rotation2d.fromDegrees(6))
@@ -1360,7 +1360,7 @@ public class Autos {
                 Commands.parallel(
                         intake.intakeCommand().asProxy(),
                         Commands.sequence(
-                                swerve.driveToNotePose(() -> photonVision.getBestNotePose(swerve::getPose)), //idk if this will intake it
+                                swerve.driveToOptionalPose(() -> photonVision.getBestNotePose(swerve::getPose)), //idk if this will intake it
                                 swerve.driveToPose(
                                         autoTriggers.trajectories.get(2)::getInitialPose,
                                         new Pose2d(1.5, 1.5, Rotation2d.fromDegrees(6))
