@@ -93,7 +93,7 @@ public class NoteTrackingResult {
     public static double getNoteDistance(final Transform3d robotToCamera, final PhotonTrackedTarget trackedTarget) {
         return (((robotToCamera.getZ() - RealVisionRunner.VisionIONoteTrackingReal.NOTE_HEIGHT_Z)
                 / Math.tan(robotToCamera.getRotation().getY() - Units.degreesToRadians(trackedTarget.getPitch())))
-                / Math.cos(trackedTarget.getYaw())) + DistanceOffsetMeters;
+                / Math.cos(Units.degreesToRadians(trackedTarget.getYaw())));
     }
 
     public static Pose2d getNotePose(
