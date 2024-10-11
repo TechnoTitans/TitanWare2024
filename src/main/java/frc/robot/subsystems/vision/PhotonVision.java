@@ -116,9 +116,12 @@ public class PhotonVision extends VirtualSubsystem {
             case REPLAY -> new ReplayVisionRunner(
                     PhotonVision.apriltagFieldLayout,
                     PhotonVision.makeVisionIOInputsMap(
-                            new ReplayVisionRunner.VisionIOApriltagsReplay(TitanCamera.PHOTON_FL_APRILTAG),
-                            new ReplayVisionRunner.VisionIOApriltagsReplay(TitanCamera.PHOTON_FC_APRILTAG),
-                            new ReplayVisionRunner.VisionIOApriltagsReplay(TitanCamera.PHOTON_FR_APRILTAG)
+                            new ReplayVisionRunner.VisionIOReplay(TitanCamera.PHOTON_FL_APRILTAG),
+                            new ReplayVisionRunner.VisionIOReplay(TitanCamera.PHOTON_FC_APRILTAG),
+                            new ReplayVisionRunner.VisionIOReplay(TitanCamera.PHOTON_FR_APRILTAG)
+                    ),
+                    PhotonVision.makeVisionIOInputsMap(
+                            new ReplayVisionRunner.VisionIOReplay(TitanCamera.PHOTON_BC_NOTE_TRACKING)
                     )
             );
             case DISABLED -> new PhotonVisionRunner() {};

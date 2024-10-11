@@ -4,6 +4,7 @@ import edu.wpi.first.apriltag.AprilTagFieldLayout;
 import edu.wpi.first.math.geometry.Pose3d;
 import frc.robot.constants.Constants;
 import frc.robot.subsystems.vision.cameras.TitanCamera;
+import frc.robot.subsystems.vision.result.NoteTrackingResult;
 import frc.robot.utils.closeables.ToClose;
 import org.littletonrobotics.junction.Logger;
 import org.photonvision.EstimatedRobotPose;
@@ -15,31 +16,35 @@ import java.util.HashMap;
 import java.util.Map;
 
 public class ReplayVisionRunner implements PhotonVisionRunner {
-    public static class VisionIOApriltagsReplay implements VisionIO {
+    public static class VisionIOReplay implements VisionIO {
         private final TitanCamera titanCamera;
         private final PhotonCamera photonCamera;
 
-        public VisionIOApriltagsReplay(final TitanCamera titanCamera) {
+        public VisionIOReplay(final TitanCamera titanCamera) {
             this.titanCamera = titanCamera;
             this.photonCamera = titanCamera.getPhotonCamera();
         }
     }
 
-    private final Map<ReplayVisionRunner.VisionIOApriltagsReplay, String> visionIONames;
-    private final Map<ReplayVisionRunner.VisionIOApriltagsReplay, VisionIO.VisionIOInputs> visionIOInputsMap;
-    private final Map<ReplayVisionRunner.VisionIOApriltagsReplay, PhotonPoseEstimator> photonPoseEstimatorMap;
+    private final Map<ReplayVisionRunner.VisionIOReplay, String> visionIONames;
+    private final Map<ReplayVisionRunner.VisionIOReplay, VisionIO.VisionIOInputs> apriltagVisionIOInputsMap;
+    private final Map<ReplayVisionRunner.VisionIOReplay, VisionIO.VisionIOInputs> noteTrackingVisionIOInputsMap;
+    private final Map<ReplayVisionRunner.VisionIOReplay, PhotonPoseEstimator> photonPoseEstimatorMap;
 
     private final Map<VisionIO, EstimatedRobotPose> estimatedRobotPoseMap;
+    private final Map<VisionIO, NoteTrackingResult> noteTrackingResultMap;
 
     public ReplayVisionRunner(
             final AprilTagFieldLayout aprilTagFieldLayout,
-            final Map<ReplayVisionRunner.VisionIOApriltagsReplay, VisionIO.VisionIOInputs> visionIOInputsMap
+            final Map<ReplayVisionRunner.VisionIOReplay, VisionIO.VisionIOInputs> apriltagVisionIOInputsMap,
+            final Map<ReplayVisionRunner.VisionIOReplay, VisionIO.VisionIOInputs> noteTrackingVisionIOInputsMap
     ) {
-        this.visionIOInputsMap = visionIOInputsMap;
+        this.apriltagVisionIOInputsMap = apriltagVisionIOInputsMap;
+        this.noteTrackingVisionIOInputsMap = noteTrackingVisionIOInputsMap;
 
-        final Map<ReplayVisionRunner.VisionIOApriltagsReplay, String> visionIONames = new HashMap<>();
-        final Map<ReplayVisionRunner.VisionIOApriltagsReplay, PhotonPoseEstimator> poseEstimatorMap = new HashMap<>();
-        for (final ReplayVisionRunner.VisionIOApriltagsReplay visionIOApriltagsReplay : visionIOInputsMap.keySet()) {
+        final Map<ReplayVisionRunner.VisionIOReplay, String> visionIONames = new HashMap<>();
+        final Map<ReplayVisionRunner.VisionIOReplay, PhotonPoseEstimator> poseEstimatorMap = new HashMap<>();
+        for (final ReplayVisionRunner.VisionIOReplay visionIOApriltagsReplay : apriltagVisionIOInputsMap.keySet()) {
             final PhotonPoseEstimator photonPoseEstimator = new PhotonPoseEstimator(
                     aprilTagFieldLayout,
                     Constants.Vision.MULTI_TAG_POSE_STRATEGY,
@@ -52,9 +57,14 @@ public class ReplayVisionRunner implements PhotonVisionRunner {
             visionIONames.put(visionIOApriltagsReplay, visionIOApriltagsReplay.photonCamera.getName());
         }
 
+        for (final ReplayVisionRunner.VisionIOReplay visionIONoteTrackReplay : noteTrackingVisionIOInputsMap.keySet()) {
+            visionIONames.put(visionIONoteTrackReplay, visionIONoteTrackReplay.photonCamera.getName());
+        }
+
         this.visionIONames = visionIONames;
         this.photonPoseEstimatorMap = poseEstimatorMap;
         this.estimatedRobotPoseMap = new HashMap<>();
+        this.noteTrackingResultMap = new HashMap<>();
     }
 
     @SuppressWarnings("DuplicatedCode")
@@ -65,10 +75,10 @@ public class ReplayVisionRunner implements PhotonVisionRunner {
         }
 
         for (
-                final Map.Entry<ReplayVisionRunner.VisionIOApriltagsReplay, VisionIO.VisionIOInputs>
-                        photonVisionIOInputsEntry : visionIOInputsMap.entrySet()
+                final Map.Entry<ReplayVisionRunner.VisionIOReplay, VisionIO.VisionIOInputs>
+                        photonVisionIOInputsEntry : apriltagVisionIOInputsMap.entrySet()
         ) {
-            final ReplayVisionRunner.VisionIOApriltagsReplay visionIO = photonVisionIOInputsEntry.getKey();
+            final ReplayVisionRunner.VisionIOReplay visionIO = photonVisionIOInputsEntry.getKey();
             final VisionIO.VisionIOInputs inputs = photonVisionIOInputsEntry.getValue();
 
             visionIO.periodic();
@@ -81,12 +91,40 @@ public class ReplayVisionRunner implements PhotonVisionRunner {
 
             final PhotonPipelineResult result = inputs.latestResult;
             VisionUtils.correctPipelineResultTimestamp(result);
+
             VisionUtils.updatePoseEstimator(
                     photonPoseEstimatorMap.get(visionIO),
                     result
             ).ifPresent(
                     estimatedRobotPose -> estimatedRobotPoseMap.put(visionIO, estimatedRobotPose)
             );
+        }
+
+        for (
+                final Map.Entry<ReplayVisionRunner.VisionIOReplay, VisionIO.VisionIOInputs>
+                        photonVisionIOInputsEntry : noteTrackingVisionIOInputsMap.entrySet()
+        ) {
+            final ReplayVisionRunner.VisionIOReplay visionIO = photonVisionIOInputsEntry.getKey();
+            final VisionIO.VisionIOInputs inputs = photonVisionIOInputsEntry.getValue();
+
+            visionIO.periodic();
+            visionIO.updateInputs(inputs);
+
+            Logger.processInputs(
+                    String.format("%s/%s", PhotonVision.PhotonLogKey, visionIONames.get(visionIO)),
+                    inputs
+            );
+
+            final PhotonPipelineResult pipelineResult = inputs.latestResult;
+            VisionUtils.correctPipelineResultTimestamp(pipelineResult);
+
+            Logger.recordOutput(
+                    String.format("%s/%s/HasTarget", PhotonVision.PhotonLogKey, visionIONames.get(visionIO)),
+                    pipelineResult.hasTargets()
+            );
+
+            final NoteTrackingResult noteTrackingResult = new NoteTrackingResult(inputs.robotToCamera, pipelineResult);
+            noteTrackingResultMap.put(visionIO, noteTrackingResult);
         }
     }
 
@@ -98,12 +136,22 @@ public class ReplayVisionRunner implements PhotonVisionRunner {
     public void resetRobotPose(final Pose3d robotPose) {}
 
     @Override
-    public Map<ReplayVisionRunner.VisionIOApriltagsReplay, VisionIO.VisionIOInputs> getApriltagVisionIOInputsMap() {
-        return visionIOInputsMap;
+    public Map<ReplayVisionRunner.VisionIOReplay, VisionIO.VisionIOInputs> getApriltagVisionIOInputsMap() {
+        return apriltagVisionIOInputsMap;
+    }
+
+    @Override
+    public Map<ReplayVisionRunner.VisionIOReplay, VisionIO.VisionIOInputs> getNoteTrackingVisionIOInputsMap() {
+        return noteTrackingVisionIOInputsMap;
     }
 
     @Override
     public EstimatedRobotPose getEstimatedRobotPose(final VisionIO visionIO) {
         return estimatedRobotPoseMap.get(visionIO);
+    }
+
+    @Override
+    public NoteTrackingResult getNoteTrackingResult(final VisionIO visionIO) {
+        return noteTrackingResultMap.get(visionIO);
     }
 }

@@ -193,6 +193,7 @@ public class SimVisionRunner implements PhotonVisionRunner {
 
             final PhotonPipelineResult result = inputs.latestResult;
             VisionUtils.correctPipelineResultTimestamp(result);
+
             VisionUtils.updatePoseEstimator(
                     photonPoseEstimatorMap.get(visionIO),
                     result
