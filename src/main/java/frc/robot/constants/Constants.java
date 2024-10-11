@@ -10,7 +10,7 @@ import edu.wpi.first.math.util.Units;
 import org.photonvision.PhotonPoseEstimator;
 
 public interface Constants {
-    RobotMode CURRENT_MODE = RobotMode.SIM;
+    RobotMode CURRENT_MODE = RobotMode.REAL;
     CompetitionType CURRENT_COMPETITION_TYPE = CompetitionType.TESTING;
     double LOOP_PERIOD_SECONDS = 0.02;
 
@@ -50,7 +50,7 @@ public interface Constants {
         );
         Transform3d ROBOT_TO_REAR_NOTE = new Transform3d(
                 new Translation3d(Units.inchesToMeters(-16), Units.inchesToMeters(0), Units.inchesToMeters(14)),
-                new Rotation3d(0, Units.degreesToRadians(21), Units.degreesToRadians(180))
+                new Rotation3d(0, Units.degreesToRadians(22), Units.degreesToRadians(180))
         );
 
         double NOTE_HEIGHT_Z = Units.inchesToMeters(2);

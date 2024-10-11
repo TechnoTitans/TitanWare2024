@@ -12,7 +12,6 @@ import java.util.Optional;
 import java.util.function.Function;
 
 public class NoteTrackingResult {
-    private static final double NoteTargetLocationHeight = Units.inchesToMeters(0); //Bounding box Offset (Selected in PV)
     private static final double DistanceOffsetMeters = Units.inchesToMeters(0); //Bounding box Offset (Selected in PV)
     private static final double AllowableTimestampTimeout = 1;
 
@@ -93,7 +92,7 @@ public class NoteTrackingResult {
     public static double getNoteDistance(final Transform3d robotToCamera, final PhotonTrackedTarget trackedTarget) {
         return PhotonUtils.calculateDistanceToTargetMeters(
                 robotToCamera.getZ(),
-                NoteTargetLocationHeight,
+                Constants.Vision.NOTE_HEIGHT_Z,
                 -robotToCamera.getRotation().getY(), //Convert CCW+ to CW+
                 Units.degreesToRadians(trackedTarget.getPitch())
         ) / Math.cos(Units.degreesToRadians(trackedTarget.getYaw())) + DistanceOffsetMeters;

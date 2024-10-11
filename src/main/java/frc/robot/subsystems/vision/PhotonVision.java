@@ -302,7 +302,7 @@ public class PhotonVision extends VirtualSubsystem {
             if (noteTrackingResult != null) {
                 Logger.recordOutput(logKey + "/HasTargets", noteTrackingResult.hasTargets);
                 final Optional<Pose2d> optionalBestNotePose = noteTrackingResult
-                        .getBestNotePose(timestamp -> Optional.of(swerve.getPose()));
+                        .getBestNotePose(swerve::getPose);
 
                 Logger.recordOutput(logKey + "/HasBestNotePose", optionalBestNotePose.isPresent());
                 Logger.recordOutput(
