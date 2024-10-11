@@ -13,7 +13,6 @@ import edu.wpi.first.math.MathUtil;
 import edu.wpi.first.math.VecBuilder;
 import edu.wpi.first.math.controller.PIDController;
 import edu.wpi.first.math.controller.ProfiledPIDController;
-import edu.wpi.first.math.estimator.SwerveDrivePoseEstimator;
 import edu.wpi.first.math.geometry.*;
 import edu.wpi.first.math.kinematics.ChassisSpeeds;
 import edu.wpi.first.math.kinematics.SwerveDriveKinematics;
@@ -34,6 +33,7 @@ import frc.robot.auto.Autos;
 import frc.robot.constants.Constants;
 import frc.robot.constants.HardwareConstants;
 import frc.robot.subsystems.drive.constants.SwerveConstants;
+import frc.robot.subsystems.drive.estimator.SwerveDrivePoseEstimator;
 import frc.robot.subsystems.drive.trajectory.HolonomicChoreoController;
 import frc.robot.subsystems.drive.trajectory.HolonomicDriveWithPIDController;
 import frc.robot.subsystems.gyro.Gyro;
@@ -358,6 +358,10 @@ public class Swerve extends SubsystemBase {
      */
     public Pose2d getPose() {
         return poseEstimator.getEstimatedPosition();
+    }
+
+    public Optional<Pose2d> getPose(final double atTimestamp) {
+        return poseEstimator.sampleAt(atTimestamp);
     }
 
     public Gyro getGyro() {

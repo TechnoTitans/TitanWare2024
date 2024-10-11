@@ -1,6 +1,7 @@
 package frc.robot.subsystems.vision.cameras;
 
 import edu.wpi.first.math.Matrix;
+import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.numbers.N1;
 import edu.wpi.first.math.numbers.N3;
 import edu.wpi.first.math.numbers.N5;
@@ -20,6 +21,23 @@ public class TitanCameraCalibration {
 
     public TitanCameraCalibration() {
         this(new HashMap<>());
+    }
+
+    public static TitanCameraCalibration perfect(final CameraProperties cameraProperties) {
+        final List<CameraProperties.Resolution> resolutions = cameraProperties.getResolutions();
+        final Map<CameraProperties.Resolution, SimCameraProperties> cameraPropertiesMap = new HashMap<>();
+
+        for (final CameraProperties.Resolution resolution : resolutions) {
+            final SimCameraProperties simCameraProperties = new SimCameraProperties();
+            simCameraProperties.setCalibration(
+                    resolution.getWidth(),
+                    resolution.getHeight(),
+                    Rotation2d.fromDegrees(cameraProperties.getCamDiagonalFOVDeg())
+            );
+            cameraPropertiesMap.put(resolution, simCameraProperties);
+        }
+
+        return new TitanCameraCalibration(cameraPropertiesMap);
     }
 
     public static TitanCameraCalibration fromSimCameraProperties(final SimCameraProperties simCameraProperties) {

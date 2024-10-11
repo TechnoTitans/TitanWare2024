@@ -147,7 +147,7 @@ public enum TitanCamera {
     ),
     PHOTON_BC_NOTE_TRACKING(
             "BC_NoteTracking",
-            Constants.Vision.ROBOT_TO_REAR_NOTED, // TODO: get transform
+            Constants.Vision.ROBOT_TO_REAR_NOTE,
             CameraProperties.ARDUCAM_OV9782,
             false
     );
@@ -204,7 +204,7 @@ public enum TitanCamera {
                 cameraProperties,
                 1.0,
                 false,
-                TitanCameraCalibration.fromSimCameraProperties(SimCameraProperties.PERFECT_90DEG()),
+                TitanCameraCalibration.perfect(cameraProperties),
                 driverCam
         );
     }

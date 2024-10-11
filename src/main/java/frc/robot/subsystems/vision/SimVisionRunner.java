@@ -7,8 +7,11 @@ import edu.wpi.first.math.geometry.Rotation3d;
 import edu.wpi.first.math.geometry.Transform3d;
 import edu.wpi.first.math.kinematics.SwerveDriveOdometry;
 import frc.robot.constants.Constants;
+import frc.robot.constants.SimConstants;
 import frc.robot.subsystems.drive.Swerve;
 import frc.robot.subsystems.vision.cameras.TitanCamera;
+import frc.robot.subsystems.vision.result.NoteTrackingResult;
+import frc.robot.utils.PoseUtils;
 import frc.robot.utils.closeables.ToClose;
 import frc.robot.utils.gyro.GyroUtils;
 import org.littletonrobotics.junction.Logger;
@@ -17,6 +20,7 @@ import org.photonvision.PhotonCamera;
 import org.photonvision.PhotonPoseEstimator;
 import org.photonvision.simulation.PhotonCameraSim;
 import org.photonvision.simulation.VisionSystemSim;
+import org.photonvision.simulation.VisionTargetSim;
 import org.photonvision.targeting.PhotonPipelineResult;
 
 import java.util.HashMap;
@@ -24,12 +28,12 @@ import java.util.Map;
 
 public class SimVisionRunner implements PhotonVisionRunner {
     public static class VisionIOApriltagsSim implements VisionIO {
-        private final TitanCamera titanCamera;
-        private final PhotonCamera photonCamera;
-        private final String cameraName;
+        public final TitanCamera titanCamera;
+        public final PhotonCamera photonCamera;
+        public final String cameraName;
 
-        private final double stdDevFactor;
-        private final Transform3d robotToCamera;
+        public final double stdDevFactor;
+        public final Transform3d robotToCamera;
 
         public VisionIOApriltagsSim(
                 final TitanCamera titanCamera,
@@ -62,31 +66,79 @@ public class SimVisionRunner implements PhotonVisionRunner {
         }
     }
 
+    public static class VisionIONoteTrackingSim implements VisionIO {
+        public final TitanCamera titanCamera;
+        public final PhotonCamera photonCamera;
+        public final String cameraName;
+
+        public final Transform3d robotToCamera;
+
+        public VisionIONoteTrackingSim(
+                final TitanCamera titanCamera,
+                final VisionSystemSim visionSystemSim
+        ) {
+            this.titanCamera = titanCamera;
+            this.photonCamera = titanCamera.getPhotonCamera();
+            this.cameraName = photonCamera.getName();
+
+            this.robotToCamera = titanCamera.getRobotToCameraTransform();
+
+            final PhotonCameraSim photonCameraSim =
+                    new PhotonCameraSim(titanCamera.getPhotonCamera(), titanCamera.toSimCameraProperties());
+
+            photonCameraSim.enableDrawWireframe(true);
+            photonCameraSim.enableRawStream(true);
+            photonCameraSim.enableProcessedStream(true);
+
+            ToClose.add(photonCameraSim);
+            visionSystemSim.addCamera(photonCameraSim, titanCamera.getRobotToCameraTransform());
+        }
+
+        @Override
+        public void updateInputs(final VisionIOInputs inputs) {
+            inputs.name = cameraName;
+            inputs.stdDevFactor = -1;
+            inputs.robotToCamera = robotToCamera;
+            inputs.latestResult = photonCamera.getLatestResult();
+        }
+    }
+
     private final Swerve swerve;
     private final SwerveDriveOdometry visionIndependentOdometry;
     private final VisionSystemSim visionSystemSim;
 
-    private final Map<VisionIOApriltagsSim, VisionIO.VisionIOInputs> visionIOInputsMap;
-    private final Map<SimVisionRunner.VisionIOApriltagsSim, PhotonPoseEstimator> photonPoseEstimatorMap;
+    private final Map<VisionIOApriltagsSim, VisionIO.VisionIOInputs> apriltagVisionIOInputsMap;
+    private final Map<VisionIONoteTrackingSim, VisionIO.VisionIOInputs> noteTrackingVisionIOInputsMap;
+    private final Map<VisionIOApriltagsSim, PhotonPoseEstimator> photonPoseEstimatorMap;
 
     private final Map<VisionIO, EstimatedRobotPose> estimatedRobotPoseMap;
+    private final Map<VisionIO, NoteTrackingResult> noteTrackingResultMap;
 
     public SimVisionRunner(
             final Swerve swerve,
             final SwerveDriveOdometry visionIndependentOdometry,
             final AprilTagFieldLayout aprilTagFieldLayout,
             final VisionSystemSim visionSystemSim,
-            final Map<VisionIOApriltagsSim, VisionIO.VisionIOInputs> visionIOInputsMap
+            final Pose2d[] simNotePoses,
+            final Map<VisionIOApriltagsSim, VisionIO.VisionIOInputs> apriltagVisionIOInputsMap,
+            final Map<VisionIONoteTrackingSim, VisionIO.VisionIOInputs> noteTrackingVisionIOInputsMap
     ) {
         this.swerve = swerve;
         this.visionIndependentOdometry = visionIndependentOdometry;
         this.visionSystemSim = visionSystemSim;
         this.visionSystemSim.addAprilTags(aprilTagFieldLayout);
 
-        this.visionIOInputsMap = visionIOInputsMap;
+        for (final Pose2d simNotePose : simNotePoses) {
+            this.visionSystemSim.addVisionTargets("note", new VisionTargetSim(
+                    PoseUtils.note2dTo3d(simNotePose), SimConstants.Vision.NOTE_TARGET_MODEL
+            ));
+        }
 
-        final Map<SimVisionRunner.VisionIOApriltagsSim, PhotonPoseEstimator> poseEstimatorMap = new HashMap<>();
-        for (final SimVisionRunner.VisionIOApriltagsSim visionIOApriltagsSim : visionIOInputsMap.keySet()) {
+        this.apriltagVisionIOInputsMap = apriltagVisionIOInputsMap;
+        this.noteTrackingVisionIOInputsMap = noteTrackingVisionIOInputsMap;
+
+        final Map<VisionIOApriltagsSim, PhotonPoseEstimator> poseEstimatorMap = new HashMap<>();
+        for (final VisionIOApriltagsSim visionIOApriltagsSim : apriltagVisionIOInputsMap.keySet()) {
             final PhotonPoseEstimator photonPoseEstimator = new PhotonPoseEstimator(
                     aprilTagFieldLayout,
                     Constants.Vision.MULTI_TAG_POSE_STRATEGY,
@@ -100,6 +152,7 @@ public class SimVisionRunner implements PhotonVisionRunner {
 
         this.photonPoseEstimatorMap = poseEstimatorMap;
         this.estimatedRobotPoseMap = new HashMap<>();
+        this.noteTrackingResultMap = new HashMap<>();
     }
 
     @SuppressWarnings("DuplicatedCode")
@@ -125,7 +178,7 @@ public class SimVisionRunner implements PhotonVisionRunner {
 
         for (
                 final Map.Entry<VisionIOApriltagsSim, VisionIO.VisionIOInputs>
-                        photonVisionIOInputsEntry : visionIOInputsMap.entrySet()
+                        photonVisionIOInputsEntry : apriltagVisionIOInputsMap.entrySet()
         ) {
             final VisionIOApriltagsSim visionIO = photonVisionIOInputsEntry.getKey();
             final VisionIO.VisionIOInputs inputs = photonVisionIOInputsEntry.getValue();
@@ -147,6 +200,33 @@ public class SimVisionRunner implements PhotonVisionRunner {
                     estimatedRobotPose -> estimatedRobotPoseMap.put(visionIO, estimatedRobotPose)
             );
         }
+
+        for (
+                final Map.Entry<VisionIONoteTrackingSim, VisionIO.VisionIOInputs>
+                        photonVisionIOInputsEntry : noteTrackingVisionIOInputsMap.entrySet()
+        ) {
+            final VisionIONoteTrackingSim visionIO = photonVisionIOInputsEntry.getKey();
+            final VisionIO.VisionIOInputs inputs = photonVisionIOInputsEntry.getValue();
+
+            visionIO.periodic();
+            visionIO.updateInputs(inputs);
+
+            Logger.processInputs(
+                    String.format("%s/%s", PhotonVision.PhotonLogKey, inputs.name),
+                    inputs
+            );
+
+            final PhotonPipelineResult pipelineResult = inputs.latestResult;
+            VisionUtils.correctPipelineResultTimestamp(pipelineResult);
+
+            Logger.recordOutput(
+                    String.format("%s/%s/HasTarget", PhotonVision.PhotonLogKey, inputs.name),
+                    pipelineResult.hasTargets()
+            );
+
+            final NoteTrackingResult noteTrackingResult = new NoteTrackingResult(inputs.robotToCamera, pipelineResult);
+            noteTrackingResultMap.put(visionIO, noteTrackingResult);
+        }
     }
 
     /**
@@ -163,11 +243,21 @@ public class SimVisionRunner implements PhotonVisionRunner {
 
     @Override
     public Map<VisionIOApriltagsSim, VisionIO.VisionIOInputs> getApriltagVisionIOInputsMap() {
-        return visionIOInputsMap;
+        return apriltagVisionIOInputsMap;
+    }
+
+    @Override
+    public Map<VisionIONoteTrackingSim, VisionIO.VisionIOInputs> getNoteTrackingVisionIOInputsMap() {
+        return noteTrackingVisionIOInputsMap;
     }
 
     @Override
     public EstimatedRobotPose getEstimatedRobotPose(final VisionIO visionIO) {
         return estimatedRobotPoseMap.get(visionIO);
+    }
+
+    @Override
+    public NoteTrackingResult getNoteTrackingResult(final VisionIO visionIO) {
+        return noteTrackingResultMap.get(visionIO);
     }
 }

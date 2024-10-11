@@ -3,7 +3,6 @@ package frc.robot.subsystems.vision;
 import edu.wpi.first.apriltag.AprilTagFieldLayout;
 import edu.wpi.first.math.geometry.Pose3d;
 import edu.wpi.first.math.geometry.Transform3d;
-import edu.wpi.first.math.util.Units;
 import frc.robot.constants.Constants;
 import frc.robot.subsystems.vision.cameras.TitanCamera;
 import frc.robot.subsystems.vision.result.NoteTrackingResult;
@@ -45,8 +44,6 @@ public class RealVisionRunner implements PhotonVisionRunner {
     }
 
     public static class VisionIONoteTrackingReal implements VisionIO {
-        public static final double NOTE_HEIGHT_Z = Units.inchesToMeters(2);
-
         private final PhotonCamera photonCamera;
         private final String cameraName;
 

@@ -4,14 +4,15 @@ import edu.wpi.first.apriltag.AprilTagFieldLayout;
 import edu.wpi.first.apriltag.AprilTagFields;
 import edu.wpi.first.math.VecBuilder;
 import edu.wpi.first.math.Vector;
-import edu.wpi.first.math.estimator.SwerveDrivePoseEstimator;
 import edu.wpi.first.math.geometry.*;
 import edu.wpi.first.math.kinematics.SwerveDriveOdometry;
 import edu.wpi.first.math.numbers.N3;
 import edu.wpi.first.wpilibj.DriverStation;
 import frc.robot.constants.Constants;
+import frc.robot.constants.FieldConstants;
 import frc.robot.subsystems.drive.Swerve;
 import frc.robot.subsystems.drive.constants.SwerveConstants;
+import frc.robot.subsystems.drive.estimator.SwerveDrivePoseEstimator;
 import frc.robot.subsystems.vision.cameras.TitanCamera;
 import frc.robot.subsystems.vision.result.NoteTrackingResult;
 import frc.robot.utils.PoseUtils;
@@ -101,10 +102,14 @@ public class PhotonVision extends VirtualSubsystem {
                         ),
                         PhotonVision.apriltagFieldLayout,
                         visionSystemSim,
+                        FieldConstants.CENTER_LINE_NOTE_POSES,
                         PhotonVision.makeVisionIOInputsMap(
                                 new SimVisionRunner.VisionIOApriltagsSim(TitanCamera.PHOTON_FL_APRILTAG, visionSystemSim),
                                 new SimVisionRunner.VisionIOApriltagsSim(TitanCamera.PHOTON_FC_APRILTAG, visionSystemSim),
                                 new SimVisionRunner.VisionIOApriltagsSim(TitanCamera.PHOTON_FR_APRILTAG, visionSystemSim)
+                        ),
+                        PhotonVision.makeVisionIOInputsMap(
+                            new SimVisionRunner.VisionIONoteTrackingSim(TitanCamera.PHOTON_BC_NOTE_TRACKING, visionSystemSim)
                         )
                 );
             }
@@ -290,15 +295,15 @@ public class PhotonVision extends VirtualSubsystem {
                 );
                 Logger.recordOutput(
                         "NoteCameraPose",
-                        new Pose3d(swerve.getPose()).transformBy(Constants.Vision.ROBOT_TO_REAR_NOTED)
+                        new Pose3d(swerve.getPose()).transformBy(Constants.Vision.ROBOT_TO_REAR_NOTE)
                 );
 
                 final Pose2d[] notePose2ds = noteTrackingResult
-                        .getNotePoses(timestamp -> Optional.of(swerve.getPose()));
+                        .getNotePoses(swerve::getPose);
 
                 final Pose3d[] notePose3ds = new Pose3d[notePose2ds.length];
                 for (int i = 0; i < notePose2ds.length; i++) {
-                    notePose3ds[i] = new Pose3d(notePose2ds[i]);
+                    notePose3ds[i] = PoseUtils.note2dTo3d(notePose2ds[i]);
                 }
 
                 Logger.recordOutput(logKey + "/NotePoses", notePose3ds);
@@ -378,7 +383,7 @@ public class PhotonVision extends VirtualSubsystem {
             final NoteTrackingResult noteTrackingResult = runner.getNoteTrackingResult(visionIO);
             if (noteTrackingResult != null) {
                 notePoses.addAll(Arrays.asList(noteTrackingResult
-                        .getNotePoses(timestamp -> Optional.of(swerve.getPose()))));
+                        .getNotePoses(swerve::getPose)));
             }
         }
         return notePoses;
