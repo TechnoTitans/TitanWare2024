@@ -20,6 +20,7 @@ import frc.robot.subsystems.intake.Intake;
 import frc.robot.subsystems.superstructure.ShotParameters;
 import frc.robot.subsystems.superstructure.Superstructure;
 import frc.robot.subsystems.vision.PhotonVision;
+import org.littletonrobotics.junction.Logger;
 
 import java.util.List;
 import java.util.Set;
@@ -146,7 +147,7 @@ public class Autos {
     }
 
     private Command resetPose(final ChoreoTrajectory trajectory) {
-        return Commands.defer(() -> swerve.resetPoseCommand(
+        return Commands.defer(() -> photonVision.resetPoseCommand(
                         Robot.IsRedAlliance.getAsBoolean()
                                 ? trajectory.getFlippedInitialPose()
                                 : trajectory.getInitialPose()
@@ -1254,6 +1255,9 @@ public class Autos {
         final AutoTriggers autoTriggers = new AutoTriggers(trajectoryName, swerve::getPose, timer::get);
 
         autoTriggers.autoEnabled().whileTrue(preloadSubwooferAndFollow0(autoTriggers.trajectories, timer));
+
+        Logger.recordOutput("OInitial pose", autoTriggers.trajectories.get(0).getInitialPose());
+        Logger.recordOutput("Initial pose", autoTriggers.trajectories.get(0).getFlippedInitialPose());
 
         autoTriggers.atTime(2.23).onTrue(
                 Commands.parallel(

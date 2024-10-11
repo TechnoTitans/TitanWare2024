@@ -67,7 +67,8 @@ public class PoseEstimator<T extends WheelPositions<T>> {
             Kinematics<?, T> kinematics,
             Odometry<T> odometry,
             Matrix<N3, N1> stateStdDevs,
-            Matrix<N3, N1> visionMeasurementStdDevs) {
+            Matrix<N3, N1> visionMeasurementStdDevs
+    ) {
         m_kinematics = kinematics;
         m_odometry = odometry;
 
@@ -175,7 +176,11 @@ public class PoseEstimator<T extends WheelPositions<T>> {
 
         // Step 4: Convert back to Twist2d.
         var scaledTwist =
-                new Twist2d(k_times_twist.get(0, 0), k_times_twist.get(1, 0), k_times_twist.get(2, 0));
+                new Twist2d(
+                        k_times_twist.get(0, 0),
+                        k_times_twist.get(1, 0),
+                        k_times_twist.get(2, 0)
+                );
 
         // Step 5: Reset Odometry to state at sample with vision adjustment.
         m_odometry.resetPosition(
@@ -226,7 +231,8 @@ public class PoseEstimator<T extends WheelPositions<T>> {
     public void addVisionMeasurement(
             Pose2d visionRobotPoseMeters,
             double timestampSeconds,
-            Matrix<N3, N1> visionMeasurementStdDevs) {
+            Matrix<N3, N1> visionMeasurementStdDevs
+    ) {
         setVisionMeasurementStdDevs(visionMeasurementStdDevs);
         addVisionMeasurement(visionRobotPoseMeters, timestampSeconds);
     }
@@ -256,7 +262,8 @@ public class PoseEstimator<T extends WheelPositions<T>> {
         m_odometry.update(gyroAngle, wheelPositions);
         m_poseBuffer.addSample(
                 currentTimeSeconds,
-                new InterpolationRecord(getEstimatedPosition(), gyroAngle, wheelPositions.copy()));
+                new InterpolationRecord(getEstimatedPosition(), gyroAngle, wheelPositions.copy())
+        );
 
         return getEstimatedPosition();
     }

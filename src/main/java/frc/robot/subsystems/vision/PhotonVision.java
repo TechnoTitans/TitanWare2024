@@ -8,6 +8,7 @@ import edu.wpi.first.math.geometry.*;
 import edu.wpi.first.math.kinematics.SwerveDriveOdometry;
 import edu.wpi.first.math.numbers.N3;
 import edu.wpi.first.wpilibj.DriverStation;
+import edu.wpi.first.wpilibj2.command.Command;
 import frc.robot.constants.Constants;
 import frc.robot.constants.FieldConstants;
 import frc.robot.subsystems.drive.Swerve;
@@ -27,6 +28,8 @@ import java.io.UncheckedIOException;
 import java.util.*;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
+
+import static edu.wpi.first.wpilibj2.command.Commands.runOnce;
 
 public class PhotonVision extends VirtualSubsystem {
     public static final String PhotonLogKey = "Vision";
@@ -254,6 +257,11 @@ public class PhotonVision extends VirtualSubsystem {
             final VisionIO.VisionIOInputs inputs = visionIOInputsEntry.getValue();
             final String logKey = PhotonLogKey + "/" + inputs.name;
 
+            Logger.recordOutput(
+                    logKey + "/CameraPose",
+                    new Pose3d(swerve.getPose()).transformBy(Constants.Vision.ROBOT_TO_REAR_NOTE)
+            );
+
             final EstimatedRobotPose estimatedRobotPose = runner.getEstimatedRobotPose(visionIO);
             if (estimatedRobotPose != null) {
                 final EstimatedRobotPose lastEstimatedPose = lastEstimatedRobotPose.get(visionIO);
@@ -285,6 +293,11 @@ public class PhotonVision extends VirtualSubsystem {
             final VisionIO.VisionIOInputs inputs = visionIOInputsEntry.getValue();
             final String logKey = PhotonLogKey + "/" + inputs.name;
 
+            Logger.recordOutput(
+                    logKey + "/CameraPose",
+                    new Pose3d(swerve.getPose()).transformBy(Constants.Vision.ROBOT_TO_REAR_NOTE)
+            );
+
             final NoteTrackingResult noteTrackingResult = runner.getNoteTrackingResult(visionIO);
             if (noteTrackingResult != null) {
                 Logger.recordOutput(logKey + "/HasTargets", noteTrackingResult.hasTargets);
@@ -295,10 +308,6 @@ public class PhotonVision extends VirtualSubsystem {
                 Logger.recordOutput(
                         logKey + "/BestNotePose",
                         new Pose3d(optionalBestNotePose.orElseGet(Pose2d::new))
-                );
-                Logger.recordOutput(
-                        "NoteCameraPose",
-                        new Pose3d(swerve.getPose()).transformBy(Constants.Vision.ROBOT_TO_REAR_NOTE)
                 );
 
                 final Pose2d[] notePose2ds = noteTrackingResult
@@ -378,6 +387,10 @@ public class PhotonVision extends VirtualSubsystem {
 
     public void resetPosition(final Pose2d robotPose) {
         resetPosition(robotPose, swerve.getYaw());
+    }
+
+    public Command resetPoseCommand(final Pose2d robotPose) {
+        return runOnce(() -> resetPosition(robotPose));
     }
 
     public List<Pose2d> getNotePoses() {

@@ -404,12 +404,8 @@ public class Swerve extends SubsystemBase {
         return runOnce(this::zeroRotation);
     }
 
-    public void resetPose(final Pose2d robotPose) {
+    private void resetPose(final Pose2d robotPose) {
         poseEstimator.resetPosition(gyro.getYawRotation2d(), getModulePositions(), robotPose);
-    }
-
-    public Command resetPoseCommand(final Pose2d robotPose) {
-        return runOnce(() -> resetPose(robotPose));
     }
 
     public ChassisSpeeds getRobotRelativeSpeeds() {
