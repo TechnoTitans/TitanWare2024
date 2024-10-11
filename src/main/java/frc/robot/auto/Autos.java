@@ -24,6 +24,7 @@ import org.littletonrobotics.junction.Logger;
 
 import java.util.List;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.DoubleSupplier;
 import java.util.function.Supplier;
 
@@ -392,45 +393,39 @@ public class Autos {
                 ).withName("Intake0")
         );
 
-        autoTriggers.atTime(1.25).onTrue(
+        autoTriggers.atTime(1).onTrue(
                 Commands.sequence(
-//                        Commands.waitUntil(noteState.isStored)
-//                                .withTimeout(2),
-                        Commands.waitSeconds(0.5),
+                        Commands.waitSeconds(1),
                         shootCommands.deferredStopAimAndShoot().withName("Shoot0").asProxy(),
                         followPath(autoTriggers.trajectories.get(1), timer).asProxy()
                 ).withName("Shoot0AndFollow1")
         );
 
-        autoTriggers.atTime(2).onTrue(
+        autoTriggers.atTime(2.3).onTrue(
                 Commands.parallel(
                         intake.intakeCommand(),
                         shootCommands.readySuperstructureForShot()
                 ).withName("Intake1")
         );
 
-        autoTriggers.atTime(3.87).onTrue(
+        autoTriggers.atTime(4.03).onTrue(
                 Commands.sequence(
-//                        Commands.waitUntil(noteState.isStored)
-//                                .withTimeout(2),
-                        Commands.waitSeconds(0.5),
+                        Commands.waitSeconds(1),
                         shootCommands.deferredStopAimAndShoot().withName("Shoot1").asProxy(),
                         followPath(autoTriggers.trajectories.get(2), timer).asProxy()
                 ).withName("Shoot1AndFollow2")
         );
 
-        autoTriggers.atTime(4.3).onTrue(
+        autoTriggers.atTime(4.6).onTrue(
                 Commands.parallel(
                         intake.intakeCommand(),
                         shootCommands.readySuperstructureForShot()
                 ).withName("Intake2")
         );
 
-        autoTriggers.atTime(6.02).onTrue(
+        autoTriggers.atTime(6.03).onTrue(
                 Commands.sequence(
-//                        Commands.waitUntil(noteState.isStored)
-//                                .withTimeout(2),
-                        Commands.waitSeconds(0.5),
+                        Commands.waitSeconds(1),
                         shootCommands.deferredStopAimAndShoot().withName("Shoot2").asProxy()
                 ).withName("Shoot2")
         );
@@ -1253,22 +1248,19 @@ public class Autos {
         final String trajectoryName = "AmpCenter3_2Note";
         final Timer timer = new Timer();
         final AutoTriggers autoTriggers = new AutoTriggers(trajectoryName, swerve::getPose, timer::get);
+        final AtomicReference<Pose2d> preNoteTrackPose = new AtomicReference<>(new Pose2d());
 
         autoTriggers.autoEnabled().whileTrue(preloadSubwooferAndFollow0(autoTriggers.trajectories, timer));
 
-        Logger.recordOutput("OInitial pose", autoTriggers.trajectories.get(0).getInitialPose());
-        Logger.recordOutput("Initial pose", autoTriggers.trajectories.get(0).getFlippedInitialPose());
-
-        autoTriggers.atTime(2.23).onTrue(
+        autoTriggers.atTime(2.35).onTrue(
                 Commands.parallel(
                         intake.intakeCommand().asProxy(),
                         Commands.sequence(
+                                Commands.runOnce(() -> preNoteTrackPose.set(swerve.getPose())),
                                 swerve.driveToOptionalPose(() -> photonVision.getBestNotePose(swerve::getPose))
                                         .until(noteState.hasNote),
                                 swerve.driveToPose(
-                                        Robot.IsRedAlliance.getAsBoolean()
-                                                ? autoTriggers.trajectories.get(1)::getFlippedInitialPose
-                                                : autoTriggers.trajectories.get(1)::getInitialPose,
+                                        preNoteTrackPose::get,
                                         new Pose2d(1, 1, Rotation2d.fromDegrees(6))
                                 ),
                                 followPath(autoTriggers.trajectories.get(1), timer)
@@ -1280,7 +1272,7 @@ public class Autos {
                 ).withName("Intake0")
         );
 
-        autoTriggers.atTime(3.37).onTrue(
+        autoTriggers.atTime(3.76).onTrue(
                 Commands.sequence(
                         shootCommands.deferredStopAimAndShoot()
                                 .onlyIf(noteState.hasNote)

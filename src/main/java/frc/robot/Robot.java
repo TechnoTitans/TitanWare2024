@@ -354,12 +354,12 @@ public class Robot extends LoggedRobot {
         autoChooser.addAutoOption(new AutoOption(
                 "Speaker2_1_0",
                 autos.speaker2_1_0(),
-                Constants.CompetitionType.COMPETITION
+                Constants.CompetitionType.TESTING
         ));
         autoChooser.addAutoOption(new AutoOption(
                 "Speaker0_1_2",
                 autos.speaker0_1_2(),
-                Constants.CompetitionType.COMPETITION
+                Constants.CompetitionType.TESTING
         ));
         autoChooser.addAutoOption(new AutoOption(
                 "Speaker0_1_2Center4_3",
@@ -463,34 +463,34 @@ public class Robot extends LoggedRobot {
                 autos.walton(),
                 Constants.CompetitionType.TESTING
         ));
-        autoChooser.addAutoOption(new AutoOption(
-                "FollowNoteAmp",
-                autos.driveAndNoteDetect(),
-                Constants.CompetitionType.TESTING
-        ));
-        autoChooser.addAutoOption(new AutoOption(
-                "FollowNoteSource",
-                autos.AltSourceCenter0_1_2NOTE(),
-                Constants.CompetitionType.TESTING
-        ));
+//        autoChooser.addAutoOption(new AutoOption(
+//                "FollowNoteAmp",
+//                autos.driveAndNoteDetect(),
+//                Constants.CompetitionType.TESTING
+//        ));
+//        autoChooser.addAutoOption(new AutoOption(
+//                "FollowNoteSource",
+//                autos.AltSourceCenter0_1_2NOTE(),
+//                Constants.CompetitionType.TESTING
+//        ));
     }
 
     @SuppressWarnings("RedundantSuppression")
     public void configureButtonBindings(final EventLoop teleopEventLoop) {
         //noinspection SuspiciousNameCombination
-//        this.driverController.leftTrigger(0.5, teleopEventLoop)
-//                .whileTrue(Commands.parallel(
-//                        intake.intakeCommand().asProxy(),
-//                        swerve.teleopDriveAndAssistLineup(
-//                                driverController::getLeftY,
-//                                driverController::getLeftX,
-//                                driverController::getRightX,
-//                                IsRedAlliance,
-//                                () -> photonVision.getBestNotePose(swerve::getPose)
-//                        )
-//                ));
         this.driverController.leftTrigger(0.5, teleopEventLoop)
-                .whileTrue(intake.intakeCommand());
+                .whileTrue(Commands.parallel(
+                        intake.intakeCommand().asProxy(),
+                        swerve.teleopDriveAndAssistLineup(
+                                driverController::getLeftY,
+                                driverController::getLeftX,
+                                driverController::getRightX,
+                                IsRedAlliance,
+                                () -> photonVision.getBestNotePose(swerve::getPose)
+                        )
+                ));
+//        this.driverController.leftTrigger(0.5, teleopEventLoop)
+//                .whileTrue(intake.intakeCommand());
 
         // TODO: this doesn't rumble early enough, or as early as we'd like it to
         //  not sure if we're hardware limited or its behind by a few cycles and we can speed it up
