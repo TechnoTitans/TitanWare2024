@@ -428,6 +428,11 @@ public class Robot extends LoggedRobot {
                 Constants.CompetitionType.COMPETITION
         ));
         autoChooser.addAutoOption(new AutoOption(
+                "NorthSourceCenter0_1_2",
+                autos.northSourceCenter0_1_2(),
+                Constants.CompetitionType.COMPETITION
+        ));
+        autoChooser.addAutoOption(new AutoOption(
                 "old_SourceCenter0_1_2",
                 autos.sourceCenter0_1_2(),
                 Constants.CompetitionType.TESTING
