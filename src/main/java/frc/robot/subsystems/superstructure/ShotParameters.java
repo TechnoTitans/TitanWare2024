@@ -88,7 +88,7 @@ public class ShotParameters {
         ));
 
         shotDataMap.put(4.5d, new Parameters(
-                Rotation2d.fromDegrees(25.5),
+                Rotation2d.fromDegrees(26),
                 84.433,
                 128.883,
                 84.433,
@@ -96,7 +96,7 @@ public class ShotParameters {
         ));
 
         shotDataMap.put(5d, new Parameters(
-                Rotation2d.fromDegrees(24.75),
+                Rotation2d.fromDegrees(25),
                 84.433,
                 128.883,
                 84.433,
