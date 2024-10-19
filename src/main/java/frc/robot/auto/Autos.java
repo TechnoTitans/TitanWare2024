@@ -339,7 +339,7 @@ public class Autos {
 
         autoTriggers.atTime(0.4).onTrue(
                 Commands.sequence(
-                        intake.intakeCommand(),
+                        intake.intakeCommand().asProxy(),
                         shootCommands.readySuperstructureForShot()
                 )
         );
@@ -353,7 +353,7 @@ public class Autos {
 
         autoTriggers.atTime(3).onTrue(
                 Commands.sequence(
-                        intake.intakeCommand(),
+                        intake.intakeCommand().asProxy(),
                         shootCommands.readySuperstructureForShot()
                 )
         );
@@ -366,7 +366,7 @@ public class Autos {
 
         autoTriggers.atTime(7).onTrue(
                 Commands.sequence(
-                        intake.intakeCommand(),
+                        intake.intakeCommand().asProxy(),
                         shootCommands.readySuperstructureForShot()
                 )
         );
@@ -388,7 +388,7 @@ public class Autos {
 
         autoTriggers.atTime(0.4).onTrue(
                 Commands.parallel(
-                        intake.intakeCommand(),
+                        intake.intakeCommand().asProxy(),
                         shootCommands.readySuperstructureForShot()
                 ).withName("Intake0")
         );
@@ -403,7 +403,7 @@ public class Autos {
 
         autoTriggers.atTime(2.3).onTrue(
                 Commands.parallel(
-                        intake.intakeCommand(),
+                        intake.intakeCommand().asProxy(),
                         shootCommands.readySuperstructureForShot()
                 ).withName("Intake1")
         );
@@ -418,7 +418,7 @@ public class Autos {
 
         autoTriggers.atTime(4.6).onTrue(
                 Commands.parallel(
-                        intake.intakeCommand(),
+                        intake.intakeCommand().asProxy(),
                         shootCommands.readySuperstructureForShot()
                 ).withName("Intake2")
         );
@@ -451,7 +451,7 @@ public class Autos {
 
         autoTriggers.atTime(1.7).onTrue(
                 Commands.parallel(
-                        intake.intakeCommand(),
+                        intake.intakeCommand().asProxy(),
                         shootCommands.readySuperstructureForShot()
                 ).withName("Intake0")
         );
@@ -465,7 +465,7 @@ public class Autos {
 
         autoTriggers.atTime(6).onTrue(
                 Commands.parallel(
-                        intake.intakeCommand(),
+                        intake.intakeCommand().asProxy(),
                         shootCommands.readySuperstructureForShot()
                 ).withName("Intake1")
         );
@@ -487,7 +487,7 @@ public class Autos {
 
         autoTriggers.atTime(2).onTrue(
                 Commands.parallel(
-                        intake.intakeCommand(),
+                        intake.intakeCommand().asProxy(),
                         shootCommands.readySuperstructureForShot()
                 ).withName("Intake0")
         );
@@ -501,7 +501,7 @@ public class Autos {
 
         autoTriggers.atTime(6).onTrue(
                 Commands.parallel(
-                        intake.intakeCommand(),
+                        intake.intakeCommand().asProxy(),
                         shootCommands.readySuperstructureForShot()
                 ).withName("Intake1")
         );
@@ -523,7 +523,7 @@ public class Autos {
 
         autoTriggers.atTime(2).onTrue(
                 Commands.parallel(
-                        intake.intakeCommand(),
+                        intake.intakeCommand().asProxy(),
                         shootCommands.readySuperstructureForShot()
                 ).withName("Intake0")
         );
@@ -537,7 +537,7 @@ public class Autos {
 
         autoTriggers.atTime(5.85).onTrue(
                 Commands.parallel(
-                        intake.intakeCommand(),
+                        intake.intakeCommand().asProxy(),
                         shootCommands.readySuperstructureForShot()
                 ).withName("Intake1")
         );
@@ -559,7 +559,7 @@ public class Autos {
 
         autoTriggers.atTime(1.8).onTrue(
                 Commands.parallel(
-                        intake.intakeCommand(),
+                        intake.intakeCommand().asProxy(),
                         shootCommands.readySuperstructureForShot()
                 ).withName("Intake0")
         );
@@ -576,7 +576,7 @@ public class Autos {
 
         autoTriggers.atTime(5).onTrue(
                 Commands.parallel(
-                        intake.intakeCommand(),
+                        intake.intakeCommand().asProxy(),
                         shootCommands.readySuperstructureForShot()
                 ).withName("Intake1")
         );
@@ -601,7 +601,7 @@ public class Autos {
 
         autoTriggers.atTime(1.8).onTrue(
                 Commands.parallel(
-                        intake.intakeCommand(),
+                        intake.intakeCommand().asProxy(),
                         shootCommands.readySuperstructureForShot()
                 ).withName("Intake0")
         );
@@ -618,7 +618,7 @@ public class Autos {
 
         autoTriggers.atTime(5.2).onTrue(
                 Commands.parallel(
-                        intake.intakeCommand(),
+                        intake.intakeCommand().asProxy(),
                         shootCommands.readySuperstructureForShot()
                 ).withName("Intake1")
         );
@@ -1034,7 +1034,7 @@ public class Autos {
 
         autoTriggers.atTime(1.6).onTrue(
                 Commands.parallel(
-                        intake.intakeCommand(),
+                        intake.intakeCommand().asProxy(),
                         shootCommands.readySuperstructureForShot()
                 ).withName("Intake0")
         );
@@ -1052,7 +1052,7 @@ public class Autos {
 
         autoTriggers.atTime(6).onTrue(
                 Commands.parallel(
-                        intake.intakeCommand(),
+                        intake.intakeCommand().asProxy(),
                         shootCommands.readySuperstructureForShot()
                 ).withName("Intake1")
         );
@@ -1096,7 +1096,7 @@ public class Autos {
 
         autoTriggers.atTime(1.6).onTrue(
                 Commands.parallel(
-                        intake.intakeCommand(),
+                        intake.intakeCommand().asProxy(),
                         Commands.sequence(
                                 Commands.waitUntil(noteState.hasNote),
                                 shootCommands.readySuperstructureForShot().asProxy()
@@ -1117,7 +1117,7 @@ public class Autos {
 
         autoTriggers.atTime(5.5).onTrue(
                 Commands.parallel(
-                        intake.intakeCommand(),
+                        intake.intakeCommand().asProxy(),
                         Commands.sequence(
                                 Commands.waitUntil(noteState.hasNote),
                                 shootCommands.readySuperstructureForShot().asProxy()
@@ -1164,7 +1164,7 @@ public class Autos {
 
         autoTriggers.atTime(1.8).onTrue(
                 Commands.parallel(
-                        intake.intakeCommand(),
+                        intake.intakeCommand().asProxy(),
                         Commands.sequence(
                                 Commands.waitUntil(noteState.hasNote),
                                 shootCommands.readySuperstructureForShot().asProxy()
@@ -1185,7 +1185,7 @@ public class Autos {
 
         autoTriggers.atTime(6.2).onTrue(
                 Commands.parallel(
-                        intake.intakeCommand(),
+                        intake.intakeCommand().asProxy(),
                         Commands.sequence(
                                 Commands.waitUntil(noteState.hasNote),
                                 shootCommands.readySuperstructureForShot().asProxy()
