@@ -443,6 +443,11 @@ public class Robot extends LoggedRobot {
                 Constants.CompetitionType.COMPETITION
         ));
         autoChooser.addAutoOption(new AutoOption(
+                "FightNorth",
+                autos.fightNorth(),
+                Constants.CompetitionType.COMPETITION
+        ));
+        autoChooser.addAutoOption(new AutoOption(
                 "SourceSpeaker0",
                 autos.sourceSpeaker0(),
                 Constants.CompetitionType.TESTING
