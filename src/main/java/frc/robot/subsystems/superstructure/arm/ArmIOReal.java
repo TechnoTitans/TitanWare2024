@@ -23,8 +23,6 @@ public class ArmIOReal implements ArmIO {
     private final TalonFX rightPivotMotor;
     private final CANcoder pivotCANCoder;
 
-    // TODO: use MotionMagicExpoTorqueCurrentFOC
-//    private final MotionMagicExpoTorqueCurrentFOC motionMagicExpoTorqueCurrentFOC;
     private final MotionMagicExpoVoltage motionMagicExpoVoltage;
     private final TorqueCurrentFOC torqueCurrentFOC;
     private final VoltageOut voltageOut;
@@ -84,9 +82,8 @@ public class ArmIOReal implements ArmIO {
         final TalonFXConfiguration leftTalonFXConfiguration = new TalonFXConfiguration();
         final InvertedValue leftTalonFXInverted = InvertedValue.Clockwise_Positive;
         leftTalonFXConfiguration.Slot0 = new Slot0Configs()
-//                .withKS(0.011965)
-                .withKS(0.060477)
-                .withKG(0.23872)
+                .withKS(0.120477)
+                .withKG(0.22872)
                 .withGravityType(GravityTypeValue.Arm_Cosine)
                 .withKV(13.941)
                 .withKA(0.17656 * 0.5)
@@ -110,9 +107,8 @@ public class ArmIOReal implements ArmIO {
         final TalonFXConfiguration rightTalonFXConfiguration = new TalonFXConfiguration();
         final InvertedValue rightTalonFXInverted = InvertedValue.CounterClockwise_Positive;
         rightTalonFXConfiguration.Slot0 = new Slot0Configs()
-//                .withKS(0.011965)
-                .withKS(0.060477)
-                .withKG(0.23872)
+                .withKS(0.120477)
+                .withKG(0.22872)
                 .withGravityType(GravityTypeValue.Arm_Cosine)
                 .withKV(13.941)
                 .withKA(0.17656 * 0.5)
@@ -222,7 +218,6 @@ public class ArmIOReal implements ArmIO {
 
     @Override
     public void toPivotPosition(final double pivotPositionRots) {
-//        leftPivotMotor.setControl(motionMagicExpoTorqueCurrentFOC.withPosition(pivotPositionRots));
         leftPivotMotor.setControl(motionMagicExpoVoltage.withPosition(pivotPositionRots));
         rightPivotMotor.setControl(leftPivotFollower);
     }

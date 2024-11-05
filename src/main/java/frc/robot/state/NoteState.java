@@ -5,10 +5,14 @@ import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.button.Trigger;
 import frc.robot.constants.Constants;
 import frc.robot.subsystems.intake.Intake;
+import frc.robot.utils.subsystems.VirtualSubsystem;
+import org.littletonrobotics.junction.Logger;
 
 import java.util.concurrent.ThreadLocalRandom;
+import java.util.function.BooleanSupplier;
 
-public class NoteState {
+public class NoteState extends VirtualSubsystem {
+    public static final String LogKey = "NoteState";
     private final Intake intake;
 
     public enum State {
@@ -19,8 +23,6 @@ public class NoteState {
         STORED,
         FEEDING
     }
-
-    private final ThreadLocalRandom random = ThreadLocalRandom.current();
 
     private State state = State.NONE;
     public final Trigger isNone = isStateTrigger(State.NONE);
@@ -33,13 +35,24 @@ public class NoteState {
     public final Trigger isStoring = isStoringForward.or(isStoringBackward);
     public final Trigger hasNote = isStoring.or(isStored).or(isFeeding);
 
+    public final BooleanSupplier shouldStoreNotes;
+    private boolean isSimNotePresent = true;
+
     public NoteState(final Constants.RobotMode mode, final Intake intake) {
         this.intake = intake;
+        this.shouldStoreNotes = intake.shouldStoreNotes;
 
         configureStateTriggers();
         if (mode != Constants.RobotMode.REAL) {
             configureSimTriggers();
         }
+    }
+
+    @Override
+    public void periodic() {
+        Logger.recordOutput(LogKey + "/State", state.toString());
+        Logger.recordOutput(LogKey + "/HasNote", hasNote.getAsBoolean());
+        Logger.recordOutput(LogKey + "/IsStoring", isStored.getAsBoolean());
     }
 
     public Trigger isStateTrigger(final State state) {
@@ -66,14 +79,22 @@ public class NoteState {
                 .onTrue(setState(State.NONE));
 
         intake.intaking.and(isStored).and(isStoring.negate()).and(intake.shooterBeamBreakBroken.negate())
-                .onTrue(Commands.sequence(
-                        setState(State.STORING_FORWARD),
-                        intake.storeCommand()
+                .onTrue(Commands.either(
+                        Commands.sequence(
+                                setState(State.STORING_FORWARD),
+                                intake.storeCommand().asProxy()
+                        ),
+                        setState(State.STORED),
+                        shouldStoreNotes
                 ));
         intake.intaking.and(intake.shooterBeamBreakBroken)
-                .onTrue(Commands.sequence(
-                        setState(State.STORING_BACKWARD),
-                        intake.storeCommand()
+                .onTrue(Commands.either(
+                        Commands.sequence(
+                                setState(State.STORING_BACKWARD),
+                                intake.storeCommand().asProxy()
+                        ),
+                        setState(State.STORED),
+                        shouldStoreNotes
                 ));
         isStoringForward.and(intake.shooterBeamBreakBroken)
                 .onTrue(setState(State.STORING_BACKWARD));
@@ -81,7 +102,11 @@ public class NoteState {
                 .onTrue(setState(State.STORED));
     }
 
-    private Command waitRand(final double lowerInclusiveSeconds, final double upperExclusiveSeconds) {
+    private Command waitRand(
+            final ThreadLocalRandom random,
+            final double lowerInclusiveSeconds,
+            final double upperExclusiveSeconds
+    ) {
         return Commands.waitSeconds(random.nextDouble(lowerInclusiveSeconds, upperExclusiveSeconds));
     }
 
@@ -89,10 +114,16 @@ public class NoteState {
         return Commands.runOnce(() -> intake.setBeamBreakSensorState(shooterBeamBroken));
     }
 
+    public void isSimNotePresent(final boolean isNotePresent) {
+        this.isSimNotePresent = isNotePresent;
+    }
+
     public void configureSimTriggers() {
-        intake.intaking.and(hasNote.negate()).and(intake.shooterBeamBreakBroken.negate())
+        final ThreadLocalRandom random = ThreadLocalRandom.current();
+
+        intake.intaking.and(hasNote.negate()).and(intake.shooterBeamBreakBroken.negate()).and(() -> isSimNotePresent)
                 .whileTrue(Commands.sequence(
-                        waitRand(0.1, 2),
+                        waitRand(random, 0.1, 2),
                         Commands.waitSeconds(0.15),
                         setIntakeSensorState(true)
                 ));
@@ -103,20 +134,20 @@ public class NoteState {
                 ));
         isStoringForward.and(intake.shooterBeamBreakBroken.negate())
                 .whileTrue(Commands.sequence(
-                        waitRand(0.05, 0.1),
+                        waitRand(random, 0.05, 0.1),
                         setIntakeSensorState(true)
                 ));
         isStoringBackward.and(intake.shooterBeamBreakBroken)
                 .whileTrue(Commands.sequence(
-                        waitRand(0.05, 0.1),
+                        waitRand(random, 0.05, 0.1),
                         setIntakeSensorState(false)
                 ));
 
         intake.feeding.and(isStored)
                 .onTrue(Commands.sequence(
-                        waitRand(0.01, 0.1),
+                        waitRand(random, 0.01, 0.1),
                         setIntakeSensorState(true),
-                        waitRand(0.02, 0.1),
+                        waitRand(random, 0.02, 0.1),
                         setIntakeSensorState(false)
                 ));
     }

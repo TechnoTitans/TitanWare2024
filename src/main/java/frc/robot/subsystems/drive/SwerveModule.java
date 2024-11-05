@@ -5,8 +5,7 @@ import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.kinematics.SwerveModulePosition;
 import edu.wpi.first.math.kinematics.SwerveModuleState;
 import frc.robot.constants.Constants;
-import frc.robot.constants.Constants.Swerve.Modules;
-import frc.robot.constants.HardwareConstants;
+import frc.robot.subsystems.drive.constants.SwerveConstants;
 import frc.robot.utils.logging.LogUtils;
 import org.littletonrobotics.junction.Logger;
 
@@ -16,21 +15,22 @@ public class SwerveModule {
     private final SwerveModuleIO moduleIO;
     private final SwerveModuleIOInputsAutoLogged inputs;
 
+    private final double wheelCircumferenceMeters = SwerveConstants.Config.wheelCircumferenceMeters();
     private SwerveModulePosition[] odometryPositions;
     private SwerveModuleState lastDesiredState = new SwerveModuleState();
 
     public SwerveModule(
-            final HardwareConstants.SwerveModuleConstants constants,
+            final SwerveConstants.SwerveModuleConstants constants,
             final OdometryThreadRunner odometryThreadRunner,
             final Constants.RobotMode robotMode
     ) {
         this.name = constants.name();
-        this.logKey = String.format("%s/%s", Swerve.LogKey, name);
+        this.logKey = String.format("%s/Modules/%s", Swerve.LogKey, name);
 
         this.moduleIO = switch (robotMode) {
             case REAL -> new SwerveModuleIOTalonFX(constants, odometryThreadRunner);
             case SIM -> new SwerveModuleIOTalonFXSim(constants, odometryThreadRunner);
-            case REPLAY -> new SwerveModuleIO() {};
+            case REPLAY, DISABLED -> new SwerveModuleIO() {};
         };
         this.moduleIO.config();
 
@@ -45,17 +45,16 @@ public class SwerveModule {
 
     public void periodic() {
         final double modulePeriodicUpdateStart = Logger.getRealTimestamp();
+        Logger.processInputs(logKey, inputs);
 
         final int samples = inputs.odometryTimestampsSec.length;
         odometryPositions = new SwerveModulePosition[samples];
         for (int i = 0; i < samples; i++) {
             odometryPositions[i] = new SwerveModulePosition(
-                    inputs.odometryDrivePositionsRots[i] * Modules.WHEEL_CIRCUMFERENCE_M,
+                    inputs.odometryDrivePositionsRots[i] * wheelCircumferenceMeters,
                     Rotation2d.fromRotations(inputs.odometryTurnPositionRots[i])
             );
         }
-
-        Logger.processInputs(logKey, inputs);
 
         Logger.recordOutput(logKey + "/CurrentState", getState());
         Logger.recordOutput(logKey + "/LastDesiredState", lastDesiredState);
@@ -63,7 +62,7 @@ public class SwerveModule {
                 logKey + "/DriveDesiredVelocityRotsPerSec",
                 computeDesiredDriverVelocity(
                         lastDesiredState,
-                        Rotation2d.fromRotations(inputs.turnAbsolutePositionRots)
+                        Rotation2d.fromRotations(inputs.turnPositionRots)
                 )
         );
 
@@ -84,7 +83,7 @@ public class SwerveModule {
      * @see Rotation2d
      */
     public Rotation2d getAngle() {
-        return Rotation2d.fromRotations(inputs.turnAbsolutePositionRots);
+        return Rotation2d.fromRotations(inputs.turnPositionRots);
     }
 
     /**
@@ -111,7 +110,7 @@ public class SwerveModule {
      */
     public SwerveModuleState getState() {
         return new SwerveModuleState(
-                getDriveVelocity() * Modules.WHEEL_CIRCUMFERENCE_M,
+                getDriveVelocity() * wheelCircumferenceMeters,
                 getAngle()
         );
     }
@@ -124,7 +123,7 @@ public class SwerveModule {
      */
     public SwerveModulePosition getPosition() {
         return new SwerveModulePosition(
-                getDrivePosition() * Modules.WHEEL_CIRCUMFERENCE_M,
+                getDrivePosition() * wheelCircumferenceMeters,
                 getAngle()
         );
     }
@@ -186,7 +185,7 @@ public class SwerveModule {
      */
     public double computeDesiredDriverVelocity(final SwerveModuleState wantedState, final Rotation2d wheelRotation) {
         SwerveModule.scaleWithErrorCosine(wantedState, wheelRotation);
-        return wantedState.speedMetersPerSecond / Modules.WHEEL_CIRCUMFERENCE_M;
+        return wantedState.speedMetersPerSecond / wheelCircumferenceMeters;
     }
 
     /**

@@ -1,6 +1,7 @@
-package frc.robot.subsystems.vision;
+package frc.robot.subsystems.vision.cameras;
 
 import edu.wpi.first.math.Matrix;
+import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.numbers.N1;
 import edu.wpi.first.math.numbers.N3;
 import edu.wpi.first.math.numbers.N5;
@@ -22,6 +23,23 @@ public class TitanCameraCalibration {
         this(new HashMap<>());
     }
 
+    public static TitanCameraCalibration perfect(final CameraProperties cameraProperties) {
+        final List<CameraProperties.Resolution> resolutions = cameraProperties.getResolutions();
+        final Map<CameraProperties.Resolution, SimCameraProperties> cameraPropertiesMap = new HashMap<>();
+
+        for (final CameraProperties.Resolution resolution : resolutions) {
+            final SimCameraProperties simCameraProperties = new SimCameraProperties();
+            simCameraProperties.setCalibration(
+                    resolution.getWidth(),
+                    resolution.getHeight(),
+                    Rotation2d.fromDegrees(cameraProperties.getCamDiagonalFOVDeg())
+            );
+            cameraPropertiesMap.put(resolution, simCameraProperties);
+        }
+
+        return new TitanCameraCalibration(cameraPropertiesMap);
+    }
+
     public static TitanCameraCalibration fromSimCameraProperties(final SimCameraProperties simCameraProperties) {
         final int width = simCameraProperties.getResWidth();
         final int height = simCameraProperties.getResHeight();
@@ -40,7 +58,11 @@ public class TitanCameraCalibration {
     }
 
     private static double getPxAvgError(final List<Double> pxErrors) {
-        return pxErrors.stream().mapToDouble(error -> error).average().orElse(0);
+        double sum = 0;
+        for (final double pxError : pxErrors) {
+            sum += pxError;
+        }
+        return sum / pxErrors.size();
     }
 
     private SimCameraProperties getOrMake(final CameraProperties.Resolution resolution) {

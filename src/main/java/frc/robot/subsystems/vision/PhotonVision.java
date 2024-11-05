@@ -4,18 +4,21 @@ import edu.wpi.first.apriltag.AprilTagFieldLayout;
 import edu.wpi.first.apriltag.AprilTagFields;
 import edu.wpi.first.math.VecBuilder;
 import edu.wpi.first.math.Vector;
-import edu.wpi.first.math.estimator.SwerveDrivePoseEstimator;
-import edu.wpi.first.math.geometry.Pose2d;
-import edu.wpi.first.math.geometry.Pose3d;
-import edu.wpi.first.math.geometry.Rotation2d;
-import edu.wpi.first.math.geometry.Twist2d;
+import edu.wpi.first.math.geometry.*;
 import edu.wpi.first.math.kinematics.SwerveDriveOdometry;
 import edu.wpi.first.math.numbers.N3;
 import edu.wpi.first.wpilibj.DriverStation;
+import edu.wpi.first.wpilibj2.command.Command;
 import frc.robot.constants.Constants;
+import frc.robot.constants.FieldConstants;
 import frc.robot.subsystems.drive.Swerve;
+import frc.robot.subsystems.drive.constants.SwerveConstants;
+import frc.robot.subsystems.drive.estimator.SwerveDrivePoseEstimator;
+import frc.robot.subsystems.vision.cameras.TitanCamera;
+import frc.robot.subsystems.vision.result.NoteTrackingResult;
 import frc.robot.utils.PoseUtils;
 import frc.robot.utils.gyro.GyroUtils;
+import frc.robot.utils.logging.LogUtils;
 import frc.robot.utils.subsystems.VirtualSubsystem;
 import org.littletonrobotics.junction.Logger;
 import org.photonvision.EstimatedRobotPose;
@@ -23,17 +26,20 @@ import org.photonvision.simulation.VisionSystemSim;
 import org.photonvision.targeting.PhotonTrackedTarget;
 
 import java.io.UncheckedIOException;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
+import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
-public class PhotonVision extends VirtualSubsystem {
-    public static final String PhotonLogKey = "PhotonVision";
+import static edu.wpi.first.wpilibj2.command.Commands.runOnce;
 
-    public static final double TRANSLATION_VELOCITY_TOLERANCE = 0.1;
-    public static final double ANGULAR_VELOCITY_TOLERANCE = 0.1;
+public class PhotonVision extends VirtualSubsystem {
+    public static final String PhotonLogKey = "Vision";
+
+    public static final double TranslationalVelocityTolerance = 1;
+    public static final double AngularVelocityTolerance = 1;
+
+    private final double maxLinearVelocity = SwerveConstants.Config.maxLinearVelocity();
+    private final double maxAngularVelocity = SwerveConstants.Config.maxAngularVelocity();
 
     public static final AprilTagFieldLayout apriltagFieldLayout;
 
@@ -53,35 +59,23 @@ public class PhotonVision extends VirtualSubsystem {
         }
     }
 
-    private static PhotonVisionApriltagsReal.IOApriltagsReal makePhotonVisionRealIO(final TitanCamera titanCamera) {
-        return new PhotonVisionApriltagsReal.IOApriltagsReal(titanCamera, PhotonVision.apriltagFieldLayout);
-    }
-
-    private static PhotonVisionApriltagsSim.IOApriltagsSim makePhotonVisionSimIO(
-            final TitanCamera titanCamera,
-            final VisionSystemSim visionSystemSim
-    ) {
-        return new PhotonVisionApriltagsSim.IOApriltagsSim(
-                titanCamera, PhotonVision.apriltagFieldLayout, visionSystemSim
-        );
-    }
-
     @SafeVarargs
-    public static <T extends PhotonVisionIO> Map<T, PhotonVisionIO.PhotonVisionIOInputs> makePhotonVisionIOInputsMap(
-            final T... photonVisionIOs
+    public static <T extends VisionIO> Map<T, VisionIO.VisionIOInputs> makeVisionIOInputsMap(
+            final T... visionIOs
     ) {
-        return Arrays.stream(photonVisionIOs).collect(Collectors.toMap(
+        return Arrays.stream(visionIOs).collect(Collectors.toMap(
                 photonVisionIO -> photonVisionIO,
-                photonVisionIO -> new PhotonVisionIO.PhotonVisionIOInputs()
+                photonVisionIO -> new VisionIO.VisionIOInputs()
         ));
     }
 
-    private final PhotonVisionRunner<? extends PhotonVisionIO> runner;
-    private final Map<? extends PhotonVisionIO, PhotonVisionIO.PhotonVisionIOInputs> photonVisionIOInputsMap;
+    private final PhotonVisionRunner runner;
+    private final Map<? extends VisionIO, VisionIO.VisionIOInputs> aprilTagVisionIOInputsMap;
+    private final Map<? extends VisionIO, VisionIO.VisionIOInputs> noteTrackingVisionIOInputsMap;
 
     private final Swerve swerve;
     private final SwerveDrivePoseEstimator poseEstimator;
-    private final Map<PhotonVisionIO, EstimatedRobotPose> lastEstimatedRobotPose;
+    private final Map<VisionIO, EstimatedRobotPose> lastEstimatedRobotPose;
 
     public PhotonVision(
             final Constants.RobotMode robotMode,
@@ -89,15 +83,20 @@ public class PhotonVision extends VirtualSubsystem {
             final SwerveDrivePoseEstimator poseEstimator
     ) {
         this.runner = switch (robotMode) {
-            case REAL -> new PhotonVisionApriltagsReal(
-                    PhotonVision.makePhotonVisionIOInputsMap(
-                            makePhotonVisionRealIO(TitanCamera.PHOTON_FL_APRILTAG),
-                            makePhotonVisionRealIO(TitanCamera.PHOTON_FR_APRILTAG)
+            case REAL -> new RealVisionRunner(
+                    PhotonVision.apriltagFieldLayout,
+                    PhotonVision.makeVisionIOInputsMap(
+                            new RealVisionRunner.VisionIOApriltagReal(TitanCamera.PHOTON_FL_APRILTAG),
+                            new RealVisionRunner.VisionIOApriltagReal(TitanCamera.PHOTON_FC_APRILTAG),
+                            new RealVisionRunner.VisionIOApriltagReal(TitanCamera.PHOTON_FR_APRILTAG)
+                    ),
+                    PhotonVision.makeVisionIOInputsMap(
+                            new RealVisionRunner.VisionIONoteTrackingReal(TitanCamera.PHOTON_BC_NOTE_TRACKING)
                     )
             );
             case SIM -> {
                 final VisionSystemSim visionSystemSim = new VisionSystemSim(PhotonVision.PhotonLogKey);
-                yield new PhotonVisionApriltagsSim(
+                yield new SimVisionRunner(
                         swerve,
                         new SwerveDriveOdometry(
                                 swerve.getKinematics(),
@@ -107,21 +106,37 @@ public class PhotonVision extends VirtualSubsystem {
                         ),
                         PhotonVision.apriltagFieldLayout,
                         visionSystemSim,
-                        PhotonVision.makePhotonVisionIOInputsMap(
-                                makePhotonVisionSimIO(TitanCamera.PHOTON_FL_APRILTAG, visionSystemSim),
-                                makePhotonVisionSimIO(TitanCamera.PHOTON_FR_APRILTAG, visionSystemSim)
+                        FieldConstants.CENTER_LINE_NOTE_POSES,
+                        PhotonVision.makeVisionIOInputsMap(
+                                new SimVisionRunner.VisionIOApriltagsSim(TitanCamera.PHOTON_FL_APRILTAG, visionSystemSim),
+                                new SimVisionRunner.VisionIOApriltagsSim(TitanCamera.PHOTON_FC_APRILTAG, visionSystemSim),
+                                new SimVisionRunner.VisionIOApriltagsSim(TitanCamera.PHOTON_FR_APRILTAG, visionSystemSim)
+                        ),
+                        PhotonVision.makeVisionIOInputsMap(
+                            new SimVisionRunner.VisionIONoteTrackingSim(TitanCamera.PHOTON_BC_NOTE_TRACKING, visionSystemSim)
                         )
                 );
             }
-            case REPLAY -> new PhotonVisionRunner<>() {};
+            case REPLAY -> new ReplayVisionRunner(
+                    PhotonVision.apriltagFieldLayout,
+                    PhotonVision.makeVisionIOInputsMap(
+                            new ReplayVisionRunner.VisionIOReplay(TitanCamera.PHOTON_FL_APRILTAG),
+                            new ReplayVisionRunner.VisionIOReplay(TitanCamera.PHOTON_FC_APRILTAG),
+                            new ReplayVisionRunner.VisionIOReplay(TitanCamera.PHOTON_FR_APRILTAG)
+                    ),
+                    PhotonVision.makeVisionIOInputsMap(
+                            new ReplayVisionRunner.VisionIOReplay(TitanCamera.PHOTON_BC_NOTE_TRACKING)
+                    )
+            );
+            case DISABLED -> new PhotonVisionRunner() {};
         };
 
         this.swerve = swerve;
         this.poseEstimator = poseEstimator;
-        this.photonVisionIOInputsMap = runner.getPhotonVisionIOInputsMap();
+        this.aprilTagVisionIOInputsMap = runner.getApriltagVisionIOInputsMap();
+        this.noteTrackingVisionIOInputsMap = runner.getNoteTrackingVisionIOInputsMap();
 
         this.lastEstimatedRobotPose = new HashMap<>();
-
         final Pose2d estimatedPose = poseEstimator.getEstimatedPosition();
         resetPosition(estimatedPose);
     }
@@ -184,37 +199,35 @@ public class PhotonVision extends VirtualSubsystem {
         final double secondsSinceLastUpdate =
                 estimatedRobotPose.timestampSeconds - lastEstimatedRobotPose.timestampSeconds;
 
-        if (lastEstimatedRobotPose.timestampSeconds == -1 || secondsSinceLastUpdate <= 0) {
-            // TODO: do we always need to reject immediately here? maybe we can still use the next estimation even
-            //  if the last estimation had no timestamp or was very close
-            return EstimationRejectionReason.LAST_ESTIMATED_POSE_TIMESTAMP_INVALID_OR_TOO_CLOSE;
+        // TODO: this rejection showed up very often at event-cmp and didn't seem to help much,
+        //  maybe re-evaluate why we added this rejection in the first place? (removed for now)
+//        if (lastEstimatedRobotPose.timestampSeconds == -1 || secondsSinceLastUpdate <= 0) {
+        // TODO: do we always need to reject immediately here? maybe we can still use the next estimation even
+        //  if the last estimation had no timestamp or was very close
+//            return EstimationRejectionReason.LAST_ESTIMATED_POSE_TIMESTAMP_INVALID_OR_TOO_CLOSE;
+//        }
+
+        // Only try calculating this rejection strategy if time > 0
+        if (secondsSinceLastUpdate > 0) {
+            final Pose2d nextEstimatedPosition2d = nextEstimatedPosition.toPose2d();
+            final Pose2d lastEstimatedPosition2d = lastEstimatedRobotPose.estimatedPose.toPose2d();
+            final Twist2d twist2dToNewEstimation = lastEstimatedPosition2d.log(nextEstimatedPosition2d);
+
+            final double xVel = twist2dToNewEstimation.dx / secondsSinceLastUpdate;
+            final double yVel = twist2dToNewEstimation.dy / secondsSinceLastUpdate;
+            final double thetaVel = twist2dToNewEstimation.dtheta / secondsSinceLastUpdate;
+            final double translationVel = Math.hypot(xVel, yVel);
+
+            Logger.recordOutput(PhotonLogKey + "/Rejection/TranslationVel", translationVel);
+            Logger.recordOutput(PhotonLogKey + "/Rejection/ThetaVel", thetaVel);
+
+            if ((Math.abs(translationVel) >= maxLinearVelocity + PhotonVision.TranslationalVelocityTolerance)
+                    || (Math.abs(thetaVel) >= maxAngularVelocity + PhotonVision.AngularVelocityTolerance)) {
+                // reject sudden pose changes resulting in an impossible velocity (cannot reach)
+                return EstimationRejectionReason.POSE_IMPOSSIBLE_VELOCITY;
+            }
         }
 
-        final Pose2d nextEstimatedPosition2d = nextEstimatedPosition.toPose2d();
-        final Pose2d lastEstimatedPosition2d = lastEstimatedRobotPose.estimatedPose.toPose2d();
-        final Twist2d twist2dToNewEstimation = lastEstimatedPosition2d.log(nextEstimatedPosition2d);
-
-        final double xVel = twist2dToNewEstimation.dx / secondsSinceLastUpdate;
-        final double yVel = twist2dToNewEstimation.dy / secondsSinceLastUpdate;
-        final double thetaVel = twist2dToNewEstimation.dtheta / secondsSinceLastUpdate;
-        final double translationVel = Math.hypot(xVel, yVel);
-
-        Logger.recordOutput(
-                PhotonLogKey + "/TranslationVel", translationVel
-        );
-        Logger.recordOutput(
-                PhotonLogKey + "/ThetaVel", thetaVel
-        );
-
-        // assume hypot is positive (>= 0)
-        if ((translationVel >= Constants.Swerve.ROBOT_MAX_SPEED_MPS + PhotonVision.TRANSLATION_VELOCITY_TOLERANCE)
-                || (Math.abs(thetaVel) >= Constants.Swerve.ROBOT_MAX_ANGULAR_SPEED_RAD_PER_SEC
-                    + PhotonVision.ANGULAR_VELOCITY_TOLERANCE)) {
-            // reject sudden pose changes resulting in an impossible velocity (cannot reach)
-            return EstimationRejectionReason.POSE_IMPOSSIBLE_VELOCITY;
-        }
-
-        // TODO: more rejection stuff
         return EstimationRejectionReason.DID_NOT_REJECT;
     }
 
@@ -238,56 +251,90 @@ public class PhotonVision extends VirtualSubsystem {
 
     private void update() {
         for (
-                final Map.Entry<? extends PhotonVisionIO, PhotonVisionIO.PhotonVisionIOInputs>
-                        photonVisionIOInputsEntry : photonVisionIOInputsMap.entrySet()
+                final Map.Entry<? extends VisionIO, VisionIO.VisionIOInputs>
+                        visionIOInputsEntry : aprilTagVisionIOInputsMap.entrySet()
         ) {
-
-            final PhotonVisionIO photonVisionIO = photonVisionIOInputsEntry.getKey();
-            final PhotonVisionIO.PhotonVisionIOInputs photonVisionIOInputs = photonVisionIOInputsEntry.getValue();
-
-            final EstimatedRobotPose stableEstimatedRobotPose = photonVisionIOInputs.stableEstimatedRobotPose;
-            final EstimatedRobotPose estimatedRobotPose = photonVisionIOInputs.estimatedRobotPose;
-
-            if (estimatedRobotPose == null) {
-                // skip the trouble of calling/indexing things if the estimatedRobotPose is null
-                continue;
-            }
-
-            final EstimatedRobotPose lastSavedEstimatedPose = lastEstimatedRobotPose.get(photonVisionIO);
-            final EstimationRejectionReason rejectionReason =
-                    shouldRejectEstimation(lastSavedEstimatedPose, estimatedRobotPose);
+            final VisionIO visionIO = visionIOInputsEntry.getKey();
+            final VisionIO.VisionIOInputs inputs = visionIOInputsEntry.getValue();
+            final String logKey = PhotonLogKey + "/" + inputs.name;
 
             Logger.recordOutput(
-                    PhotonLogKey + "/RejectionReason", rejectionReason.getId()
+                    logKey + "/CameraPose",
+                    new Pose3d(swerve.getPose()).transformBy(Constants.Vision.ROBOT_TO_REAR_NOTE)
             );
 
-            if (rejectionReason.wasRejected()) {
-                continue;
+            final EstimatedRobotPose estimatedRobotPose = runner.getEstimatedRobotPose(visionIO);
+            if (estimatedRobotPose != null) {
+                final EstimatedRobotPose lastEstimatedPose = lastEstimatedRobotPose.get(visionIO);
+                final EstimationRejectionReason rejectionReason =
+                        shouldRejectEstimation(lastEstimatedPose, estimatedRobotPose);
+
+                Logger.recordOutput(logKey + "/RejectionReason", rejectionReason.getId());
+                if (rejectionReason.wasRejected()) {
+                    continue;
+                }
+
+                final Vector<N3> stdDevs = calculateStdDevs(estimatedRobotPose, inputs.stdDevFactor);
+                Logger.recordOutput(logKey + "/StdDevs", stdDevs.getData());
+
+                lastEstimatedRobotPose.put(visionIO, estimatedRobotPose);
+                poseEstimator.addVisionMeasurement(
+                        estimatedRobotPose.estimatedPose.toPose2d(),
+                        estimatedRobotPose.timestampSeconds,
+                        stdDevs
+                );
             }
+        }
 
-            lastEstimatedRobotPose.put(photonVisionIO, stableEstimatedRobotPose);
+        for (
+                final Map.Entry<? extends VisionIO, VisionIO.VisionIOInputs>
+                        visionIOInputsEntry : noteTrackingVisionIOInputsMap.entrySet()
+        ) {
+            final VisionIO visionIO = visionIOInputsEntry.getKey();
+            final VisionIO.VisionIOInputs inputs = visionIOInputsEntry.getValue();
+            final String logKey = PhotonLogKey + "/" + inputs.name;
 
-            final Vector<N3> stdDevs = calculateStdDevs(estimatedRobotPose, photonVisionIOInputs.stdDevFactor);
-            Logger.recordOutput(PhotonLogKey + "/" + photonVisionIOInputs.name + "/StdDevs", stdDevs.getData());
-
-            poseEstimator.addVisionMeasurement(
-                    estimatedRobotPose.estimatedPose.toPose2d(),
-                    estimatedRobotPose.timestampSeconds,
-                    stdDevs
+            Logger.recordOutput(
+                    logKey + "/CameraPose",
+                    new Pose3d(swerve.getPose()).transformBy(Constants.Vision.ROBOT_TO_REAR_NOTE)
             );
+
+            final NoteTrackingResult noteTrackingResult = runner.getNoteTrackingResult(visionIO);
+            if (noteTrackingResult != null) {
+                Logger.recordOutput(logKey + "/HasTargets", noteTrackingResult.hasTargets);
+                final Optional<Pose2d> optionalBestNotePose = noteTrackingResult
+                        .getBestNotePose(swerve::getPose);
+
+                Logger.recordOutput(logKey + "/HasBestNotePose", optionalBestNotePose.isPresent());
+                Logger.recordOutput(
+                        logKey + "/BestNotePose",
+                        new Pose3d(optionalBestNotePose.orElseGet(Pose2d::new))
+                );
+
+                final Pose2d[] notePose2ds = noteTrackingResult
+                        .getNotePoses(swerve::getPose);
+
+                final Pose3d[] notePose3ds = new Pose3d[notePose2ds.length];
+                for (int i = 0; i < notePose2ds.length; i++) {
+                    notePose3ds[i] = PoseUtils.note2dTo3d(notePose2ds[i]);
+                }
+
+                Logger.recordOutput(logKey + "/NotePoses", notePose3ds);
+            } else {
+                Logger.recordOutput(logKey + "/HasTargets", false);
+            }
         }
     }
 
     public void updateOutputs() {
         for (
-                final Map.Entry<PhotonVisionIO, EstimatedRobotPose>
+                final Map.Entry<VisionIO, EstimatedRobotPose>
                         estimatedRobotPoseEntry : lastEstimatedRobotPose.entrySet()
         ) {
-            final PhotonVisionIO.PhotonVisionIOInputs io =
-                    photonVisionIOInputsMap.get(estimatedRobotPoseEntry.getKey());
+            final VisionIO.VisionIOInputs inputs = aprilTagVisionIOInputsMap.get(estimatedRobotPoseEntry.getKey());
             final EstimatedRobotPose estimatedRobotPose = estimatedRobotPoseEntry.getValue();
 
-            final String logKey = PhotonVision.PhotonLogKey + "/" + io.name;
+            final String logKey = PhotonVision.PhotonLogKey + "/" + inputs.name;
             if (estimatedRobotPose == null) {
                 continue;
             }
@@ -320,22 +367,67 @@ public class PhotonVision extends VirtualSubsystem {
 
     @Override
     public void periodic() {
+        final double visionIOPeriodicStart = Logger.getRealTimestamp();
         runner.periodic();
 
         // Update and log PhotonVision results
         update();
         updateOutputs();
+
+        Logger.recordOutput(
+                PhotonLogKey + "/PeriodicIOPeriodMs",
+                LogUtils.microsecondsToMilliseconds(Logger.getRealTimestamp() - visionIOPeriodicStart)
+        );
     }
 
     public void resetPosition(final Pose2d robotPose, final Rotation2d robotYaw) {
         poseEstimator.resetPosition(robotYaw, swerve.getModulePositions(), robotPose);
         runner.resetRobotPose(GyroUtils.robotPose2dToPose3dWithGyro(
                 new Pose2d(robotPose.getTranslation(), robotYaw),
-                GyroUtils.rpyToRotation3d(swerve.getRoll(), swerve.getPitch(), swerve.getYaw())
+                new Rotation3d(
+                        swerve.getRoll().getRadians(),
+                        swerve.getPitch().getRadians(),
+                        swerve.getYaw().getRadians()
+                )
         ));
     }
 
     public void resetPosition(final Pose2d robotPose) {
         resetPosition(robotPose, swerve.getYaw());
+    }
+
+    public Command resetPoseCommand(final Pose2d robotPose) {
+        return runOnce(() -> resetPosition(robotPose));
+    }
+
+    public List<Pose2d> getNotePoses() {
+        final List<Pose2d> notePoses = new ArrayList<>();
+        for (final VisionIO visionIO : noteTrackingVisionIOInputsMap.keySet()) {
+            final NoteTrackingResult noteTrackingResult = runner.getNoteTrackingResult(visionIO);
+            if (noteTrackingResult != null) {
+                notePoses.addAll(Arrays.asList(noteTrackingResult
+                        .getNotePoses(swerve::getPose)));
+            }
+        }
+        return notePoses;
+    }
+
+    public Optional<Pose2d> getBestNotePose(final Supplier<Pose2d> robotPoseSupplier) {
+        final List<Pose2d> notePoses = new ArrayList<>();
+
+        for (final VisionIO visionIO : noteTrackingVisionIOInputsMap.keySet()) {
+            final NoteTrackingResult noteTrackingResult = runner.getNoteTrackingResult(visionIO);
+            if (noteTrackingResult != null) {
+                final Optional<Pose2d> optionalBestNotePose = noteTrackingResult
+                        .getBestNotePose(timestamp -> Optional.of(swerve.getPose()));
+
+                optionalBestNotePose.ifPresent(notePoses::add);
+            }
+        }
+
+        notePoses.sort(Comparator.comparingDouble(pose ->
+                robotPoseSupplier.get().minus(pose).getTranslation().getNorm()));
+
+        return notePoses.isEmpty() ? Optional.empty() : Optional.of(notePoses.get(0));
     }
 }

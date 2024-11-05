@@ -27,9 +27,6 @@ public class ControllerUtils {
      * @param xInput the xInput (typically your {@link XboxController#getLeftY()}, yes, <b>Y</b>)
      * @param yInput the yInput (typically your {@link XboxController#getLeftX()}, yes, <b>X</b>)
      * @param deadband the deadband
-     * @param scalar the scalar to apply directly to the input
-     * @param sensitivity the sensitivity to apply to the scaled input
-     * @param weight the weight to apply to the finalized input
      * @return the {@link Translation2d} that describes the stick input, with deadband, scalar, sensitivity
      * and weight all applied
      *
@@ -37,64 +34,32 @@ public class ControllerUtils {
      * since one joystick is controlling two axes at once (X and Y). We square the magnitude of the joystick vector
      * rather than the individual axes, because otherwise the squaring will change the direction of travel.
      */
-    public static Translation2d getStickXYSquaredInput(
+    public static Translation2d calculateLinearVelocity(
             final double xInput,
             final double yInput,
-            final double deadband,
-            final double scalar,
-            final double sensitivity,
-            final double weight
+            final double deadband
     ) {
-        final double magnitude = Math.hypot(xInput, yInput);
+        final double magnitude = MathUtil.applyDeadband(Math.hypot(xInput, yInput), deadband);
         final Rotation2d direction = new Rotation2d(xInput, yInput);
 
-        final double deadbandMagnitude = applyDeadband(magnitude, deadband);
-        final double squaredMagnitude = Math.copySign(deadbandMagnitude * deadbandMagnitude, deadbandMagnitude);
-
-        final double weightedMagnitude = applyWeights(squaredMagnitude, scalar, sensitivity, weight);
+        final double squaredMagnitude = Math.copySign(magnitude * magnitude, magnitude);
         return new Pose2d(new Translation2d(), direction)
-                .transformBy(new Transform2d(new Translation2d(weightedMagnitude, 0), new Rotation2d()))
+                .transformBy(new Transform2d(squaredMagnitude, 0, new Rotation2d()))
                 .getTranslation();
     }
 
-    public static double getStickSquaredInput(
-            final double input,
-            final double deadband,
-            final double scalar,
-            final double sensitivity,
-            final double weight
-    ) {
-        return applyWeights(applyDeadband(Math.copySign(input * input, input), deadband), scalar, sensitivity, weight);
+    public static double getStickSquaredInput(final double input, final double deadband) {
+        return MathUtil.applyDeadband(Math.copySign(input * input, input), deadband);
     }
 
-    public static double applyDeadband(final double input, final double deadband) {
-        // yes, this negative sign does need to exist because controller stick up is -1 not 1
-        return -MathUtil.applyDeadband(input, Math.abs(deadband));
-    }
-
-    public static double applyWeights(
-            final double input,
-            final double scalar,
-            final double sensitivity,
-            final double weight
-    ) {
-        return input * scalar * sensitivity * weight;
-    }
-
-    public static Rotation2d getFieldRelativeAngleFromStickInputs(final double xInput, final double yInput) {
-        return Rotation2d.fromRadians(Math.atan2(yInput, xInput))
-                .rotateBy(STICK_TO_FIELD_RELATIVE_ROTATION)
-                .times(STICK_TO_GYRO_ROTATION);
-    }
-
-    public static Command getRumbleForDurationCommand(
+    public static Command rumbleForDurationCommand(
             final GenericHID controller,
             final GenericHID.RumbleType rumbleType,
-            final double value,
+            final double strength,
             final double timeSeconds
     ) {
         return Commands.sequence(
-                Commands.runOnce(() -> controller.setRumble(rumbleType, value)),
+                Commands.runOnce(() -> controller.setRumble(rumbleType, strength)),
                 Commands.waitSeconds(timeSeconds),
                 Commands.runOnce(() -> controller.setRumble(rumbleType, 0))
         );

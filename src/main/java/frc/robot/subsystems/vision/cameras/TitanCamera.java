@@ -1,4 +1,4 @@
-package frc.robot.subsystems.vision;
+package frc.robot.subsystems.vision.cameras;
 
 import edu.wpi.first.math.MatBuilder;
 import edu.wpi.first.math.Nat;
@@ -11,9 +11,10 @@ import org.photonvision.simulation.SimCameraProperties;
 public enum TitanCamera {
     PHOTON_FL_APRILTAG(
             "FL_Apriltag",
-            Constants.Vision.ROBOT_TO_FL_APRILTAG_CAM,
+            Constants.Vision.ROBOT_TO_FL_APRILTAG,
             CameraProperties.SEE3CAM_24CUG,
             1.0,
+            true,
             new TitanCameraCalibration()
                     .withCalibration(
                             CameraProperties.Resolution.R1920x1080,
@@ -46,20 +47,63 @@ public enum TitanCamera {
                     )
                     .withFPS(
                             CameraProperties.Resolution.R1920x1080,
-                            18
+                            60
                     )
                     .withLatency(
                             CameraProperties.Resolution.R1920x1080,
-                            50,
-                            20
+                            7,
+                            3
+                    ),
+            false
+    ),
+    PHOTON_FC_APRILTAG(
+            "FC_Apriltag",
+            Constants.Vision.ROBOT_TO_FC_APRILTAG,
+            CameraProperties.ARDUCAM_OV9281,
+            2.5,
+            true,
+            new TitanCameraCalibration()
+                    .withCalibration(
+                            CameraProperties.Resolution.R640x480,
+                            MatBuilder.fill(
+                                    Nat.N3(),
+                                    Nat.N3(),
+                                    // intrinsic
+                                    549.0659323788205,
+                                    0.0,
+                                    321.9593286259019,
+                                    0.0,
+                                    547.4680535283653,
+                                    269.83116533897265,
+                                    0.0,
+                                    0.0,
+                                    1.0
+                            ),
+                            // TODO: mrcal gives us 8 distCoeffs, PV sim expects 5
+                            SimCameraProperties.PERFECT_90DEG().getDistCoeffs()
+                    )
+                    .withCalibrationError(
+                            CameraProperties.Resolution.R640x480,
+                            0.54,
+                            0.06
+                    )
+                    .withFPS(
+                            CameraProperties.Resolution.R640x480,
+                            130
+                    )
+                    .withLatency(
+                            CameraProperties.Resolution.R640x480,
+                            6,
+                            3
                     ),
             false
     ),
     PHOTON_FR_APRILTAG(
             "FR_Apriltag",
-            Constants.Vision.ROBOT_TO_FR_APRILTAG_CAM,
+            Constants.Vision.ROBOT_TO_FR_APRILTAG,
             CameraProperties.SEE3CAM_24CUG,
             1.0,
+            true,
             new TitanCameraCalibration()
                     .withCalibration(
                             CameraProperties.Resolution.R1920x1080,
@@ -92,18 +136,24 @@ public enum TitanCamera {
                     )
                     .withFPS(
                             CameraProperties.Resolution.R1920x1080,
-                            18
+                            60
                     )
                     .withLatency(
                             CameraProperties.Resolution.R1920x1080,
-                            50,
-                            20
+                            7,
+                            3
                     ),
+            false
+    ),
+    PHOTON_BC_NOTE_TRACKING(
+            "BC_NoteTracking",
+            Constants.Vision.ROBOT_TO_REAR_NOTE,
+            CameraProperties.ARDUCAM_OV9782,
             false
     );
 
     private final PhotonCamera photonCamera;
-    private final Transform3d robotRelativeToCameraTransform;
+    private final Transform3d robotToCameraTransform;
     private final CameraProperties cameraProperties;
     private final double stdDevFactor;
     private final TitanCameraCalibration cameraCalibration;
@@ -111,21 +161,22 @@ public enum TitanCamera {
 
     TitanCamera(
             final String photonCameraName,
-            final Transform3d robotRelativeToCameraTransform,
+            final Transform3d robotToCameraTransform,
             final CameraProperties cameraProperties,
             final double stdDevFactor,
+            final boolean requiresCalibration,
             final TitanCameraCalibration titanCameraCalibration,
             final boolean driverCam
     ) {
         this.photonCamera = new PhotonCamera(photonCameraName);
-        this.robotRelativeToCameraTransform = robotRelativeToCameraTransform;
+        this.robotToCameraTransform = robotToCameraTransform;
         this.cameraProperties = cameraProperties;
         this.stdDevFactor = stdDevFactor;
         this.cameraCalibration = titanCameraCalibration;
         this.driverCam = driverCam;
 
         // if it isn't a driverCam, then it should have proper calibration data
-        if (!driverCam) {
+        if (!driverCam && requiresCalibration) {
             for (final CameraProperties.Resolution resolution : cameraProperties.getResolutions()) {
                 if (!cameraCalibration.hasResolution(resolution)) {
                     throw new RuntimeException(
@@ -143,16 +194,17 @@ public enum TitanCamera {
 
     TitanCamera(
             final String photonCameraName,
-            final Transform3d robotRelativeToCameraTransform,
+            final Transform3d robotToCameraTransform,
             final CameraProperties cameraProperties,
             final boolean driverCam
     ) {
         this(
                 photonCameraName,
-                robotRelativeToCameraTransform,
+                robotToCameraTransform,
                 cameraProperties,
                 1.0,
-                TitanCameraCalibration.fromSimCameraProperties(SimCameraProperties.PERFECT_90DEG()),
+                false,
+                TitanCameraCalibration.perfect(cameraProperties),
                 driverCam
         );
     }
@@ -161,8 +213,8 @@ public enum TitanCamera {
         return photonCamera;
     }
 
-    public Transform3d getRobotRelativeToCameraTransform() {
-        return robotRelativeToCameraTransform;
+    public Transform3d getRobotToCameraTransform() {
+        return robotToCameraTransform;
     }
 
     public CameraProperties getCameraProperties() {

@@ -1,13 +1,14 @@
 package frc.robot;
 
 import com.ctre.phoenix6.SignalLogger;
-import edu.wpi.first.wpilibj.*;
+import edu.wpi.first.wpilibj.DriverStation;
+import edu.wpi.first.wpilibj.GenericHID;
+import edu.wpi.first.wpilibj.PowerDistribution;
+import edu.wpi.first.wpilibj.RobotBase;
 import edu.wpi.first.wpilibj.event.EventLoop;
 import edu.wpi.first.wpilibj.livewindow.LiveWindow;
-import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.CommandScheduler;
 import edu.wpi.first.wpilibj2.command.Commands;
-import edu.wpi.first.wpilibj2.command.Subsystem;
 import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
 import edu.wpi.first.wpilibj2.command.button.Trigger;
 import frc.robot.auto.AutoChooser;
@@ -19,16 +20,21 @@ import frc.robot.constants.HardwareConstants;
 import frc.robot.constants.RobotMap;
 import frc.robot.state.NoteState;
 import frc.robot.subsystems.drive.Swerve;
+import frc.robot.subsystems.drive.constants.SwerveConstants;
 import frc.robot.subsystems.intake.Intake;
+import frc.robot.subsystems.superstructure.ShootOnTheMove;
 import frc.robot.subsystems.superstructure.ShotParameters;
 import frc.robot.subsystems.superstructure.Superstructure;
 import frc.robot.subsystems.superstructure.arm.Arm;
 import frc.robot.subsystems.superstructure.shooter.Shooter;
 import frc.robot.subsystems.vision.PhotonVision;
 import frc.robot.utils.closeables.ToClose;
+import frc.robot.utils.logging.LogUtils;
 import frc.robot.utils.subsystems.VirtualSubsystem;
+import frc.robot.utils.teleop.ControllerUtils;
 import frc.robot.utils.teleop.Profiler;
 import org.littletonrobotics.junction.LogFileUtil;
+import org.littletonrobotics.junction.LogTable;
 import org.littletonrobotics.junction.LoggedRobot;
 import org.littletonrobotics.junction.Logger;
 import org.littletonrobotics.junction.networktables.NT4Publisher;
@@ -39,9 +45,9 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.Optional;
+import java.util.Set;
 import java.util.function.BooleanSupplier;
 
-@SuppressWarnings("RedundantMethodOverride")
 public class Robot extends LoggedRobot {
     private static final String AKitLogPath = "/U/logs";
     private static final String HootLogPath = "/U/logs";
@@ -59,26 +65,25 @@ public class Robot extends LoggedRobot {
     public final Swerve swerve = new Swerve(
             Constants.CURRENT_MODE,
             HardwareConstants.GYRO,
-            HardwareConstants.FRONT_LEFT_MODULE,
-            HardwareConstants.FRONT_RIGHT_MODULE,
-            HardwareConstants.BACK_LEFT_MODULE,
-            HardwareConstants.BACK_RIGHT_MODULE
+            SwerveConstants.FrontLeftModule,
+            SwerveConstants.FrontRightModule,
+            SwerveConstants.BackLeftModule,
+            SwerveConstants.BackRightModule
     );
     public final Intake intake = new Intake(Constants.CURRENT_MODE, HardwareConstants.INTAKE);
     public final Arm arm = new Arm(Constants.CURRENT_MODE, HardwareConstants.ARM);
     public final Shooter shooter = new Shooter(Constants.CURRENT_MODE, HardwareConstants.SHOOTER);
     public final Superstructure superstructure = new Superstructure(arm, shooter);
 
-    @SuppressWarnings("unused")
     public final PhotonVision photonVision = new PhotonVision(Constants.CURRENT_MODE, swerve, swerve.getPoseEstimator());
 
     public final NoteState noteState = new NoteState(Constants.CURRENT_MODE, intake);
-    public final ShootCommands shootCommands = new ShootCommands(swerve, intake, superstructure);
-    public final Autos autos = new Autos(swerve, intake, superstructure, noteState, shootCommands);
+    public final ShootCommands shootCommands = new ShootCommands(swerve, intake, superstructure, noteState);
+    public final Autos autos = new Autos(swerve, intake, superstructure, photonVision, noteState, shootCommands);
     public final AutoChooser<String, AutoOption> autoChooser = new AutoChooser<>(
             new AutoOption(
                     "DoNothing",
-                    autos.doNothing(),
+                    autos.driveAndNoteDetect(),
                     Constants.CompetitionType.COMPETITION
             )
     );
@@ -90,7 +95,10 @@ public class Robot extends LoggedRobot {
     private final EventLoop teleopEventLoop = new EventLoop();
     private final EventLoop testEventLoop = new EventLoop();
 
+    private final Trigger autoEnabled = new Trigger(DriverStation::isAutonomousEnabled);
     private final Trigger teleopEnabled = new Trigger(DriverStation::isTeleopEnabled);
+    private final Trigger endgameTrigger = new Trigger(() -> DriverStation.getMatchTime() <= 20)
+            .and(DriverStation::isFMSAttached).and(teleopEnabled);
 
     @Override
     public void robotInit() {
@@ -125,12 +133,15 @@ public class Robot extends LoggedRobot {
         // no need to inspect this here because BuildConstants is a dynamically changing file upon compilation
         //noinspection RedundantSuppression
         switch (BuildConstants.DIRTY) {
-            //noinspection DataFlowIssue
-            case 0 -> Logger.recordMetadata("GitDirty", "All changes committed");
-            //noinspection DataFlowIssue
-            case 1 -> Logger.recordMetadata("GitDirty", "Uncommitted changes");
-            //noinspection DataFlowIssue
-            default -> Logger.recordMetadata("GitDirty", "Unknown");
+            //noinspection DataFlowIssue,RedundantSuppression
+            case 0 -> //noinspection UnreachableCode
+                    Logger.recordMetadata("GitDirty", "All changes committed");
+            //noinspection DataFlowIssue,RedundantSuppression
+            case 1 -> //noinspection UnreachableCode
+                    Logger.recordMetadata("GitDirty", "Uncommitted changes");
+            //noinspection DataFlowIssue,RedundantSuppression
+            default -> //noinspection UnreachableCode
+                    Logger.recordMetadata("GitDirty", "Unknown");
         }
 
         switch (Constants.CURRENT_MODE) {
@@ -142,7 +153,7 @@ public class Robot extends LoggedRobot {
                     SignalLogger.setPath("/U");
                     DriverStation.reportError(
                             String.format(
-                                    "Failed to create CTRE .hoot log path at \"%s\"! Falling back to default.\n%s",
+                                    "Failed to create .hoot log path at \"%s\"! Falling back to default.\n%s",
                                     HootLogPath,
                                     ioException
                             ),
@@ -161,10 +172,13 @@ public class Robot extends LoggedRobot {
                 Logger.addDataReceiver(new NT4Publisher());
             }
             case REPLAY -> {
+                // Disable Protobuf log overhead warning in replay
+                LogTable.disableProtobufWarning();
                 setUseTiming(false);
+
                 final String logPath = LogFileUtil.findReplayLog();
                 Logger.setReplaySource(new WPILOGReader(logPath));
-                Logger.addDataReceiver(new WPILOGWriter(LogFileUtil.addPathSuffix(logPath, "_sim")));
+                Logger.addDataReceiver(new WPILOGWriter(LogFileUtil.addPathSuffix(logPath, "_sim"), 0.005));
             }
         }
 
@@ -190,26 +204,22 @@ public class Robot extends LoggedRobot {
         CommandScheduler.getInstance().onCommandInterrupt(
                 (interrupted, interrupting) -> {
                     Logger.recordOutput("Commands/Interrupted", interrupted.getName());
+
                     Logger.recordOutput(
                             "Commands/InterruptedRequirements",
-                            interrupted.getRequirements()
-                                    .stream()
-                                    .map(Subsystem::getName)
-                                    .toArray(String[]::new)
+                            LogUtils.getRequirementsFromSubsystems(interrupted.getRequirements())
                     );
 
-                    Logger.recordOutput("Commands/Interrupting", interrupting.isPresent()
+                    Logger.recordOutput("Commands/Interrupter", interrupting.isPresent()
                             ? interrupting.get().getName()
                             : "None"
                     );
+
                     Logger.recordOutput(
-                            "Commands/InterruptingRequirements",
-                            interrupting
-                                    .map(command -> command.getRequirements()
-                                            .stream()
-                                            .map(Subsystem::getName)
-                                            .toArray(String[]::new)
-                                    ).orElseGet(() -> new String[0])
+                            "Commands/InterrupterRequirements",
+                            LogUtils.getRequirementsFromSubsystems(
+                                    interrupting.isPresent() ? interrupting.get().getRequirements() : Set.of()
+                            )
                     );
                 }
         );
@@ -226,7 +236,7 @@ public class Robot extends LoggedRobot {
                 .minus(FieldConstants.getSpeakerPose())
                 .getTranslation()
                 .getNorm();
-        final ShotParameters.Parameters shotParameters = ShotParameters.get(distanceToSpeaker);
+        final ShotParameters.Parameters shotParameters = ShotParameters.getShotParameters(swerve.getPose());
 
         Logger.recordOutput("ShotParameters/SpeakerDistance", distanceToSpeaker);
         Logger.recordOutput("ShotParameters/ArmPivotAngle", shotParameters.armPivotAngle().getRotations());
@@ -234,12 +244,26 @@ public class Robot extends LoggedRobot {
         Logger.recordOutput("ShotParameters/RightVelocityRotsPerSec", shotParameters.rightVelocityRotsPerSec());
         Logger.recordOutput("ShotParameters/AmpVelocityRotsPerSec", shotParameters.ampVelocityRotsPerSec());
 
-        final NoteState.State state = noteState.getState();
-        Logger.recordOutput("NoteState", state.toString());
-    }
+        final double distanceToFerry = swerve.getPose()
+                .minus(FieldConstants.getFerryPose())
+                .getTranslation()
+                .getNorm();
+        final ShotParameters.Parameters ferryParameters = ShotParameters.getFerryParameters(swerve.getPose());
 
-    @Override
-    public void disabledInit() {}
+        Logger.recordOutput("FerryParameters/FerryDistance", distanceToFerry);
+        Logger.recordOutput("FerryParameters/ArmPivotAngle", ferryParameters.armPivotAngle().getRotations());
+        Logger.recordOutput("FerryParameters/LeftVelocityRotsPerSec", ferryParameters.leftVelocityRotsPerSec());
+        Logger.recordOutput("FerryParameters/RightVelocityRotsPerSec", ferryParameters.rightVelocityRotsPerSec());
+        Logger.recordOutput("FerryParameters/AmpVelocityRotsPerSec", ferryParameters.ampVelocityRotsPerSec());
+
+        final ShootOnTheMove.Shot shotWhileMoving = ShootOnTheMove.calculate(
+                swerve.getPose(),
+                swerve.getRobotRelativeSpeeds(),
+                currentPose -> shotParameters
+        );
+
+        Logger.recordOutput("ShootWhileMoving/FuturePose", shotWhileMoving.futurePose());
+    }
 
     @Override
     public void disabledPeriodic() {}
@@ -247,6 +271,11 @@ public class Robot extends LoggedRobot {
     @Override
     public void autonomousInit() {
         autonomousEventLoop = autoChooser.getSelected().autoEventLoop();
+        autoEnabled.onFalse(Commands.runOnce(() -> {
+            if (autonomousEventLoop != null) {
+                autonomousEventLoop.poll();
+            }
+        }).ignoringDisable(true));
     }
 
     @Override
@@ -263,7 +292,8 @@ public class Robot extends LoggedRobot {
                 swerve.teleopDriveCommand(
                         driverController::getLeftY,
                         driverController::getLeftX,
-                        driverController::getRightX
+                        driverController::getRightX,
+                        IsRedAlliance
                 )
         );
     }
@@ -285,24 +315,20 @@ public class Robot extends LoggedRobot {
         coDriverController.y(testEventLoop).and(coDriverController.rightBumper(testEventLoop))
                 .whileTrue(shooter.torqueCurrentSysIdCommand());
 
-        coDriverController.x(testEventLoop).and(coDriverController.rightBumper(testEventLoop))
-                .whileTrue(arm.voltageSysIdCommand());
-
-        coDriverController.a(testEventLoop).and(coDriverController.rightBumper(testEventLoop))
-                .whileTrue(intake.torqueCurrentSysIdCommand());
+//        coDriverController.x(testEventLoop).and(coDriverController.rightBumper(testEventLoop))
+//                .whileTrue(arm.voltageSysIdCommand());
+//
+//        coDriverController.a(testEventLoop).and(coDriverController.rightBumper(testEventLoop))
+//                .whileTrue(intake.torqueCurrentSysIdCommand());
 
 //        coDriverController.y(testEventLoop)
-//                .whileTrue(swerve
-//                        .angularVoltageSysIdQuasistaticCommand(SysIdRoutine.Direction.kForward));
+//                .whileTrue(swerve.linearTorqueCurrentSysIdQuasistaticCommand(SysIdRoutine.Direction.kForward));
 //        coDriverController.a(testEventLoop)
-//                .whileTrue(swerve
-//                        .angularVoltageSysIdQuasistaticCommand(SysIdRoutine.Direction.kReverse));
+//                .whileTrue(swerve.linearTorqueCurrentSysIdQuasistaticCommand(SysIdRoutine.Direction.kReverse));
 //        coDriverController.b(testEventLoop)
-//                .whileTrue(swerve
-//                        .angularVoltageSysIdDynamicCommand(SysIdRoutine.Direction.kForward));
+//                .whileTrue(swerve.linearTorqueCurrentSysIdDynamicCommand(SysIdRoutine.Direction.kForward));
 //        coDriverController.x(testEventLoop)
-//                .whileTrue(swerve
-//                        .angularVoltageSysIdDynamicCommand(SysIdRoutine.Direction.kReverse));
+//                .whileTrue(swerve.linearTorqueCurrentSysIdDynamicCommand(SysIdRoutine.Direction.kReverse));
     }
 
     @Override
@@ -313,39 +339,123 @@ public class Robot extends LoggedRobot {
     }
 
     @Override
-    public void simulationInit() {}
-
-    @Override
     public void simulationPeriodic() {}
 
-    public Command runEjectShooter() {
-        return Commands.parallel(
-                intake.runEjectInCommand(),
-                superstructure.toGoal(Superstructure.Goal.EJECT)
-        );
-    }
-
-    public Command runEjectIntake() {
-        return Commands.deadline(
-                intake.runEjectOutCommand(),
-                superstructure.toGoal(Superstructure.Goal.BACK_FEED)
-        );
-    }
-
     public void configureStateTriggers() {
-        teleopEnabled.onTrue(superstructure.toGoal(Superstructure.Goal.IDLE));
+        teleopEnabled.onTrue(superstructure.toInstantGoal(Superstructure.Goal.IDLE));
+
+        endgameTrigger.onTrue(ControllerUtils.rumbleForDurationCommand(
+                coDriverController.getHID(), GenericHID.RumbleType.kBothRumble, 0.5, 1)
+        );
     }
 
     public void configureAutos() {
         autoChooser.addAutoOption(new AutoOption(
-                "SourceSpeaker0",
-                autos.sourceSpeaker0(),
+                "Speaker2_1_0",
+                autos.speaker2_1_0(),
+                Constants.CompetitionType.TESTING
+        ));
+        autoChooser.addAutoOption(new AutoOption(
+                "Speaker0_1_2",
+                autos.speaker0_1_2(),
+                Constants.CompetitionType.TESTING
+        ));
+        autoChooser.addAutoOption(new AutoOption(
+                "Speaker0_1_2Center4_3",
+                autos.speaker0_1_2Center4_3(),
+                Constants.CompetitionType.TESTING
+        ));
+        autoChooser.addAutoOption(new AutoOption(
+                "Speaker0_1_2Center4_3_2",
+                autos.speaker0_1_2Center4_3_2(),
+                Constants.CompetitionType.TESTING
+        ));
+
+        autoChooser.addAutoOption(new AutoOption(
+                "AmpCenter3_2",
+                autos.ampCenter3_2(),
+                Constants.CompetitionType.COMPETITION
+        ));
+        autoChooser.addAutoOption(new AutoOption(
+                "AmpCenter2_3",
+                autos.ampCenter2_3(),
+                Constants.CompetitionType.COMPETITION
+        ));
+        autoChooser.addAutoOption(new AutoOption(
+                "AmpCenter4_3",
+                autos.ampCenter4_3(),
+                Constants.CompetitionType.COMPETITION
+        ));
+        autoChooser.addAutoOption(new AutoOption(
+                "AmpCenter3_4",
+                autos.ampCenter3_4(),
+                Constants.CompetitionType.COMPETITION
+        ));
+        autoChooser.addAutoOption(new AutoOption(
+                "AmpCenter4_3_2",
+                autos.ampCenter4_3_2(),
+                Constants.CompetitionType.COMPETITION
+        ));
+        autoChooser.addAutoOption(new AutoOption(
+                "AmpCenter4_2_1",
+                autos.ampCenter4_2_1(),
                 Constants.CompetitionType.COMPETITION
         ));
         autoChooser.addAutoOption(new AutoOption(
                 "AmpSpeaker2",
                 autos.ampSpeaker2(),
+                Constants.CompetitionType.TESTING
+        ));
+        autoChooser.addAutoOption(new AutoOption(
+                "AmpSpeaker2Center2_3",
+                autos.ampSpeaker2Center2_3(),
+                Constants.CompetitionType.TESTING
+        ));
+        autoChooser.addAutoOption(new AutoOption(
+                "Amp2_1Center2_3_4",
+                autos.amp2_1Center2_3_4(),
+                Constants.CompetitionType.TESTING
+        ));
+
+        autoChooser.addAutoOption(new AutoOption(
+                "SourceCenter1_0",
+                autos.sourceCenter1_0(),
+                Constants.CompetitionType.TESTING
+        ));
+        autoChooser.addAutoOption(new AutoOption(
+                "SourceCenter0_1_2",
+                autos.altSourceCenter0_1_2(),
                 Constants.CompetitionType.COMPETITION
+        ));
+        autoChooser.addAutoOption(new AutoOption(
+                "NorthSourceCenter0_1_2",
+                autos.northSourceCenter0_1_2(),
+                Constants.CompetitionType.COMPETITION
+        ));
+        autoChooser.addAutoOption(new AutoOption(
+                "old_SourceCenter0_1_2",
+                autos.sourceCenter0_1_2(),
+                Constants.CompetitionType.TESTING
+        ));
+        autoChooser.addAutoOption(new AutoOption(
+                "SourceCenter1_0_2",
+                autos.sourceCenter1_0_2(),
+                Constants.CompetitionType.COMPETITION
+        ));
+        autoChooser.addAutoOption(new AutoOption(
+                "FightNorth",
+                autos.fightNorth(),
+                Constants.CompetitionType.COMPETITION
+        ));
+        autoChooser.addAutoOption(new AutoOption(
+                "SourceSpeaker0",
+                autos.sourceSpeaker0(),
+                Constants.CompetitionType.TESTING
+        ));
+        autoChooser.addAutoOption(new AutoOption(
+                "SourceMobility",
+                autos.sourceMobility(),
+                Constants.CompetitionType.TESTING
         ));
         autoChooser.addAutoOption(new AutoOption(
                 "SourceSpeaker0Center1",
@@ -362,62 +472,71 @@ public class Robot extends LoggedRobot {
                 autos.walton(),
                 Constants.CompetitionType.TESTING
         ));
-        autoChooser.addAutoOption(new AutoOption(
-                "Speaker2_1_0",
-                autos.speaker2_1_0(),
-                Constants.CompetitionType.COMPETITION
-        ));
-        autoChooser.addAutoOption(new AutoOption(
-                "AmpSpeaker2Center2_3",
-                autos.ampSpeaker2Center2_3(),
-                Constants.CompetitionType.COMPETITION
-        ));
-        autoChooser.addAutoOption(new AutoOption(
-                "SourceMobility",
-                autos.sourceMobility(),
-                Constants.CompetitionType.COMPETITION
-        ));
-        autoChooser.addAutoOption(new AutoOption(
-                "SourceCenter1_0",
-                autos.sourceCenter1_0(),
-                Constants.CompetitionType.COMPETITION
-        ));
-        autoChooser.addAutoOption(new AutoOption(
-                "AmpCenter3_2",
-                autos.ampCenter3_2(),
-                Constants.CompetitionType.COMPETITION
-        ));
-        autoChooser.addAutoOption(new AutoOption(
-                "AmpCenter4_3",
-                autos.ampCenter4_3(),
-                Constants.CompetitionType.COMPETITION
-        ));
-        autoChooser.addAutoOption(new AutoOption(
-                "Speaker2_1_0Center4_3",
-                autos.speaker2_1_0Center4_3(),
-                Constants.CompetitionType.COMPETITION
-        ));
+//        autoChooser.addAutoOption(new AutoOption(
+//                "FollowNoteAmp",
+//                autos.driveAndNoteDetect(),
+//                Constants.CompetitionType.TESTING
+//        ));
+//        autoChooser.addAutoOption(new AutoOption(
+//                "FollowNoteSource",
+//                autos.AltSourceCenter0_1_2NOTE(),
+//                Constants.CompetitionType.TESTING
+//        ));
     }
 
+    @SuppressWarnings("RedundantSuppression")
     public void configureButtonBindings(final EventLoop teleopEventLoop) {
-        final XboxController driverHID = driverController.getHID();
-        this.driverController.leftTrigger(0.5, teleopEventLoop).whileTrue(intake.intakeCommand());
-        // TODO: does this rumble fast enough?
-        this.noteState.hasNote.onTrue(
-                Commands.startEnd(
-                        () -> driverHID.setRumble(GenericHID.RumbleType.kBothRumble, 0.5),
-                        () -> driverHID.setRumble(GenericHID.RumbleType.kBothRumble, 0)
-                ).withTimeout(0.5)
+        //noinspection SuspiciousNameCombination
+        this.driverController.leftTrigger(0.5, teleopEventLoop)
+                .whileTrue(Commands.parallel(
+                        intake.intakeCommand().asProxy(),
+                        swerve.teleopDriveAndAssistLineup(
+                                driverController::getLeftY,
+                                driverController::getLeftX,
+                                driverController::getRightX,
+                                IsRedAlliance,
+                                () -> photonVision.getBestNotePose(swerve::getPose)
+                        )
+                ));
+//        this.driverController.leftTrigger(0.5, teleopEventLoop)
+//                .whileTrue(intake.intakeCommand());
+
+        // TODO: this doesn't rumble early enough, or as early as we'd like it to
+        //  not sure if we're hardware limited or its behind by a few cycles and we can speed it up
+        this.noteState.hasNote.and(teleopEnabled).onTrue(
+                Commands.parallel(
+                        ControllerUtils.rumbleForDurationCommand(
+                                driverController.getHID(),
+                                GenericHID.RumbleType.kBothRumble,
+                                0.5,
+                                0.5
+                        ),
+                        ControllerUtils.rumbleForDurationCommand(
+                                coDriverController.getHID(),
+                                GenericHID.RumbleType.kBothRumble,
+                                0.5,
+                                0.5
+                        )
+                )
         );
 
+        //noinspection SuspiciousNameCombination
         this.driverController.rightTrigger(0.5, teleopEventLoop)
-//                .whileTrue(shootCommands.stopAimAndShoot())
-                .whileTrue(shootCommands.deferredStopAimAndShoot())
-                .onFalse(superstructure.toGoal(Superstructure.Goal.IDLE));
+                .whileTrue(shootCommands.readyShot(
+                        driverController::getLeftY,
+                        driverController::getLeftX
+                ))
+                .onFalse(shootCommands.deferredStopAimAndShoot());
+//                .whileTrue(shootCommands.deferredStopAimAndShoot());
+//                .whileTrue(shootCommands.teleopDriveAimAndShoot(
+//                        driverController::getLeftY,
+//                        driverController::getLeftX
+//                ));
 
-        this.driverController.a(teleopEventLoop).whileTrue(shootCommands.amp());
+//        this.driverController.a(teleopEventLoop)
+//                .whileTrue(shootCommands.readyAmp())
+//                .onFalse(shootCommands.amp());
         this.driverController.y(teleopEventLoop).onTrue(swerve.zeroRotationCommand());
-
         this.driverController.b(teleopEventLoop).whileTrue(intake.feedCommand());
 
         this.driverController.leftBumper(teleopEventLoop).whileTrue(
@@ -434,9 +553,25 @@ public class Robot extends LoggedRobot {
                 )
         );
 
-        this.coDriverController.y(teleopEventLoop).whileTrue(runEjectShooter());
-        this.coDriverController.a(teleopEventLoop).whileTrue(runEjectIntake());
-        this.coDriverController.b().whileTrue(shootCommands.lineupAndAmp());
+        this.coDriverController.y(teleopEventLoop)
+                .whileTrue(shootCommands.runEjectShooter());
+        this.coDriverController.a(teleopEventLoop)
+                .whileTrue(shootCommands.runEjectIntake());
+        //noinspection SuspiciousNameCombination
+        this.coDriverController.b(teleopEventLoop)
+                .whileTrue(shootCommands.angleAndReadyAmp(
+                        driverController::getLeftY,
+                        driverController::getLeftX
+                )).onFalse(shootCommands.amp());
+//                .whileTrue(shootCommands.lineupAndAmp());
+        //noinspection SuspiciousNameCombination
+        this.coDriverController.leftTrigger(0.5, teleopEventLoop)
+                .whileTrue(shootCommands.readyFerry(
+                        driverController::getLeftY,
+                        driverController::getLeftX
+                ))
+                .onFalse(shootCommands.ferry());
+
         this.coDriverController.rightTrigger(0.5, teleopEventLoop)
                 .whileTrue(shootCommands.shootSubwoofer());
     }

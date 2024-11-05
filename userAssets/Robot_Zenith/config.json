@@ -6,7 +6,7 @@
     { "axis": "y", "degrees": 0 },
     { "axis": "z", "degrees": -90 }
   ],
-  "position": [1, 0, -0.562],
+  "position": [0.9, 0.105, -0.562],
   "cameras": [
     {
       "name": "FL_Apriltag",
@@ -21,6 +21,12 @@
       "position": [0.3006852, -0.3266694, 0.2272538],
       "resolution": [1920, 1080],
       "fov": 104.6
+    }
+  ],
+  "components": [
+    {
+      "zeroedRotations": [{ "axis": "x", "degrees": 75 }, { "axis": "y", "degrees": 0 }, { "axis": "z", "degrees": -90 }],
+      "zeroedPosition": [0.5626, 0.105, -1.2147]
     }
   ]
 }

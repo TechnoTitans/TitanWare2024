@@ -10,7 +10,7 @@ import frc.robot.utils.logging.LogUtils;
 import org.littletonrobotics.junction.Logger;
 
 public class Gyro {
-    protected static final String logKey = "Gyro";
+    protected static final String LogKey = "Gyro";
 
     private final GyroIO gyroIO;
 
@@ -29,11 +29,11 @@ public class Gyro {
         this.gyroIO = switch (mode) {
             case REAL -> new GyroIOPigeon2(gyroConstants, odometryThreadRunner);
             case SIM -> new GyroIOSim(gyroConstants, odometryThreadRunner, kinematics, swerveModules);
-            case REPLAY -> new GyroIO() {};
+            case REPLAY, DISABLED -> new GyroIO() {};
         };
 
         this.inputs = new GyroIOInputsAutoLogged();
-        this.isReal = Constants.CURRENT_MODE == Constants.RobotMode.REAL;
+        this.isReal = mode == Constants.RobotMode.REAL;
 
         this.gyroIO.config();
     }
@@ -46,10 +46,10 @@ public class Gyro {
         final double gyroPeriodicUpdateStart = Logger.getRealTimestamp();
 
         gyroIO.periodic();
-        Logger.processInputs(logKey, inputs);
+        Logger.processInputs(LogKey, inputs);
 
         Logger.recordOutput(
-                logKey + "/PeriodicIOPeriodMs",
+                LogKey + "/PeriodicIOPeriodMs",
                 LogUtils.microsecondsToMilliseconds(Logger.getRealTimestamp() - gyroPeriodicUpdateStart)
         );
     }

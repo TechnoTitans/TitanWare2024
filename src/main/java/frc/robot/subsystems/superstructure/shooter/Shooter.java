@@ -21,7 +21,7 @@ import static edu.wpi.first.units.Units.*;
 public class Shooter extends SubsystemBase {
     protected static final String LogKey = "Shooter";
 
-    private static final double VelocityToleranceRotsPerSec = 2.5;
+    private static final double VelocityToleranceRotsPerSec = 3.5;
     private final ShooterIO shooterIO;
     private final ShooterIOInputsAutoLogged inputs;
 
@@ -30,8 +30,8 @@ public class Shooter extends SubsystemBase {
 
     public Trigger atVelocitySetpoint = new Trigger(this::atVelocitySetpoint);
 
-    private Goal goal = Goal.STOP;
-    private Goal previousGoal = goal;
+    private Goal desiredGoal = Goal.STOP;
+    private Goal currentGoal = desiredGoal;
 
     private final VelocitySetpoint setpoint;
 
@@ -45,10 +45,10 @@ public class Shooter extends SubsystemBase {
         NONE(0, 0, 0),
         STOP(0, 0, 0),
         IDLE(40, 40, 40),
-        EJECT(80, 80, 80),
+        EJECT(50, 50, 50),
         BACK_FEED(-60, -60, -60),
-        AMP(60, -60, -60),
-        TEST(84.433, 84.433, 128.883),
+        AMP(80, -40, -40),
+        FERRY_CENTERLINE(60, 60, 80),
         SUBWOOFER(80, 80, 80);
 
         private final double ampVelocity;
@@ -82,7 +82,7 @@ public class Shooter extends SubsystemBase {
         this.shooterIO = switch (mode) {
             case REAL -> new ShooterIOReal(shooterConstants);
             case SIM -> new ShooterIOSim(shooterConstants);
-            case REPLAY -> new ShooterIO() {};
+            case REPLAY, DISABLED -> new ShooterIO() {};
         };
 
         this.inputs = new ShooterIOInputsAutoLogged();
@@ -113,27 +113,28 @@ public class Shooter extends SubsystemBase {
                 LogUtils.microsecondsToMilliseconds(Logger.getRealTimestamp() - shooterPeriodicUpdateStart)
         );
 
-        if (goal != Goal.NONE && previousGoal != goal) {
-            setpoint.ampVelocityRotsPerSec = goal.getAmpVelocity();
-            setpoint.leftFlywheelVelocityRotsPerSec = goal.getLeftFlywheelVelocity();
-            setpoint.rightFlywheelVelocityRotsPerSec = goal.getRightFlywheelVelocity();
+        if (desiredGoal != Goal.NONE && currentGoal != desiredGoal) {
+            setpoint.ampVelocityRotsPerSec = desiredGoal.getAmpVelocity();
+            setpoint.leftFlywheelVelocityRotsPerSec = desiredGoal.getLeftFlywheelVelocity();
+            setpoint.rightFlywheelVelocityRotsPerSec = desiredGoal.getRightFlywheelVelocity();
             shooterIO.toVelocity(
                     setpoint.ampVelocityRotsPerSec,
                     setpoint.leftFlywheelVelocityRotsPerSec,
                     setpoint.rightFlywheelVelocityRotsPerSec
             );
 
-            this.previousGoal = goal;
-        } else if (goal == Goal.NONE) {
+            this.currentGoal = desiredGoal;
+        } else if (desiredGoal == Goal.NONE) {
             shooterIO.toVelocity(
                     setpoint.ampVelocityRotsPerSec,
                     setpoint.leftFlywheelVelocityRotsPerSec,
                     setpoint.rightFlywheelVelocityRotsPerSec
             );
-            this.previousGoal = Goal.NONE;
+            this.currentGoal = Goal.NONE;
         }
 
-        Logger.recordOutput(LogKey + "/Goal", goal.toString());
+        Logger.recordOutput(LogKey + "/DesiredGoal", desiredGoal.toString());
+        Logger.recordOutput(LogKey + "/CurrentGoal", currentGoal.toString());
         Logger.recordOutput(LogKey + "/AtVelocitySetpoint", atVelocitySetpoint());
         Logger.recordOutput(LogKey + "/VelocitySetpoint/AmpVelocityRotsPerSec", setpoint.ampVelocityRotsPerSec);
         Logger.recordOutput(
@@ -159,11 +160,13 @@ public class Shooter extends SubsystemBase {
                 setpoint.ampVelocityRotsPerSec,
                 inputs.ampVelocityRotsPerSec,
                 VelocityToleranceRotsPerSec
-        );
+        ) && currentGoal == desiredGoal;
     }
 
-    public Command toGoal(final Goal goal) {
-        return runEnd(() -> this.goal = goal, () -> this.goal = Goal.IDLE);
+    public void setGoal(final Goal goal) {
+        this.desiredGoal = goal;
+        Logger.recordOutput(LogKey + "/DesiredGoal", desiredGoal.toString());
+        Logger.recordOutput(LogKey + "/CurrentGoal", currentGoal.toString());
     }
 
     public Command toVelocityCommand(
@@ -171,14 +174,28 @@ public class Shooter extends SubsystemBase {
             final DoubleSupplier leftFlywheelVelocityRotsPerSec,
             final DoubleSupplier rightFlywheelVelocityRotsPerSec
     ) {
-        return Commands.sequence(
-                Commands.runOnce(() -> this.goal = Goal.NONE),
-                run(() -> {
+        return runEnd(
+                () -> {
+                    this.desiredGoal = Goal.NONE;
                     setpoint.ampVelocityRotsPerSec = ampVelocityRotsPerSec.getAsDouble();
                     setpoint.leftFlywheelVelocityRotsPerSec = leftFlywheelVelocityRotsPerSec.getAsDouble();
                     setpoint.rightFlywheelVelocityRotsPerSec = rightFlywheelVelocityRotsPerSec.getAsDouble();
-                })
+                },
+                () -> this.desiredGoal = Goal.IDLE
         );
+    }
+
+    public Command runVelocityCommand(
+            final DoubleSupplier ampVelocityRotsPerSec,
+            final DoubleSupplier leftFlywheelVelocityRotsPerSec,
+            final DoubleSupplier rightFlywheelVelocityRotsPerSec
+    ) {
+        return run(() -> {
+            this.desiredGoal = Goal.NONE;
+            setpoint.ampVelocityRotsPerSec = ampVelocityRotsPerSec.getAsDouble();
+            setpoint.leftFlywheelVelocityRotsPerSec = leftFlywheelVelocityRotsPerSec.getAsDouble();
+            setpoint.rightFlywheelVelocityRotsPerSec = rightFlywheelVelocityRotsPerSec.getAsDouble();
+        });
     }
 
     public Command runVoltageCommand(
@@ -251,10 +268,10 @@ public class Shooter extends SubsystemBase {
 
         return Commands.sequence(
                 sysIdRoutine.quasistatic(SysIdRoutine.Direction.kForward)
-                        .withTimeout(10),
+                        .withTimeout(8),
                 Commands.waitUntil(isStopped),
                 sysIdRoutine.quasistatic(SysIdRoutine.Direction.kReverse)
-                        .withTimeout(10),
+                        .withTimeout(8),
                 Commands.waitUntil(isStopped),
                 sysIdRoutine.dynamic(SysIdRoutine.Direction.kForward)
                         .withTimeout(6),
