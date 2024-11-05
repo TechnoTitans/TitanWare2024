@@ -182,3 +182,4 @@ simgui-*.json
 
 # Ignore files for simulated CTRE Status Signals
 /ctre_sim/
+/logs/
