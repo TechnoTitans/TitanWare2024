@@ -30,7 +30,7 @@ public class SwerveModule {
         this.moduleIO = switch (robotMode) {
             case REAL -> new SwerveModuleIOTalonFX(constants, odometryThreadRunner);
             case SIM -> new SwerveModuleIOTalonFXSim(constants, odometryThreadRunner);
-            case REPLAY -> new SwerveModuleIO() {};
+            case REPLAY, DISABLED -> new SwerveModuleIO() {};
         };
         this.moduleIO.config();
 

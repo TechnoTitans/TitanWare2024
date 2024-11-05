@@ -45,7 +45,7 @@ public class Shooter extends SubsystemBase {
         NONE(0, 0, 0),
         STOP(0, 0, 0),
         IDLE(40, 40, 40),
-        EJECT(80, 80, 80),
+        EJECT(50, 50, 50),
         BACK_FEED(-60, -60, -60),
         AMP(80, -40, -40),
         FERRY_CENTERLINE(60, 60, 80),
@@ -82,7 +82,7 @@ public class Shooter extends SubsystemBase {
         this.shooterIO = switch (mode) {
             case REAL -> new ShooterIOReal(shooterConstants);
             case SIM -> new ShooterIOSim(shooterConstants);
-            case REPLAY -> new ShooterIO() {};
+            case REPLAY, DISABLED -> new ShooterIO() {};
         };
 
         this.inputs = new ShooterIOInputsAutoLogged();
@@ -268,10 +268,10 @@ public class Shooter extends SubsystemBase {
 
         return Commands.sequence(
                 sysIdRoutine.quasistatic(SysIdRoutine.Direction.kForward)
-                        .withTimeout(10),
+                        .withTimeout(8),
                 Commands.waitUntil(isStopped),
                 sysIdRoutine.quasistatic(SysIdRoutine.Direction.kReverse)
-                        .withTimeout(10),
+                        .withTimeout(8),
                 Commands.waitUntil(isStopped),
                 sysIdRoutine.dynamic(SysIdRoutine.Direction.kForward)
                         .withTimeout(6),

@@ -1,8 +1,8 @@
 package frc.robot.subsystems.vision;
 
 import edu.wpi.first.apriltag.AprilTagFieldLayout;
-import edu.wpi.first.math.geometry.*;
-import edu.wpi.first.math.util.Units;
+import edu.wpi.first.math.geometry.Pose3d;
+import edu.wpi.first.math.geometry.Transform3d;
 import frc.robot.constants.Constants;
 import frc.robot.subsystems.vision.cameras.TitanCamera;
 import frc.robot.subsystems.vision.result.NoteTrackingResult;
@@ -44,8 +44,6 @@ public class RealVisionRunner implements PhotonVisionRunner {
     }
 
     public static class VisionIONoteTrackingReal implements VisionIO {
-        public static final double NOTE_HEIGHT_Z = Units.inchesToMeters(1);
-
         private final PhotonCamera photonCamera;
         private final String cameraName;
 
@@ -149,9 +147,10 @@ public class RealVisionRunner implements PhotonVisionRunner {
             final PhotonPipelineResult pipelineResult = inputs.latestResult;
             VisionUtils.correctPipelineResultTimestamp(pipelineResult);
 
-            // TODO: HasTarget is true at this point, but when it gets sent through
-            //  NoteTrackingResult and logged outside of here, it becomes always false.
-            Logger.recordOutput("HasTarget", pipelineResult.hasTargets());
+            Logger.recordOutput(
+                    String.format("%s/%s/HasTarget", PhotonVision.PhotonLogKey, inputs.name),
+                    pipelineResult.hasTargets()
+            );
 
             final NoteTrackingResult noteTrackingResult = new NoteTrackingResult(inputs.robotToCamera, pipelineResult);
             noteTrackingResultMap.put(visionIO, noteTrackingResult);
@@ -168,6 +167,11 @@ public class RealVisionRunner implements PhotonVisionRunner {
     @Override
     public Map<VisionIOApriltagReal, VisionIO.VisionIOInputs> getApriltagVisionIOInputsMap() {
         return apriltagVisionIOInputsMap;
+    }
+
+    @Override
+    public Map<VisionIONoteTrackingReal, VisionIO.VisionIOInputs> getNoteTrackingVisionIOInputsMap() {
+        return noteTrackingVisionIOInputsMap;
     }
 
     @Override
