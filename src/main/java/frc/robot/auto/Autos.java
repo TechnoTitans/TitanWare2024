@@ -1192,7 +1192,7 @@ public class Autos {
                         Commands.sequence(
                                 Commands.waitUntil(noteState.hasNote),
                                 shootCommands.readySuperstructureForShot().asProxy()
-                        )
+                        ).withTimeout(3)
                 ).withName("Intake1")
         );
 

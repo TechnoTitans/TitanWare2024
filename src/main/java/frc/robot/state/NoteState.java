@@ -36,6 +36,7 @@ public class NoteState extends VirtualSubsystem {
     public final Trigger hasNote = isStoring.or(isStored).or(isFeeding);
 
     public final BooleanSupplier shouldStoreNotes;
+    private boolean isSimNotePresent = true;
 
     public NoteState(final Constants.RobotMode mode, final Intake intake) {
         this.intake = intake;
@@ -113,10 +114,14 @@ public class NoteState extends VirtualSubsystem {
         return Commands.runOnce(() -> intake.setBeamBreakSensorState(shooterBeamBroken));
     }
 
+    public void isSimNotePresent(final boolean isNotePresent) {
+        this.isSimNotePresent = isNotePresent;
+    }
+
     public void configureSimTriggers() {
         final ThreadLocalRandom random = ThreadLocalRandom.current();
 
-        intake.intaking.and(hasNote.negate()).and(intake.shooterBeamBreakBroken.negate())
+        intake.intaking.and(hasNote.negate()).and(intake.shooterBeamBreakBroken.negate()).and(() -> isSimNotePresent)
                 .whileTrue(Commands.sequence(
                         waitRand(random, 0.1, 2),
                         Commands.waitSeconds(0.15),
