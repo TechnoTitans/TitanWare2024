@@ -165,8 +165,10 @@ public class Robot extends LoggedRobot {
                 Logger.addDataReceiver(new NT4Publisher());
             }
             case SIM -> {
-                SignalLogger.setPath("/logs");
-                Logger.addDataReceiver(new WPILOGWriter("/logs"));
+                // log to working directory when running sim
+                // setPath doesn't seem to work in sim (path is ignored and hoot files are always sent to /logs)
+//                SignalLogger.setPath("/logs");
+                Logger.addDataReceiver(new WPILOGWriter(""));
                 Logger.addDataReceiver(new NT4Publisher());
             }
             case REPLAY -> {

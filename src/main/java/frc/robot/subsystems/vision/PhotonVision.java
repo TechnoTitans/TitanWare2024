@@ -18,6 +18,7 @@ import frc.robot.subsystems.vision.cameras.TitanCamera;
 import frc.robot.subsystems.vision.result.NoteTrackingResult;
 import frc.robot.utils.PoseUtils;
 import frc.robot.utils.gyro.GyroUtils;
+import frc.robot.utils.logging.LogUtils;
 import frc.robot.utils.subsystems.VirtualSubsystem;
 import org.littletonrobotics.junction.Logger;
 import org.photonvision.EstimatedRobotPose;
@@ -366,11 +367,17 @@ public class PhotonVision extends VirtualSubsystem {
 
     @Override
     public void periodic() {
+        final double visionIOPeriodicStart = Logger.getRealTimestamp();
         runner.periodic();
 
         // Update and log PhotonVision results
         update();
         updateOutputs();
+
+        Logger.recordOutput(
+                PhotonLogKey + "/PeriodicIOPeriodMs",
+                LogUtils.microsecondsToMilliseconds(Logger.getRealTimestamp() - visionIOPeriodicStart)
+        );
     }
 
     public void resetPosition(final Pose2d robotPose, final Rotation2d robotYaw) {
