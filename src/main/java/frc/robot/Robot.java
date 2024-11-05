@@ -11,7 +11,6 @@ import edu.wpi.first.wpilibj2.command.CommandScheduler;
 import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
 import edu.wpi.first.wpilibj2.command.button.Trigger;
-import edu.wpi.first.wpilibj2.command.sysid.SysIdRoutine;
 import frc.robot.auto.AutoChooser;
 import frc.robot.auto.AutoOption;
 import frc.robot.auto.Autos;
@@ -76,16 +75,15 @@ public class Robot extends LoggedRobot {
     public final Shooter shooter = new Shooter(Constants.CURRENT_MODE, HardwareConstants.SHOOTER);
     public final Superstructure superstructure = new Superstructure(arm, shooter);
 
-    @SuppressWarnings("unused")
     public final PhotonVision photonVision = new PhotonVision(Constants.CURRENT_MODE, swerve, swerve.getPoseEstimator());
 
     public final NoteState noteState = new NoteState(Constants.CURRENT_MODE, intake);
     public final ShootCommands shootCommands = new ShootCommands(swerve, intake, superstructure, noteState);
-    public final Autos autos = new Autos(swerve, intake, superstructure, noteState, shootCommands);
+    public final Autos autos = new Autos(swerve, intake, superstructure, photonVision, noteState, shootCommands);
     public final AutoChooser<String, AutoOption> autoChooser = new AutoChooser<>(
             new AutoOption(
                     "DoNothing",
-                    autos.doNothing(),
+                    autos.driveAndNoteDetect(),
                     Constants.CompetitionType.COMPETITION
             )
     );
@@ -99,10 +97,8 @@ public class Robot extends LoggedRobot {
 
     private final Trigger autoEnabled = new Trigger(DriverStation::isAutonomousEnabled);
     private final Trigger teleopEnabled = new Trigger(DriverStation::isTeleopEnabled);
-    private final Trigger endgameTrigger = new Trigger(
-            () -> DriverStation.getMatchTime() <= 20
-                    && DriverStation.isFMSAttached()
-    ).and(teleopEnabled);
+    private final Trigger endgameTrigger = new Trigger(() -> DriverStation.getMatchTime() <= 20)
+            .and(DriverStation::isFMSAttached).and(teleopEnabled);
 
     @Override
     public void robotInit() {
@@ -169,10 +165,8 @@ public class Robot extends LoggedRobot {
                 Logger.addDataReceiver(new NT4Publisher());
             }
             case SIM -> {
-                // log to working directory when running sim
-                // setPath doesn't seem to work in sim (path is ignored and hoot files are always sent to /logs)
-//                SignalLogger.setPath("/logs");
-                Logger.addDataReceiver(new WPILOGWriter(""));
+                SignalLogger.setPath("/logs");
+                Logger.addDataReceiver(new WPILOGWriter("/logs"));
                 Logger.addDataReceiver(new NT4Publisher());
             }
             case REPLAY -> {
@@ -214,13 +208,13 @@ public class Robot extends LoggedRobot {
                             LogUtils.getRequirementsFromSubsystems(interrupted.getRequirements())
                     );
 
-                    Logger.recordOutput("Commands/Interrupting", interrupting.isPresent()
+                    Logger.recordOutput("Commands/Interrupter", interrupting.isPresent()
                             ? interrupting.get().getName()
                             : "None"
                     );
 
                     Logger.recordOutput(
-                            "Commands/InterruptingRequirements",
+                            "Commands/InterrupterRequirements",
                             LogUtils.getRequirementsFromSubsystems(
                                     interrupting.isPresent() ? interrupting.get().getRequirements() : Set.of()
                             )
@@ -319,20 +313,20 @@ public class Robot extends LoggedRobot {
         coDriverController.y(testEventLoop).and(coDriverController.rightBumper(testEventLoop))
                 .whileTrue(shooter.torqueCurrentSysIdCommand());
 
-        coDriverController.x(testEventLoop).and(coDriverController.rightBumper(testEventLoop))
-                .whileTrue(arm.voltageSysIdCommand());
+//        coDriverController.x(testEventLoop).and(coDriverController.rightBumper(testEventLoop))
+//                .whileTrue(arm.voltageSysIdCommand());
+//
+//        coDriverController.a(testEventLoop).and(coDriverController.rightBumper(testEventLoop))
+//                .whileTrue(intake.torqueCurrentSysIdCommand());
 
-        coDriverController.a(testEventLoop).and(coDriverController.rightBumper(testEventLoop))
-                .whileTrue(intake.torqueCurrentSysIdCommand());
-
-        coDriverController.y(testEventLoop)
-                .whileTrue(swerve.linearTorqueCurrentSysIdQuasistaticCommand(SysIdRoutine.Direction.kForward));
-        coDriverController.a(testEventLoop)
-                .whileTrue(swerve.linearTorqueCurrentSysIdQuasistaticCommand(SysIdRoutine.Direction.kReverse));
-        coDriverController.b(testEventLoop)
-                .whileTrue(swerve.linearTorqueCurrentSysIdDynamicCommand(SysIdRoutine.Direction.kForward));
-        coDriverController.x(testEventLoop)
-                .whileTrue(swerve.linearTorqueCurrentSysIdDynamicCommand(SysIdRoutine.Direction.kReverse));
+//        coDriverController.y(testEventLoop)
+//                .whileTrue(swerve.linearTorqueCurrentSysIdQuasistaticCommand(SysIdRoutine.Direction.kForward));
+//        coDriverController.a(testEventLoop)
+//                .whileTrue(swerve.linearTorqueCurrentSysIdQuasistaticCommand(SysIdRoutine.Direction.kReverse));
+//        coDriverController.b(testEventLoop)
+//                .whileTrue(swerve.linearTorqueCurrentSysIdDynamicCommand(SysIdRoutine.Direction.kForward));
+//        coDriverController.x(testEventLoop)
+//                .whileTrue(swerve.linearTorqueCurrentSysIdDynamicCommand(SysIdRoutine.Direction.kReverse));
     }
 
     @Override
@@ -357,12 +351,12 @@ public class Robot extends LoggedRobot {
         autoChooser.addAutoOption(new AutoOption(
                 "Speaker2_1_0",
                 autos.speaker2_1_0(),
-                Constants.CompetitionType.COMPETITION
+                Constants.CompetitionType.TESTING
         ));
         autoChooser.addAutoOption(new AutoOption(
                 "Speaker0_1_2",
                 autos.speaker0_1_2(),
-                Constants.CompetitionType.COMPETITION
+                Constants.CompetitionType.TESTING
         ));
         autoChooser.addAutoOption(new AutoOption(
                 "Speaker0_1_2Center4_3",
@@ -432,6 +426,11 @@ public class Robot extends LoggedRobot {
                 Constants.CompetitionType.COMPETITION
         ));
         autoChooser.addAutoOption(new AutoOption(
+                "NorthSourceCenter0_1_2",
+                autos.northSourceCenter0_1_2(),
+                Constants.CompetitionType.COMPETITION
+        ));
+        autoChooser.addAutoOption(new AutoOption(
                 "old_SourceCenter0_1_2",
                 autos.sourceCenter0_1_2(),
                 Constants.CompetitionType.TESTING
@@ -439,6 +438,11 @@ public class Robot extends LoggedRobot {
         autoChooser.addAutoOption(new AutoOption(
                 "SourceCenter1_0_2",
                 autos.sourceCenter1_0_2(),
+                Constants.CompetitionType.COMPETITION
+        ));
+        autoChooser.addAutoOption(new AutoOption(
+                "FightNorth",
+                autos.fightNorth(),
                 Constants.CompetitionType.COMPETITION
         ));
         autoChooser.addAutoOption(new AutoOption(
@@ -461,27 +465,56 @@ public class Robot extends LoggedRobot {
                 autos.sourceSpeaker0Center1_2(),
                 Constants.CompetitionType.TESTING
         ));
-
-
         autoChooser.addAutoOption(new AutoOption(
                 "Walton",
                 autos.walton(),
                 Constants.CompetitionType.TESTING
         ));
+//        autoChooser.addAutoOption(new AutoOption(
+//                "FollowNoteAmp",
+//                autos.driveAndNoteDetect(),
+//                Constants.CompetitionType.TESTING
+//        ));
+//        autoChooser.addAutoOption(new AutoOption(
+//                "FollowNoteSource",
+//                autos.AltSourceCenter0_1_2NOTE(),
+//                Constants.CompetitionType.TESTING
+//        ));
     }
 
     @SuppressWarnings("RedundantSuppression")
     public void configureButtonBindings(final EventLoop teleopEventLoop) {
+        //noinspection SuspiciousNameCombination
         this.driverController.leftTrigger(0.5, teleopEventLoop)
-                .whileTrue(intake.intakeCommand());
+                .whileTrue(Commands.parallel(
+                        intake.intakeCommand().asProxy(),
+                        swerve.teleopDriveAndAssistLineup(
+                                driverController::getLeftY,
+                                driverController::getLeftX,
+                                driverController::getRightX,
+                                IsRedAlliance,
+                                () -> photonVision.getBestNotePose(swerve::getPose)
+                        )
+                ));
+//        this.driverController.leftTrigger(0.5, teleopEventLoop)
+//                .whileTrue(intake.intakeCommand());
+
         // TODO: this doesn't rumble early enough, or as early as we'd like it to
         //  not sure if we're hardware limited or its behind by a few cycles and we can speed it up
-        this.noteState.hasNote.onTrue(
-                ControllerUtils.rumbleForDurationCommand(
-                        driverController.getHID(),
-                        GenericHID.RumbleType.kBothRumble,
-                        0.5,
-                        0.5
+        this.noteState.hasNote.and(teleopEnabled).onTrue(
+                Commands.parallel(
+                        ControllerUtils.rumbleForDurationCommand(
+                                driverController.getHID(),
+                                GenericHID.RumbleType.kBothRumble,
+                                0.5,
+                                0.5
+                        ),
+                        ControllerUtils.rumbleForDurationCommand(
+                                coDriverController.getHID(),
+                                GenericHID.RumbleType.kBothRumble,
+                                0.5,
+                                0.5
+                        )
                 )
         );
 

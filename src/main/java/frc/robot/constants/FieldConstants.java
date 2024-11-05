@@ -36,6 +36,14 @@ public class FieldConstants {
     public static final Pose2d RED_AMP_POSE = PoseUtils.flip(BLUE_AMP_POSE);
     public static final Pose2d RED_AMP_SCORING_POSE = PoseUtils.flip(BLUE_AMP_SCORING_POSE);
 
+    public static final Pose2d[] CENTER_LINE_NOTE_POSES = new Pose2d[] {
+            new Pose2d(FIELD_LENGTH_X_METERS/2, 7.47, Rotation2d.fromDegrees(0)),
+            new Pose2d(FIELD_LENGTH_X_METERS/2, 5.79, Rotation2d.fromDegrees(0)),
+            new Pose2d(FIELD_LENGTH_X_METERS/2, FIELD_WIDTH_Y_METERS / 2.0, Rotation2d.fromDegrees(0)),
+            new Pose2d(FIELD_LENGTH_X_METERS/2, FIELD_WIDTH_Y_METERS - 5.79, Rotation2d.fromDegrees(0)),
+            new Pose2d(FIELD_LENGTH_X_METERS/2, FIELD_WIDTH_Y_METERS - 7.47, Rotation2d.fromDegrees(0)),
+    };
+
     private static Pose2d getAllianceFlippedPose(final Pose2d blueAlliancePose, final Pose2d redAlliancePose) {
         final Optional<DriverStation.Alliance> alliance = DriverStation.getAlliance();
         if (alliance.isPresent()) {

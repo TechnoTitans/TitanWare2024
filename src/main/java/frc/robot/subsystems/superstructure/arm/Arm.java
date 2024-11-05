@@ -87,7 +87,7 @@ public class Arm extends SubsystemBase {
         this.armIO = switch (mode) {
             case REAL -> new ArmIOReal(armConstants);
             case SIM -> new ArmIOSim(armConstants);
-            case REPLAY -> new ArmIO() {};
+            case REPLAY, DISABLED -> new ArmIO() {};
         };
 
         this.inputs = new ArmIOInputsAutoLogged();

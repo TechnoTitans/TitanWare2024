@@ -11,13 +11,14 @@ import org.photonvision.PhotonPoseEstimator;
 
 public interface Constants {
     RobotMode CURRENT_MODE = RobotMode.REAL;
-    CompetitionType CURRENT_COMPETITION_TYPE = CompetitionType.TESTING;
+    CompetitionType CURRENT_COMPETITION_TYPE = CompetitionType.COMPETITION;
     double LOOP_PERIOD_SECONDS = 0.02;
 
     enum RobotMode {
         REAL,
         SIM,
-        REPLAY
+        REPLAY,
+        DISABLED
     }
 
     enum CompetitionType {
@@ -39,16 +40,20 @@ public interface Constants {
                 new Translation3d(Units.inchesToMeters(11.862), Units.inchesToMeters(12.681), Units.inchesToMeters(8.947)),
                 new Rotation3d(0, Units.degreesToRadians(-25), Units.degreesToRadians(20))
         );
-
         Transform3d ROBOT_TO_FC_APRILTAG = new Transform3d(
                 new Translation3d(Units.inchesToMeters(13.36613), Units.inchesToMeters(8.5202), Units.inchesToMeters(6.759)),
                 new Rotation3d(0, Units.degreesToRadians(-30), 0)
         );
-
         Transform3d ROBOT_TO_FR_APRILTAG = new Transform3d(
                 new Translation3d(Units.inchesToMeters(11.838), Units.inchesToMeters(-12.861), Units.inchesToMeters(8.947)),
                 new Rotation3d(0, Units.degreesToRadians(-25), Units.degreesToRadians(-20))
         );
+        Transform3d ROBOT_TO_REAR_NOTE = new Transform3d(
+                new Translation3d(Units.inchesToMeters(-16), Units.inchesToMeters(0), Units.inchesToMeters(14)),
+                new Rotation3d(0, Units.degreesToRadians(22), Units.degreesToRadians(180))
+        );
+
+        double NOTE_HEIGHT_Z = Units.inchesToMeters(2);
 
         /**
          * Standard deviations of the supplied pose estimate (before vision, likely to be solely wheel odometry)

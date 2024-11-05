@@ -1,6 +1,9 @@
 package frc.robot.utils.gyro;
 
-import edu.wpi.first.math.geometry.*;
+import edu.wpi.first.math.geometry.Pose2d;
+import edu.wpi.first.math.geometry.Pose3d;
+import edu.wpi.first.math.geometry.Rotation3d;
+import edu.wpi.first.math.geometry.Twist3d;
 import frc.robot.subsystems.drive.constants.SwerveConstants;
 
 public class GyroUtils {

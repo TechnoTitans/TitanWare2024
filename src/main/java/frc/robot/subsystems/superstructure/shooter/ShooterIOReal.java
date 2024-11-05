@@ -73,10 +73,10 @@ public class ShooterIOReal implements ShooterIO {
     public void config() {
         final TalonFXConfiguration ampTalonFXConfiguration = new TalonFXConfiguration();
         ampTalonFXConfiguration.Slot0 = new Slot0Configs()
-                .withKS(2.732)
-                .withKV(0.038323)
-                .withKA(0.15474)
-                .withKP(6.246);
+                .withKS(5.6462)
+                .withKV(0)
+                .withKA(0.18083)
+                .withKP(3.5468);
         ampTalonFXConfiguration.TorqueCurrent.PeakForwardTorqueCurrent = 80;
         ampTalonFXConfiguration.TorqueCurrent.PeakReverseTorqueCurrent = -80;
         ampTalonFXConfiguration.CurrentLimits.StatorCurrentLimit = 60;
