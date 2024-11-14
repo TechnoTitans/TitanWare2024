@@ -459,21 +459,6 @@ public class Swerve extends SubsystemBase {
         backRight.setDesiredState(states[3]);
     }
 
-    public void drive(final SwerveModuleState[] states, final ChassisSpeeds desiredSpeeds) {
-        SwerveDriveKinematics.desaturateWheelSpeeds(
-                states,
-                desiredSpeeds,
-                maxLinearVelocity,
-                maxLinearVelocity,
-                maxAngularVelocity
-        );
-
-        frontLeft.setDesiredState(states[0]);
-        frontRight.setDesiredState(states[1]);
-        backLeft.setDesiredState(states[2]);
-        backRight.setDesiredState(states[3]);
-    }
-
     public void drive(
             final double xSpeedMeterPerSec,
             final double ySpeedMetersPerSec,
@@ -500,12 +485,16 @@ public class Swerve extends SubsystemBase {
     }
 
     public void drive(final ChassisSpeeds speeds) {
+        final SwerveModuleState[] moduleStates = kinematics.toSwerveModuleStates(speeds);
+
+        SwerveDriveKinematics.desaturateWheelSpeeds(moduleStates, maxLinearVelocity);
+
         final ChassisSpeeds correctedSpeeds = ChassisSpeeds.discretize(
-                speeds,
-                4 * Constants.LOOP_PERIOD_SECONDS
+                kinematics.toChassisSpeeds(moduleStates),
+                Constants.LOOP_PERIOD_SECONDS
         );
 
-        drive(kinematics.toSwerveModuleStates(correctedSpeeds), speeds);
+        drive(kinematics.toSwerveModuleStates(correctedSpeeds));
     }
 
     public Command teleopDriveCommand(
