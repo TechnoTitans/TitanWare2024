@@ -453,6 +453,7 @@ public class Swerve extends SubsystemBase {
 
     public void drive(final SwerveModuleState[] states) {
         SwerveDriveKinematics.desaturateWheelSpeeds(states, maxLinearVelocity);
+
         frontLeft.setDesiredState(states[0]);
         frontRight.setDesiredState(states[1]);
         backLeft.setDesiredState(states[2]);
@@ -485,7 +486,9 @@ public class Swerve extends SubsystemBase {
     }
 
     public void drive(final ChassisSpeeds speeds) {
-        final SwerveModuleState[] moduleStates = kinematics.toSwerveModuleStates(speeds);
+        final SwerveModuleState[] moduleStates = kinematics.toSwerveModuleStates(
+                speeds, new Translation2d(Units.inchesToMeters(-4), 0)
+        );
 
         SwerveDriveKinematics.desaturateWheelSpeeds(moduleStates, maxLinearVelocity);
 
