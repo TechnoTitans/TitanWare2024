@@ -487,7 +487,7 @@ public class Swerve extends SubsystemBase {
 
     public void drive(final ChassisSpeeds speeds) {
         final SwerveModuleState[] moduleStates = kinematics.toSwerveModuleStates(
-                speeds, new Translation2d(Units.inchesToMeters(-4), 0)
+                speeds, Config.centerOfRotationMeters()
         );
 
         SwerveDriveKinematics.desaturateWheelSpeeds(moduleStates, maxLinearVelocity);
