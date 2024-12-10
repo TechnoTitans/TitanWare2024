@@ -106,12 +106,7 @@ public class Shooter extends SubsystemBase {
         final double shooterPeriodicUpdateStart = Logger.getRealTimestamp();
 
         shooterIO.updateInputs(inputs);
-
         Logger.processInputs(LogKey, inputs);
-        Logger.recordOutput(
-                LogKey + "/PeriodicIOPeriodMs",
-                LogUtils.microsecondsToMilliseconds(Logger.getRealTimestamp() - shooterPeriodicUpdateStart)
-        );
 
         if (desiredGoal != Goal.NONE && currentGoal != desiredGoal) {
             setpoint.ampVelocityRotsPerSec = desiredGoal.getAmpVelocity();
@@ -144,6 +139,11 @@ public class Shooter extends SubsystemBase {
         Logger.recordOutput(
                 LogKey + "/VelocitySetpoint/RightFlywheelVelocityRotsPerSec",
                 setpoint.rightFlywheelVelocityRotsPerSec
+        );
+
+        Logger.recordOutput(
+                LogKey + "/PeriodicIOPeriodMs",
+                LogUtils.microsecondsToMilliseconds(Logger.getRealTimestamp() - shooterPeriodicUpdateStart)
         );
     }
 

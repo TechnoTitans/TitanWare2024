@@ -84,11 +84,6 @@ public class Intake extends SubsystemBase {
 
         eventLoop.poll();
 
-        Logger.recordOutput(
-                LogKey + "/PeriodicIOPeriodMs",
-                LogUtils.microsecondsToMilliseconds(Logger.getRealTimestamp() - intakeIOPeriodicStart)
-        );
-
         Logger.recordOutput(LogKey + "/Intaking", intaking.getAsBoolean());
         Logger.recordOutput(LogKey + "/Feeding", feeding.getAsBoolean());
         Logger.recordOutput(LogKey + "/ShouldStoreNotes", shouldStoreNotes.getAsBoolean());
@@ -96,6 +91,11 @@ public class Intake extends SubsystemBase {
         Logger.recordOutput(LogKey + "/Setpoint/RightRollerVelocityRotsPerSec", setpoint.rightRollerVelocityRotsPerSec);
         Logger.recordOutput(LogKey + "/Setpoint/LeftRollerVelocityRotsPerSec", setpoint.leftRollerVelocityRotsPerSec);
         Logger.recordOutput(LogKey + "/Setpoint/ShooterFeederRotsPerSec", setpoint.shooterFeederRotsPerSec);
+
+        Logger.recordOutput(
+                LogKey + "/PeriodicIOPeriodMs",
+                LogUtils.microsecondsToMilliseconds(Logger.getRealTimestamp() - intakeIOPeriodicStart)
+        );
     }
 
     public Command storeCommand() {

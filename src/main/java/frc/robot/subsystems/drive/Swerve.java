@@ -259,11 +259,6 @@ public class Swerve extends SubsystemBase {
         backLeft.periodic();
         backRight.periodic();
 
-        Logger.recordOutput(
-                LogKey + "/PeriodicIOPeriodMs",
-                LogUtils.microsecondsToMilliseconds(Logger.getRealTimestamp() - swervePeriodicUpdateStart)
-        );
-
         // Update PoseEstimator and Odometry
         final double odometryUpdateStart = Logger.getRealTimestamp();
 
@@ -342,6 +337,11 @@ public class Swerve extends SubsystemBase {
         Logger.recordOutput(LogKey + "/HolonomicController/Active", holonomicControllerActive);
         Logger.recordOutput(LogKey + "/HolonomicController/TargetPose", holonomicPoseTarget);
         Logger.recordOutput(LogKey + "/HolonomicController/AtPoseSetpoint", atHolonomicDrivePose.getAsBoolean());
+
+        Logger.recordOutput(
+                LogKey + "/PeriodicIOPeriodMs",
+                LogUtils.microsecondsToMilliseconds(Logger.getRealTimestamp() - swervePeriodicUpdateStart)
+        );
     }
 
     public SwerveDriveKinematics getKinematics() {

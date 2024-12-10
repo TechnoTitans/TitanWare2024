@@ -128,10 +128,6 @@ public class Arm extends SubsystemBase {
 
         armIO.updateInputs(inputs);
         Logger.processInputs(LogKey, inputs);
-        Logger.recordOutput(
-                LogKey + "/PeriodicIOPeriodMs",
-                LogUtils.microsecondsToMilliseconds(Logger.getRealTimestamp() - armPeriodicUpdateStart)
-        );
 
         if (desiredGoal != Goal.NONE && currentGoal != desiredGoal) {
             setpoint.pivotPositionRots = desiredGoal.getPivotPositionGoal();
@@ -158,6 +154,11 @@ public class Arm extends SubsystemBase {
         Logger.recordOutput(
                 LogKey + "/GoalPose",
                 armPoseFromAngle(Units.rotationsToRadians(-setpoint.pivotPositionRots))
+        );
+
+        Logger.recordOutput(
+                LogKey + "/PeriodicIOPeriodMs",
+                LogUtils.microsecondsToMilliseconds(Logger.getRealTimestamp() - armPeriodicUpdateStart)
         );
     }
 
