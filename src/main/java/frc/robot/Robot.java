@@ -1,10 +1,7 @@
 package frc.robot;
 
 import com.ctre.phoenix6.SignalLogger;
-import edu.wpi.first.wpilibj.DriverStation;
-import edu.wpi.first.wpilibj.GenericHID;
-import edu.wpi.first.wpilibj.PowerDistribution;
-import edu.wpi.first.wpilibj.RobotBase;
+import edu.wpi.first.wpilibj.*;
 import edu.wpi.first.wpilibj.event.EventLoop;
 import edu.wpi.first.wpilibj.livewindow.LiveWindow;
 import edu.wpi.first.wpilibj2.command.CommandScheduler;
@@ -229,6 +226,7 @@ public class Robot extends LoggedRobot {
 
     @Override
     public void robotPeriodic() {
+        Threads.setCurrentThreadPriority(true, 99);
         CommandScheduler.getInstance().run();
         VirtualSubsystem.run();
 
@@ -263,6 +261,7 @@ public class Robot extends LoggedRobot {
         );
 
         Logger.recordOutput("ShootWhileMoving/FuturePose", shotWhileMoving.futurePose());
+        Threads.setCurrentThreadPriority(true, 10);
     }
 
     @Override

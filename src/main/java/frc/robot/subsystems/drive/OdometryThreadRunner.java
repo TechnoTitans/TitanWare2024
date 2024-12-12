@@ -313,7 +313,6 @@ public class OdometryThreadRunner {
 
         final BaseStatusSignal[] allSignalsArray = allSignals.toArray(BaseStatusSignal[]::new);
         BaseStatusSignal.setUpdateFrequencyForAll(UPDATE_FREQUENCY_HZ, allSignalsArray);
-        Threads.setCurrentThreadPriority(true, STARTING_THREAD_PRIORITY);
 
         while (running) {
             final int statusCodeValue;
