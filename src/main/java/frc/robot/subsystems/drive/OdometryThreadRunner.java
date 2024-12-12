@@ -390,7 +390,6 @@ public class OdometryThreadRunner {
             // This is inherently synchronous, since lastThreadPriority is only written
             // here and threadPriorityToSet is only read here
             if (threadPriorityToSet != lastThreadPriority) {
-                Threads.setCurrentThreadPriority(true, threadPriorityToSet);
                 lastThreadPriority = threadPriorityToSet;
             }
         }
