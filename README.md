@@ -1,5 +1,5 @@
 # TitanWare2024
-FRC 1683's primarily code repository for Crescendo 2024.
+FRC 1683's primary code repository for Crescendo 2024.
 
 ![CI](https://github.com/TechnoTitans/TitanWare2024/actions/workflows/CI.yml/badge.svg)
 

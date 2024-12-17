@@ -18,7 +18,8 @@ public class SwerveConstants {
             Units.feetToMeters(16.0),
             Units.feetToMeters(80.0),
             12,
-            6
+            6,
+            new Translation2d(Units.inchesToMeters(-4), 0)
     );
 
     public static final SwerveModuleConstants FrontLeftModule = new SwerveModuleConstants(
@@ -71,7 +72,8 @@ public class SwerveConstants {
             double maxLinearVelocity,
             double maxLinearAcceleration,
             double maxAngularVelocity,
-            double maxAngularAcceleration
+            double maxAngularAcceleration,
+            Translation2d centerOfRotationMeters
     ) {
         public double driveBaseRadiusMeters() {
             return Math.hypot(wheelBaseMeters / 2, trackWidthMeters / 2);
